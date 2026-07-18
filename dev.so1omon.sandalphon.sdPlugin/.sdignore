@@ -1,0 +1,4 @@
+logs/
+*.log
+*.js.map
+.DS_Store

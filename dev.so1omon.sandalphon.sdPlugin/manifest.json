@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Actions": [
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/actions/foundation-status",
+      "Name": "Foundation Status",
+      "States": [
+        {
+          "Image": "imgs/actions/foundation-status-key",
+          "ShowTitle": true,
+          "Title": "Foundation\nReady",
+          "TitleAlignment": "bottom"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Verify that the Sandalphon plugin foundation is running.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.foundation-status"
+    }
+  ],
+  "Author": "Jedidiah Foster",
+  "Category": "Sandalphon",
+  "CategoryIcon": "imgs/category",
+  "CodePath": "bin/plugin.js",
+  "Description": "A human interface layer for directing and supervising software agents.",
+  "Icon": "imgs/plugin",
+  "Name": "Sandalphon",
+  "Nodejs": {
+    "Version": "24"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "13"
+    }
+  ],
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "SupportURL": "https://github.com/so1omon563/sandalphon/issues",
+  "URL": "https://github.com/so1omon563/sandalphon",
+  "UUID": "dev.so1omon.sandalphon",
+  "Version": "0.0.1.0"
+}

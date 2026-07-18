@@ -1,0 +1,36 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="512"
+  height="512"
+  viewBox="0 0 512 512"
+  role="img"
+  aria-label="Sandalphon monochrome bridge mark"
+>
+  <path
+    d="M256 76v360"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-width="40"
+  />
+  <path
+    d="M92 164c66 0 104 34 164 92 60-58 98-92 164-92"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="44"
+  />
+  <path
+    d="M92 348c66 0 104-34 164-92 60 58 98 92 164 92"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="44"
+  />
+  <circle cx="92" cy="164" r="30" fill="#ffffff" />
+  <circle cx="420" cy="164" r="30" fill="#ffffff" />
+  <circle cx="92" cy="348" r="30" fill="#ffffff" />
+  <circle cx="420" cy="348" r="30" fill="#ffffff" />
+</svg>

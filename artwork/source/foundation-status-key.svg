@@ -1,0 +1,45 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="144"
+  height="144"
+  viewBox="0 0 144 144"
+  role="img"
+  aria-label="Sandalphon foundation status"
+>
+  <defs>
+    <linearGradient id="key-background" x1="16" y1="10" x2="132" y2="136">
+      <stop offset="0" stop-color="#172348" />
+      <stop offset="1" stop-color="#090d1c" />
+    </linearGradient>
+    <linearGradient id="key-signal" x1="28" y1="28" x2="116" y2="112">
+      <stop offset="0" stop-color="#72e2f1" />
+      <stop offset="1" stop-color="#9a87ff" />
+    </linearGradient>
+  </defs>
+  <rect width="144" height="144" rx="18" fill="url(#key-background)" />
+  <path
+    d="M72 24v84"
+    fill="none"
+    stroke="#f5fbff"
+    stroke-linecap="round"
+    stroke-width="8"
+  />
+  <path
+    d="M30 44c18 0 28 9 42 28 14-19 24-28 42-28"
+    fill="none"
+    stroke="url(#key-signal)"
+    stroke-linecap="round"
+    stroke-width="9"
+  />
+  <path
+    d="M30 100c18 0 28-9 42-28 14 19 24 28 42 28"
+    fill="none"
+    stroke="url(#key-signal)"
+    stroke-linecap="round"
+    stroke-width="9"
+  />
+  <circle cx="30" cy="44" r="6" fill="#72e2f1" />
+  <circle cx="114" cy="44" r="6" fill="#8aa7ff" />
+  <circle cx="30" cy="100" r="6" fill="#72e2f1" />
+  <circle cx="114" cy="100" r="6" fill="#9a87ff" />
+</svg>

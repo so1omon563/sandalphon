@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+dev.so1omon.sandalphon.sdPlugin/bin/
+dev.so1omon.sandalphon.sdPlugin/logs/
+*.streamDeckPlugin
+*.log
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/

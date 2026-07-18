@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+dev.so1omon.sandalphon.sdPlugin/bin/
+dev.so1omon.sandalphon.sdPlugin/manifest.json
+package-lock.json
+*.streamDeckPlugin
