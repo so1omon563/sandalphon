@@ -99,6 +99,10 @@ Use Node.js 24 or newer and Stream Deck 7.1 or newer.
 Use npm ci from a clean checkout. Commit package-lock.json whenever dependency
 resolution changes.
 
+The official Stream Deck CLI normalizes manifest.json when it packages a
+plugin. That file is excluded from Prettier and remains protected by strict
+manifest contract tests plus the official validate and pack checks.
+
 ## Coding Style and Architecture
 
 - Use strict TypeScript and ES modules.
