@@ -22,7 +22,7 @@
     "validate:plugin": "streamdeck validate dev.so1omon.sandalphon.sdPlugin --no-update-check",
     "package:check": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --dry-run --no-update-check",
     "package:plugin": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --output dist --force --no-update-check",
-    "dev:link": "streamdeck link dev.so1omon.sandalphon.sdPlugin",
+    "dev:link": "npm run build && streamdeck link dev.so1omon.sandalphon.sdPlugin",
     "dev:restart": "streamdeck restart dev.so1omon.sandalphon",
     "dev:unlink": "streamdeck unlink dev.so1omon.sandalphon",
     "check": "npm run format && npm run lint && npm run typecheck && npm run test:coverage && npm run package:check"

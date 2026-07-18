@@ -17,8 +17,8 @@ local Node versions may run the checks, but CI and the plugin manifest use Node
     npm ci
     npm run dev:link
 
-Linking enables Stream Deck developer mode and points the desktop application
-at the repository sdPlugin directory.
+The link command builds the plugin first, then enables Stream Deck developer
+mode and points the desktop application at the repository sdPlugin directory.
 
 ## Daily Commands
 
