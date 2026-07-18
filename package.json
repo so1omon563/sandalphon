@@ -19,7 +19,7 @@
     "format:write": "prettier --write .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "validate:plugin": "streamdeck validate dev.so1omon.sandalphon.sdPlugin --no-update-check",
+    "validate:plugin": "npm run build && streamdeck validate dev.so1omon.sandalphon.sdPlugin --no-update-check",
     "package:check": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --dry-run --no-update-check",
     "package:plugin": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --output dist --force --no-update-check",
     "dev:link": "npm run build && streamdeck link dev.so1omon.sandalphon.sdPlugin",
