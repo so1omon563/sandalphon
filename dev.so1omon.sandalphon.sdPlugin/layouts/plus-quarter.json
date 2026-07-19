@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "dev.so1omon.sandalphon.plus-quarter",
+  "items": [
+    {
+      "key": "heading",
+      "type": "text",
+      "rect": [12, 8, 176, 26],
+      "font": { "size": 16, "weight": 600 },
+      "alignment": "left",
+      "color": "#F5FBFF",
+      "text-overflow": "ellipsis"
+    },
+    {
+      "key": "detail",
+      "type": "text",
+      "rect": [12, 38, 176, 34],
+      "font": { "size": 13, "weight": 500 },
+      "alignment": "left",
+      "color": "#C4CEE0",
+      "text-overflow": "ellipsis"
+    },
+    {
+      "key": "rail",
+      "type": "bar",
+      "rect": [12, 84, 176, 4],
+      "value": 100,
+      "range": { "min": 0, "max": 100 },
+      "subtype": 0,
+      "border_w": 0,
+      "bar_bg_c": "#172348",
+      "bar_fill_c": "#A7B0C0"
+    }
+  ]
+}

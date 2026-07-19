@@ -179,6 +179,8 @@ manifest contract tests plus the official validate and pack checks.
   credentials.
 - Keep consequential-action confirmation and permission boundaries
   fail-closed.
+- Cap Codex app-server JSON-RPC lines at 16 MiB of raw UTF-8 bytes. Malformed or
+  larger traffic closes the transport and invalidates live offers.
 - Use SECURITY.md for private vulnerability reporting and keep it aligned with
   credential, transport, plugin package, and release changes.
 

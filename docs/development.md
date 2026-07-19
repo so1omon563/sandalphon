@@ -52,6 +52,22 @@ input exercised, expected result, and observed result.
 
 Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 
+### Stream Deck + verification — 2026-07-19
+
+- Hardware: standard Stream Deck +.
+- Stream Deck application: 7.5.0 (22885).
+- Profile: eight Keypad-only managed key contexts and four separately
+  identified managed encoder contexts.
+- Verified: dynamic key images, coordinated quarter-local touch-strip frames,
+  session preview and explicit selection, touch navigation, historical-thread
+  Resume, and next-turn reasoning preview.
+- Long-thread evidence: Resume accepted a 5.74 MiB JSON-RPC history response
+  without disconnecting after the bounded raw UTF-8 transport limit was raised
+  to 16 MiB. The prior 1 MiB limit failed closed as Offline/disconnected.
+- Physical feedback finding: an uncommitted session now labels its strip lane
+  Preview and returns to Session only after the selecting dial press. Lanes
+  omit rotate or press descriptions when no distinct valid choice exists.
+
 ## Node Resolution on macOS
 
 Multiple Node installations may coexist. Verify which -a node and node

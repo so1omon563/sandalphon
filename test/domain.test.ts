@@ -85,6 +85,37 @@ describe("domain reducer", () => {
     ).toBe(state);
   });
 
+  it("changes only an advertised next-turn reasoning option at a turn boundary", () => {
+    const state = readyState();
+    const changed = reduceCore(state, {
+      type: "nextTurnReasoningChanged",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      reasoningEffort: "high",
+    });
+    expect(changed.sessions[0]?.nextTurnSettings).toMatchObject({
+      revision: 1,
+      reasoningEffort: "high",
+    });
+    expect(
+      reduceCore(changed, {
+        type: "nextTurnReasoningChanged",
+        connectionEpoch: 1,
+        sessionId: "session-1",
+        reasoningEffort: "unsupported",
+      }),
+    ).toBe(changed);
+    const active = activeState();
+    expect(
+      reduceCore(active, {
+        type: "nextTurnReasoningChanged",
+        connectionEpoch: 1,
+        sessionId: "session-1",
+        reasoningEffort: "high",
+      }),
+    ).toBe(active);
+  });
+
   it("tracks activity, waits, and exact request resolution", () => {
     let state = activeState();
     state = reduceCore(state, {
