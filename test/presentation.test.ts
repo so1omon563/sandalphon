@@ -7,7 +7,7 @@ import {
   rotatePreview,
   type SurfaceRuntime,
 } from "../src/presentation.js";
-import { readyState } from "./core-fixtures.js";
+import { readyState, waitingState } from "./core-fixtures.js";
 
 function classicRuntime(
   scope: "managed" | "composable" = "managed",
@@ -99,6 +99,26 @@ describe("presentation", () => {
     const frame = present(toSnapshot(readyState()), runtime);
     expect(frame.keyViews.map(({ id }) => id)).toEqual(["owned"]);
     expect(frame.fullStripCoordinated).toBe(false);
+  });
+
+  it("keeps consequential confirmation unavailable in composable scope", () => {
+    const runtime = {
+      ...classicRuntime("composable"),
+      visibleControls: Array.from({ length: 6 }, (_, index) => ({
+        id: `owned-${index}`,
+        controller: "keypad" as const,
+        owned: true,
+      })),
+    };
+    const frame = present(toSnapshot(waitingState()), runtime);
+    const approve = frame.keyViews.find(
+      ({ actionKind }) => actionKind === "ApproveRequest",
+    );
+    expect(approve).toMatchObject({
+      enabled: false,
+      unavailableReason: "managedSurfaceRequired",
+    });
+    expect(approve?.offerToken).toBeUndefined();
   });
 
   it("fails visibly for disconnect, mismatch, and partial Plus ownership", () => {

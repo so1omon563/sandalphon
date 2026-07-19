@@ -4,6 +4,7 @@ import {
   advanceInvocation,
   createInvocationLedger,
   dispatchOffer,
+  markClaimedEffectsUncertain,
   releaseEffect,
   toSnapshot,
 } from "../src/domain/offers.js";
@@ -246,6 +247,16 @@ describe("action offers", () => {
     const failed = advanceInvocation(pending, "invoke-1", "failed");
     expect(failed.invocationResults["invoke-1"]?.status).toBe("failed");
     expect(failed.claimedEffects).toEqual([]);
+
+    const withRejection = dispatchOffer(state, accepted, {
+      invocationId: "bad",
+      offerToken: "stale",
+    });
+    const disconnected = markClaimedEffectsUncertain(withRejection.ledger);
+    expect(disconnected.invocationResults["invoke-1"]?.status).toBe(
+      "uncertain",
+    );
+    expect(disconnected.invocationResults["bad"]?.status).toBe("rejected");
   });
 
   it("rejects stale tokens and invalid or missing choices locally", () => {

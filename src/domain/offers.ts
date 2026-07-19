@@ -179,6 +179,22 @@ export function advanceInvocation(
   };
 }
 
+export function markClaimedEffectsUncertain(
+  ledger: InvocationLedger,
+): InvocationLedger {
+  return {
+    ...ledger,
+    invocationResults: Object.fromEntries(
+      Object.entries(ledger.invocationResults).map(([invocationId, result]) => [
+        invocationId,
+        result.effectKey && ledger.claimedEffects.includes(result.effectKey)
+          ? { ...result, status: "uncertain" as const }
+          : result,
+      ]),
+    ),
+  };
+}
+
 function issueOffers(
   state: CoreState,
   session: SessionState,

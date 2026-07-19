@@ -98,6 +98,27 @@ describe("deterministic harness", () => {
     expect(codex.dispatched).toEqual([]);
   });
 
+  it("marks a possibly written effect uncertain on disconnect", () => {
+    const codex = readyHarness();
+    const offer = codex.snapshot.sessions[0]?.actionOffers.find(
+      ({ kind }) => kind === "ChangeNextTurnOptions",
+    );
+    codex.invoke({
+      invocationId: "in-flight",
+      offerToken: offer?.offerToken ?? "",
+      optionId: "high",
+    });
+    codex.receive({ type: "disconnect" });
+    expect(codex.result("in-flight")?.status).toBe("uncertain");
+    expect(codex.snapshot.sessions[0]?.actionOffers).toContainEqual(
+      expect.objectContaining({
+        kind: "ChangeNextTurnOptions",
+        state: "disabled",
+        reason: "reconciling",
+      }),
+    );
+  });
+
   it("rejects key-up when a provider update replaced the offer token", () => {
     const codex = readyHarness();
     codex.receive({

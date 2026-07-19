@@ -2,6 +2,7 @@ import {
   advanceInvocation,
   createInvocationLedger,
   dispatchOffer,
+  markClaimedEffectsUncertain,
   toSnapshot,
   type IntentResult,
   type InvocationLedger,
@@ -30,6 +31,9 @@ export class SimulatedCodex {
   }
 
   receive(event: CoreEvent): SandalphonSnapshot {
+    if (event.type === "disconnect") {
+      this.#ledger = markClaimedEffectsUncertain(this.#ledger);
+    }
     this.#state = reduceCore(this.#state, event);
     return this.snapshot;
   }
@@ -39,6 +43,10 @@ export class SimulatedCodex {
     this.#ledger = decision.ledger;
     if (decision.shouldDispatch) this.dispatched.push(invocation);
     return decision.result;
+  }
+
+  result(invocationId: string): IntentResult | undefined {
+    return this.#ledger.invocationResults[invocationId];
   }
 
   advance(

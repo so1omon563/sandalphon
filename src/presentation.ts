@@ -35,6 +35,7 @@ export interface ControlView {
   readonly offerToken?: string;
   readonly actionKind?: ActionKind;
   readonly optionIds?: readonly string[];
+  readonly unavailableReason?: "managedSurfaceRequired";
 }
 
 export interface PresentationFrame {
@@ -111,7 +112,13 @@ export function present(
     surfaceProfile: runtime.profile,
     surfaceView: view,
     keyViews: keyIds.map((id, index) =>
-      controlView(id, index, selected?.primaryState ?? "unavailable", offers),
+      controlView(
+        id,
+        index,
+        selected?.primaryState ?? "unavailable",
+        offers,
+        runtime.scope,
+      ),
     ),
     encoderViews: encoderIds.map((id, index) =>
       encoderControlView(id, index, offers),
@@ -155,6 +162,7 @@ function controlView(
   index: number,
   primaryState: string,
   offers: SandalphonSnapshot["sessions"][number]["actionOffers"],
+  scope: SurfaceScope,
 ): ControlView {
   if (index === 0) {
     return {
@@ -166,14 +174,21 @@ function controlView(
   }
   const offer = offers[index - 1];
   if (!offer) return { id, role: "empty", enabled: false, label: "" };
+  const managedRequired =
+    scope === "composable" &&
+    (offer.safety.confirmation === "reviewPress" ||
+      offer.safety.confirmation === "reviewHold");
   return {
     id,
     role: offer.kind === "ChangeNextTurnOptions" ? "choice" : "action",
-    enabled: offer.state === "available",
+    enabled: offer.state === "available" && !managedRequired,
     label: offer.kind,
-    ...(offer.offerToken ? { offerToken: offer.offerToken } : {}),
+    ...(offer.offerToken && !managedRequired
+      ? { offerToken: offer.offerToken }
+      : {}),
     ...(offer.optionIds ? { optionIds: offer.optionIds } : {}),
     actionKind: offer.kind,
+    ...(managedRequired ? { unavailableReason: "managedSurfaceRequired" } : {}),
   };
 }
 
