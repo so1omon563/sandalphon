@@ -34,3 +34,6 @@ All notable changes to Sandalphon are recorded here.
 - Bounded 16 MiB raw UTF-8 JSON-RPC line handling for long `thread/resume`
   history pages, while malformed and oversized local-process traffic still
   fails closed.
+- Evidence-backed first-public-release gates for support, physical validation,
+  installation lifecycle, security and privacy, documentation, licensing, and
+  artifact provenance, plus a release-candidate evidence command.

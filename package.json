@@ -26,6 +26,8 @@
     "validate:plugin": "npm run build && streamdeck validate dev.so1omon.sandalphon.sdPlugin --no-update-check",
     "package:check": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --dry-run --no-update-check",
     "package:plugin": "npm run build && streamdeck pack dev.so1omon.sandalphon.sdPlugin --output dist --force --no-update-check",
+    "release:evidence": "node scripts/release-evidence.mjs",
+    "release:candidate": "npm run check && npm run package:plugin && npm run release:evidence",
     "dev:link": "npm run build && streamdeck link dev.so1omon.sandalphon.sdPlugin",
     "dev:restart": "streamdeck restart dev.so1omon.sandalphon",
     "dev:unlink": "streamdeck unlink dev.so1omon.sandalphon",
