@@ -91,6 +91,10 @@ export type Classic15DetailPagination =
       readonly requiredPages: number;
     };
 
+const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
+  granularity: "grapheme",
+});
+
 const VIEW_ROLES = {
   home: [
     "selectedSession",
@@ -209,11 +213,14 @@ export function classic15Layout(view: SurfaceView): readonly Classic15Cell[] {
 export function paginateClassic15Detail(
   text: string,
 ): Classic15DetailPagination {
-  const characters = Array.from(text);
+  const graphemes = Array.from(
+    GRAPHEME_SEGMENTER.segment(text),
+    ({ segment }) => segment,
+  );
   const lines =
-    characters.length === 0
+    graphemes.length === 0
       ? [""]
-      : chunks(characters, CLASSIC15_DETAIL_LINE_LENGTH).map((line) =>
+      : chunks(graphemes, CLASSIC15_DETAIL_LINE_LENGTH).map((line) =>
           line.join(""),
         );
   const detailCells = chunks(lines, CLASSIC15_DETAIL_LINES_PER_CELL).map(

@@ -21,12 +21,16 @@ const views: readonly SurfaceView[] = [
   "unavailable",
 ];
 
+const graphemeSegmenter = new Intl.Segmenter("en", {
+  granularity: "grapheme",
+});
+
 describe("Classic 15 interaction contract", () => {
   it("fills one row-major 5 by 3 frame for every managed view", () => {
     for (const view of views) {
       const layout = classic15Layout(view);
       expect(layout).toHaveLength(CLASSIC15_KEY_COUNT);
-      expect(new Set(layout.map(({ id }) => id))).toHaveLength(
+      expect(new Set(layout.map(({ id }) => id)).size).toBe(
         CLASSIC15_KEY_COUNT,
       );
       expect(layout.at(0)).toMatchObject({ row: 0, column: 0 });
@@ -104,7 +108,9 @@ describe("Classic 15 interaction contract", () => {
       result.pages.every(({ cells }) =>
         cells.every(({ lines }) =>
           lines.every(
-            (line) => Array.from(line).length <= CLASSIC15_DETAIL_LINE_LENGTH,
+            (line) =>
+              Array.from(graphemeSegmenter.segment(line)).length <=
+              CLASSIC15_DETAIL_LINE_LENGTH,
           ),
         ),
       ),
@@ -115,6 +121,16 @@ describe("Classic 15 interaction contract", () => {
         .flatMap(({ lines }) => lines)
         .join(""),
     ).toBe(text);
+  });
+
+  it("keeps a multi-code-point grapheme within one rendered line", () => {
+    const combinedGlyph = "👩‍💻";
+    const firstLine = `${"x".repeat(11)}${combinedGlyph}`;
+    const result = paginateClassic15Detail(`${firstLine}y`);
+    expect(result.available).toBe(true);
+    if (!result.available) return;
+
+    expect(result.pages[0]?.cells[0]?.lines).toEqual([firstLine, "y"]);
   });
 
   it("fails closed when complete detail exceeds the bounded review surface", () => {

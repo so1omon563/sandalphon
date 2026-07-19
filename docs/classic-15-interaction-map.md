@@ -201,11 +201,11 @@ rotation acceleration, touch region, swipe, or hidden long-press selector.
 | `K10` Back    | `K11` Previous detail | `K12` Detail page | `K13` Next detail | `K14` Exit    |
 
 The six detail cells are read in key order `K1`, `K2`, `K3`, `K4`, `K6`,
-`K8`. Each contains at most two 12-character lines. Decision-critical fields
+`K8`. Each contains at most two 12-grapheme lines. Decision-critical fields
 are first serialized in a visible, reversible form, then paged without
 ellipsis or omitted characters. The executable paginator preserves up to 12
-pages, or 1,728 displayed Unicode code points. When complete context exceeds
-that bound or cannot be represented faithfully, Approve and other
+pages, or 1,728 displayed Unicode grapheme clusters. When complete context
+exceeds that bound or cannot be represented faithfully, Approve and other
 complete-inspection actions are unavailable with `Review in Codex`; a
 target-level Reject or Cancel may remain available when its own exact context
 fits.
