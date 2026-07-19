@@ -4,7 +4,12 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      include: ["src/foundation.ts"],
+      include: [
+        "src/foundation.ts",
+        "src/harness.ts",
+        "src/presentation.ts",
+        "src/domain/**/*.ts",
+      ],
       reporter: ["text", "json-summary"],
       thresholds: {
         branches: 100,

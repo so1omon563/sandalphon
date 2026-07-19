@@ -50,6 +50,25 @@ The first system has four recognizable responsibilities:
 Raw provider parsing and command construction do not live in individual key or
 dial handlers. Presentation consumes Sandalphon state and invokes typed offers.
 
+## Deterministic Core
+
+The transport-neutral core is executable without a Codex process or physical
+device. It reduces authoritative events into orthogonal integration, session,
+run, request, result, attention, and next-turn-setting state. Presentation
+receives a complete snapshot and opaque action offers; it never supplies raw
+provider identifiers or command parameters.
+
+Offers are bound to one connection epoch and snapshot revision. Invocation
+validation checks current selection, ownership, freshness, run and request
+identity, inspection, advertised decisions, and ordered options before a side
+effect can be dispatched. One invocation id and effect key suppress duplicate
+or racing device input inside the current process.
+
+Consequential confirmation is a separate deterministic reducer. Review,
+inspection, arming, 800 ms hold, expiry, invalidation, and dispatch do not
+change provider truth by themselves. The simulated Codex, Classic 15, and
+Stream Deck + boundaries prove these rules before live adapters are added.
+
 ## Safety
 
 Physical input is not authority by itself. Consequential actions require
