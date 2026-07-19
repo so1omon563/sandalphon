@@ -58,7 +58,6 @@ interface ReviewContext {
 
 const ACTION_CATALOG: readonly ActionKind[] = [
   "Inspect",
-  "AcknowledgeResult",
   "ResumeSession",
   "ChangeNextTurnOptions",
   "RetryWork",
@@ -83,6 +82,7 @@ export class Classic15MvpSurface {
   #view: Classic15MvpFrame["view"] = "home";
   #revision = 0;
   #rosterMode: RosterMode = "Priority";
+  #attentionRoster = false;
   #rosterPage = 0;
   #actionPage = 0;
   #choice: ChoiceContext | undefined;
@@ -151,6 +151,7 @@ export class Classic15MvpSurface {
 
   invalidatePhysicalInput(): void {
     this.#view = "home";
+    this.#attentionRoster = false;
     this.#review = undefined;
     this.#choice = undefined;
     this.#invalidateConfirmation();
@@ -160,7 +161,11 @@ export class Classic15MvpSurface {
   keyDown(index: number, now: number): void {
     const frame = this.frame;
     if (!frame.keys[index]?.enabled) return;
-    if (frame.view === "request" && [5, 7, 9].includes(index)) {
+    if (
+      frame.view === "request" &&
+      [5, 7, 9].includes(index) &&
+      this.#decisionKind(index) !== "Inspect"
+    ) {
       void this.#decisionDown(index, now);
       return;
     }
@@ -221,11 +226,13 @@ export class Classic15MvpSurface {
     else if (this.frame.view === "actions")
       await this.#activateActions(index, selected, now);
     else if (this.frame.view === "choice") await this.#activateChoice(index);
-    else if (this.frame.view === "request") this.#activateRequest(index, now);
+    else if (this.frame.view === "request")
+      await this.#activateRequest(index, now);
   }
 
   async #activateHome(index: number, now: number): Promise<void> {
     if (index === 0) {
+      this.#attentionRoster = false;
       this.#view = "session";
       this.#advanceFrame();
       return;
@@ -236,11 +243,9 @@ export class Classic15MvpSurface {
       return;
     }
     if (index === 9) {
-      const target = this.#attentionSessions()[0];
-      if (target) {
-        await this.#application.selectSession(target.id);
-        if (target.pendingRequests.length > 0) this.#openProviderReview(now);
-      }
+      const selected = this.#selectedSession();
+      if (selected?.pendingRequests.length) this.#openProviderReview(now);
+      else this.#openAttentionRoster();
       return;
     }
     if (index === 11 || index === 13) {
@@ -263,6 +268,7 @@ export class Classic15MvpSurface {
     if (index === 0) return;
     if (index === 1) {
       if (selected.pendingRequests.length > 0) this.#openProviderReview(now);
+      else if (selected.resultLatch) this.#openResultReview(selected);
       else await this.#activateKind(selected, "Inspect", now);
       return;
     }
@@ -293,10 +299,7 @@ export class Classic15MvpSurface {
     }
     if (index === 9) {
       if (selected.pendingRequests.length > 0) this.#openProviderReview(now);
-      else {
-        const target = this.#attentionSessions()[0];
-        if (target) await this.#application.selectSession(target.id);
-      }
+      else this.#openAttentionRoster();
       return;
     }
     if (index === 11 || index === 13) {
@@ -319,7 +322,10 @@ export class Classic15MvpSurface {
   ): Promise<void> {
     if (index >= 1 && index <= 8) {
       const kind = ACTION_CATALOG[this.#actionPage * 8 + index - 1];
-      if (kind === "ChangeNextTurnOptions") this.#openReasoningChoice(selected);
+      if (kind === "Inspect" && selected.resultLatch)
+        this.#openResultReview(selected);
+      else if (kind === "ChangeNextTurnOptions")
+        this.#openReasoningChoice(selected);
       else if (kind) await this.#activateKind(selected, kind, now);
       return;
     }
@@ -360,6 +366,7 @@ export class Classic15MvpSurface {
     if (choice.kind === "roster") {
       if (!ROSTER_MODES.includes(option as RosterMode)) return;
       this.#rosterMode = option as RosterMode;
+      this.#attentionRoster = false;
       this.#rosterPage = 0;
       this.#choice = undefined;
       this.#view = "home";
@@ -374,9 +381,22 @@ export class Classic15MvpSurface {
     }
   }
 
-  #activateRequest(index: number, now: number): void {
+  async #activateRequest(index: number, now: number): Promise<void> {
     const review = this.#review;
     if (!review) return;
+    const inspect = review.offers.Inspect;
+    if (
+      index === 9 &&
+      inspect?.state === "available" &&
+      inspect.offerToken &&
+      this.#seenDetailPages.size === review.pages.length
+    ) {
+      await this.#invoke(inspect.offerToken);
+      this.#review = undefined;
+      this.#view = "home";
+      this.#advanceFrame();
+      return;
+    }
     if (index === 11 || index === 13) {
       const next = this.#movePage(
         this.#detailPage,
@@ -450,6 +470,39 @@ export class Classic15MvpSurface {
     this.#view = "request";
     this.#advanceFrame();
     this.#armAutomaticDecision(now);
+  }
+
+  #openResultReview(selected: SessionSnapshot): void {
+    const result = selected.resultLatch;
+    const inspect = selected.actionOffers.find(
+      ({ kind, state }) => kind === "Inspect" && state === "available",
+    );
+    if (!result || !inspect?.offerToken) return;
+    const pagination = paginateClassic15Detail(
+      `${result.outcome === "completed" ? "Completed" : "Failed"} result for ${selected.name}. Run ${result.runId}. Review this exact result before acknowledging it.`,
+    );
+    if (!pagination.available) return;
+    this.#review = {
+      pages: pagination.pages,
+      inspection: "target",
+      offers: { Inspect: inspect },
+      localAction: true,
+    };
+    this.#detailPage = 0;
+    this.#seenDetailPages = new Set([0]);
+    this.#view = "request";
+    this.#advanceFrame();
+  }
+
+  #openAttentionRoster(): void {
+    if (this.#attentionSessions().length === 0) return;
+    this.#attentionRoster = true;
+    this.#rosterPage = 0;
+    this.#view = "home";
+    this.#review = undefined;
+    this.#choice = undefined;
+    this.#invalidateConfirmation();
+    this.#advanceFrame();
   }
 
   #openRosterChoice(): void {
@@ -565,7 +618,11 @@ export class Classic15MvpSurface {
 
   #decisionKind(index: number): ActionKind | undefined {
     if (index === 9)
-      return this.#review?.offers.RetryWork ? "RetryWork" : "ApproveRequest";
+      return this.#review?.offers.RetryWork
+        ? "RetryWork"
+        : this.#review?.offers.Inspect
+          ? "Inspect"
+          : "ApproveRequest";
     if (index === 5)
       return this.#review?.offers.CancelRun ? "CancelRun" : "CancelRequest";
     return index === 7 ? "RejectRequest" : undefined;
@@ -584,6 +641,7 @@ export class Classic15MvpSurface {
   }
 
   #rosterSessions(): readonly SessionSnapshot[] {
+    if (this.#attentionRoster) return this.#attentionSessions();
     if (this.#rosterMode === "Favorites" || this.#rosterMode === "Custom")
       return [];
     if (this.#rosterMode === "Recent") return this.#snapshot.sessions;
@@ -600,10 +658,11 @@ export class Classic15MvpSurface {
   }
 
   #rosterPages(): number {
-    return Math.max(
-      1,
-      Math.ceil(Math.max(0, this.#rosterSessions().length - 1) / 8),
-    );
+    const selectedId = this.#snapshot.selectedSessionId;
+    const candidateCount = this.#rosterSessions().filter(
+      ({ id }) => id !== selectedId,
+    ).length;
+    return Math.max(1, Math.ceil(candidateCount / 8));
   }
 
   #boundPages(): void {
@@ -678,11 +737,11 @@ export class Classic15MvpSurface {
         `${this.#attentionSessions().length} attention`,
         "Home",
         "Previous",
-        `${this.#rosterMode} ${this.#rosterPage + 1}/${this.#rosterPages()}`,
+        `${this.#attentionRoster ? "Attention" : this.#rosterMode} ${this.#rosterPage + 1}/${this.#rosterPages()}`,
         "Next",
         "Exit",
       ];
-      return views(labels, state, [
+      const keys = views(labels, state, [
         0,
         ...items.map((_, index) => index + 1),
         ...(this.#attentionSessions().length > 0 ? [9] : []),
@@ -692,6 +751,11 @@ export class Classic15MvpSurface {
         ...(this.#rosterPage + 1 < this.#rosterPages() ? [13] : []),
         14,
       ]);
+      items.forEach((item, index) => {
+        const key = keys[index + 1];
+        if (key) keys[index + 1] = { ...key, state: item.primaryState };
+      });
+      return keys;
     }
     if (view === "session") {
       const labels = [
@@ -793,7 +857,9 @@ export class Classic15MvpSurface {
     });
     labels[5] = this.#decisionLabel("CancelRequest");
     labels[7] = this.#decisionLabel("RejectRequest");
-    labels[9] = this.#decisionLabel("ApproveRequest");
+    labels[9] = this.#review?.offers.Inspect
+      ? "Acknowledge"
+      : this.#decisionLabel("ApproveRequest");
     labels[10] = "Back";
     labels[11] = "Previous";
     labels[12] = `Page ${this.#detailPage + 1}/${this.#review?.pages.length ?? 1}`;
@@ -806,9 +872,21 @@ export class Classic15MvpSurface {
     for (const [index, kind] of [
       [5, this.#review?.offers.CancelRun ? "CancelRun" : "CancelRequest"],
       [7, "RejectRequest"],
-      [9, this.#review?.offers.RetryWork ? "RetryWork" : "ApproveRequest"],
+      [
+        9,
+        this.#review?.offers.RetryWork
+          ? "RetryWork"
+          : this.#review?.offers.Inspect
+            ? "Inspect"
+            : "ApproveRequest",
+      ],
     ] as const) {
-      if (kind && this.#review?.offers[kind]?.state === "available")
+      if (
+        kind &&
+        this.#review?.offers[kind]?.state === "available" &&
+        (kind !== "Inspect" ||
+          this.#seenDetailPages.size === (this.#review?.pages.length ?? 0))
+      )
         enabled.push(index);
     }
     return views(labels, state, enabled, page);

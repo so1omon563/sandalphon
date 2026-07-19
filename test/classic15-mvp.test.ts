@@ -12,7 +12,12 @@ import {
   createSession,
   reduceCore,
 } from "../src/domain/reducer.js";
-import { readyState, waitingState } from "./core-fixtures.js";
+import {
+  activeState,
+  completeApproval,
+  readyState,
+  waitingState,
+} from "./core-fixtures.js";
 
 function historicalSnapshot(): SandalphonSnapshot {
   let state = reduceCore(createCoreState(), {
@@ -102,6 +107,90 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     surface.dispose();
   });
 
+  it("opens the selected request without stealing selection", async () => {
+    let state = waitingState();
+    state = reduceCore(state, {
+      type: "observeSession",
+      connectionEpoch: 1,
+      session: createSession("session-2", "Selected request"),
+    });
+    state = reduceCore(state, {
+      type: "runStarted",
+      connectionEpoch: 1,
+      sessionId: "session-2",
+      runId: "run-2",
+      steerability: "steerable",
+    });
+    state = reduceCore(state, {
+      type: "requestOpened",
+      connectionEpoch: 1,
+      sessionId: "session-2",
+      request: {
+        ...completeApproval,
+        id: "request-2",
+        runId: "run-2",
+      },
+    });
+    state = reduceCore(state, {
+      type: "selectSession",
+      sessionId: "session-2",
+    });
+    const application = new SurfaceApplication(toSnapshot(state));
+    application.reviewDetail = {
+      requestId: "request-2",
+      text: "Review selected request",
+      inspection: "complete",
+    };
+    const surface = new Classic15MvpSurface(application);
+
+    await releaseKey(surface, 9);
+
+    expect(application.selectSession).not.toHaveBeenCalled();
+    expect(application.snapshot.selectedSessionId).toBe("session-2");
+    expect(surface.frame.view).toBe("request");
+  });
+
+  it("opens an attention-only roster and renders each candidate state", async () => {
+    let state = readyState("selected");
+    state = reduceCore(state, {
+      type: "observeSession",
+      connectionEpoch: 1,
+      session: createSession("failed", "Failed work"),
+    });
+    state = reduceCore(state, {
+      type: "runStarted",
+      connectionEpoch: 1,
+      sessionId: "failed",
+      runId: "failed-run",
+      steerability: "steerable",
+    });
+    state = reduceCore(state, {
+      type: "runCompleted",
+      connectionEpoch: 1,
+      sessionId: "failed",
+      runId: "failed-run",
+      outcome: "failed",
+      retryable: false,
+    });
+    const application = new SurfaceApplication(toSnapshot(state));
+    const surface = new Classic15MvpSurface(application);
+
+    expect(surface.frame.keys[1]).toMatchObject({
+      label: "Failed work",
+      state: "failed",
+    });
+    await releaseKey(surface, 9);
+
+    expect(application.selectSession).not.toHaveBeenCalled();
+    expect(surface.frame.keys[12]?.label).toBe("Attention 1/1");
+    expect(surface.frame.keys[1]).toMatchObject({
+      label: "Failed work",
+      state: "failed",
+    });
+    await releaseKey(surface, 1, 200);
+    expect(application.selectSession).toHaveBeenCalledWith("failed");
+  });
+
   it("invalidates a captured release when application state changes", async () => {
     const application = new SurfaceApplication(historicalSnapshot());
     const surface = new Classic15MvpSurface(application);
@@ -139,6 +228,31 @@ describe("Stream Deck Classic 15 MVP surface", () => {
       expect.objectContaining({ optionId: "high" }),
     );
     expect(surface.frame.view).toBe("session");
+  });
+
+  it("shows result detail before a separate acknowledgement", async () => {
+    const completed = reduceCore(activeState(), {
+      type: "runCompleted",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      runId: "run-1",
+      outcome: "completed",
+      retryable: false,
+    });
+    const application = new SurfaceApplication(toSnapshot(completed));
+    const surface = new Classic15MvpSurface(application);
+    await releaseKey(surface, 0);
+
+    await releaseKey(surface, 1, 200);
+    expect(application.invoke).not.toHaveBeenCalled();
+    expect(surface.frame.view).toBe("request");
+    expect(surface.frame.keys[9]).toMatchObject({
+      label: "Acknowledge",
+      enabled: true,
+    });
+
+    await releaseKey(surface, 9, 300);
+    expect(application.invoke.mock.calls[0]?.[0].offerToken).toMatch(/^offer:/);
   });
 
   it("requires every detail page and a fresh 800 ms approval hold", async () => {
