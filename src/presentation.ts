@@ -35,7 +35,7 @@ export interface ControlView {
   readonly offerToken?: string;
   readonly actionKind?: ActionKind;
   readonly optionIds?: readonly string[];
-  readonly unavailableReason?: "managedSurfaceRequired";
+  readonly unavailableReason?: "managedSurfaceRequired" | "surfaceUnavailable";
 }
 
 export interface PresentationFrame {
@@ -118,10 +118,11 @@ export function present(
         selected?.primaryState ?? "unavailable",
         offers,
         runtime.scope,
+        unavailableReasons.length === 0,
       ),
     ),
     encoderViews: encoderIds.map((id, index) =>
-      encoderControlView(id, index, offers),
+      encoderControlView(id, index, offers, unavailableReasons.length === 0),
     ),
     unavailableReasons,
     fullStripCoordinated:
@@ -163,6 +164,7 @@ function controlView(
   primaryState: string,
   offers: SandalphonSnapshot["sessions"][number]["actionOffers"],
   scope: SurfaceScope,
+  surfaceAvailable: boolean,
 ): ControlView {
   if (index === 0) {
     return {
@@ -181,14 +183,16 @@ function controlView(
   return {
     id,
     role: offer.kind === "ChangeNextTurnOptions" ? "choice" : "action",
-    enabled: offer.state === "available" && !managedRequired,
+    enabled:
+      offer.state === "available" && !managedRequired && surfaceAvailable,
     label: offer.kind,
-    ...(offer.offerToken && !managedRequired
+    ...(offer.offerToken && !managedRequired && surfaceAvailable
       ? { offerToken: offer.offerToken }
       : {}),
     ...(offer.optionIds ? { optionIds: offer.optionIds } : {}),
     actionKind: offer.kind,
     ...(managedRequired ? { unavailableReason: "managedSurfaceRequired" } : {}),
+    ...(!surfaceAvailable ? { unavailableReason: "surfaceUnavailable" } : {}),
   };
 }
 
@@ -196,6 +200,7 @@ function encoderControlView(
   id: string,
   index: number,
   offers: SandalphonSnapshot["sessions"][number]["actionOffers"],
+  surfaceAvailable: boolean,
 ): ControlView {
   const choiceOffers = offers.filter(
     ({ kind }) => kind === "ChangeNextTurnOptions",
@@ -205,10 +210,13 @@ function encoderControlView(
   return {
     id,
     role: "choice",
-    enabled: offer.state === "available",
+    enabled: offer.state === "available" && surfaceAvailable,
     label: offer.kind,
-    ...(offer.offerToken ? { offerToken: offer.offerToken } : {}),
+    ...(offer.offerToken && surfaceAvailable
+      ? { offerToken: offer.offerToken }
+      : {}),
     ...(offer.optionIds ? { optionIds: offer.optionIds } : {}),
     actionKind: offer.kind,
+    ...(!surfaceAvailable ? { unavailableReason: "surfaceUnavailable" } : {}),
   };
 }

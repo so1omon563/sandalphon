@@ -27,6 +27,7 @@ function readyHarness(): SimulatedCodex {
   codex.receive({ type: "connectionReady", connectionEpoch: 1 });
   codex.receive({
     type: "observeSession",
+    connectionEpoch: 1,
     session: {
       id: "session-1",
       name: "Work",

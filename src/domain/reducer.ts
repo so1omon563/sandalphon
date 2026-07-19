@@ -23,7 +23,11 @@ export type CoreEvent =
       readonly reason: IntegrationReason;
     }
   | { readonly type: "disconnect" }
-  | { readonly type: "observeSession"; readonly session: SessionState }
+  | {
+      readonly type: "observeSession";
+      readonly connectionEpoch: number;
+      readonly session: SessionState;
+    }
   | { readonly type: "selectSession"; readonly sessionId: string }
   | ProviderSessionEvent;
 
@@ -194,6 +198,7 @@ function reduceSessionEvent(
       next = { ...session, activity: event.activity };
       break;
     case "requestOpened": {
+      if (session.run.activeRunId !== event.request.runId) return state;
       const pendingRequests = [
         ...session.pendingRequests.filter(({ id }) => id !== event.request.id),
         event.request,

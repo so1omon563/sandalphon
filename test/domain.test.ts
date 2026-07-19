@@ -31,18 +31,22 @@ describe("domain reducer", () => {
 
     let state = reduceCore(initial, {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-1", "First"),
     });
     state = reduceCore(state, {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-1", "Renamed"),
     });
     state = reduceCore(state, {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-2", "Other"),
     });
     state = reduceCore(state, {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-1", "Final"),
     });
     state = reduceCore(state, {
@@ -107,6 +111,7 @@ describe("domain reducer", () => {
       sessionId: "session-1",
       request: {
         id: "request-2",
+        runId: "run-1",
         kind: "userInput",
         inspection: "none",
         advertisedDecisions: [],
@@ -304,6 +309,7 @@ describe("domain reducer", () => {
 
     const reconciled = reduceCore(reconnected, {
       type: "observeSession",
+      connectionEpoch: 2,
       session: createSession("session-1", "Project work"),
     });
     expect(reconciled.sessions[0]?.freshness).toBe("current");

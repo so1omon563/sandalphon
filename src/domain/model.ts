@@ -54,6 +54,7 @@ export interface RunState {
 
 export interface HumanRequest {
   readonly id: string;
+  readonly runId: string;
   readonly kind: WaitKind;
   readonly inspection: InspectionLevel;
   readonly advertisedDecisions: readonly RequestDecision[];

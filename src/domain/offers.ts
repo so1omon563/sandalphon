@@ -319,7 +319,7 @@ function requestDecisionCandidate(
   let reason = baseReason;
   if (!reason && !request) reason = "noPendingRequest";
   if (!reason && request) {
-    if (!session.run.activeRunId) reason = "noActiveRun";
+    if (session.run.activeRunId !== request.runId) reason = "noActiveRun";
     if (request.kind !== "approval") reason = "unsupported";
     if (!reason && !inspectionSatisfies(request.inspection, inspection)) {
       reason = "requestNotInspectable";

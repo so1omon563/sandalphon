@@ -25,6 +25,7 @@ describe("action offers", () => {
   it("fails consequential offers closed unless state is ready, owned, and current", () => {
     let state = reduceCore(createCoreState(), {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-1", "Work"),
     });
     state = reduceCore(state, {
@@ -43,6 +44,7 @@ describe("action offers", () => {
       }),
       {
         type: "observeSession",
+        connectionEpoch: 1,
         session: createSession("external", "Desktop", "external", "historical"),
       },
     );
@@ -63,6 +65,7 @@ describe("action offers", () => {
   it("offers resume only for known historical resumable sessions", () => {
     const starting = reduceCore(createCoreState(), {
       type: "observeSession",
+      connectionEpoch: 0,
       session: createSession("session-1", "Prior", "resumable", "historical"),
     });
     expect(offer(starting, "ResumeSession")).toMatchObject({
@@ -76,6 +79,7 @@ describe("action offers", () => {
     });
     state = reduceCore(state, {
       type: "observeSession",
+      connectionEpoch: 1,
       session: createSession("session-1", "Prior", "resumable", "historical"),
     });
     expect(offer(state, "ResumeSession")).toMatchObject({ state: "available" });
@@ -98,6 +102,7 @@ describe("action offers", () => {
 
     const partial = waitingState({
       id: "request-1",
+      runId: "run-1",
       kind: "approval",
       inspection: "target",
       advertisedDecisions: ["decline"],
@@ -118,6 +123,7 @@ describe("action offers", () => {
   it("does not turn unrenderable input requests into approval actions", () => {
     const state = waitingState({
       id: "input-1",
+      runId: "run-1",
       kind: "userInput",
       inspection: "none",
       advertisedDecisions: [],
@@ -132,6 +138,7 @@ describe("action offers", () => {
     let state = readyState();
     state = reduceCore(state, {
       type: "observeSession",
+      connectionEpoch: 1,
       session: createSession("session-2", "Other"),
     });
     expect(
@@ -140,22 +147,68 @@ describe("action offers", () => {
         ?.actionOffers.find(({ kind }) => kind === "ChangeNextTurnOptions"),
     ).toMatchObject({ state: "disabled", reason: "noSelectedSession" });
 
-    state = reduceCore(state, {
+    const ignored = reduceCore(state, {
       type: "requestOpened",
       connectionEpoch: 1,
       sessionId: "session-1",
       request: {
         id: "orphan-request",
+        runId: "run-1",
         kind: "approval",
         inspection: "complete",
         advertisedDecisions: ["accept"],
       },
     });
-    expect(offer(state, "ApproveRequest")).toMatchObject({
+    expect(ignored).toBe(state);
+    expect(offer(ignored, "ApproveRequest")).toMatchObject({
+      state: "disabled",
+      reason: "noPendingRequest",
+    });
+    expect(offer(ignored, "CancelRun")).toMatchObject({
       state: "disabled",
       reason: "noActiveRun",
     });
-    expect(offer(state, "CancelRun")).toMatchObject({
+
+    let newerRun = reduceCore(activeState(), {
+      type: "runStarted",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      runId: "run-2",
+      steerability: "steerable",
+    });
+    const beforeRequest = newerRun;
+    newerRun = reduceCore(newerRun, {
+      type: "requestOpened",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      request: {
+        id: "stale-request",
+        runId: "run-1",
+        kind: "approval",
+        inspection: "complete",
+        advertisedDecisions: ["accept"],
+      },
+    });
+    expect(newerRun).toBe(beforeRequest);
+    expect(newerRun.sessions[0]?.pendingRequests).toEqual([]);
+
+    const malformed = {
+      ...activeState(),
+      sessions: activeState().sessions.map((session) => ({
+        ...session,
+        run: { ...session.run, phase: "waiting" as const },
+        pendingRequests: [
+          {
+            id: "stale-request",
+            runId: "older-run",
+            kind: "approval" as const,
+            inspection: "complete" as const,
+            advertisedDecisions: ["accept" as const],
+          },
+        ],
+      })),
+    };
+    expect(offer(malformed, "ApproveRequest")).toMatchObject({
       state: "disabled",
       reason: "noActiveRun",
     });

@@ -139,6 +139,16 @@ describe("presentation", () => {
       observedKeyGrid: [4, 2],
     });
     expect(mismatch.unavailableReasons).toEqual(["profileMismatch"]);
+    expect(
+      mismatch.keyViews
+        .filter(({ actionKind }) => actionKind)
+        .every(
+          ({ enabled, offerToken, unavailableReason }) =>
+            !enabled &&
+            offerToken === undefined &&
+            unavailableReason === "surfaceUnavailable",
+        ),
+    ).toBe(true);
     expect(present(snapshot, plusRuntime(3)).fullStripCoordinated).toBe(false);
   });
 
