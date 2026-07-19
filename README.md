@@ -12,7 +12,8 @@ agent work: useful controls in, legible state and attention out.
 ## Current Status
 
 The repository currently contains the independent foundation, deterministic
-behavioral core, and the first live Stream Deck + integration:
+behavioral core, and verified live integrations for Stream Deck + and the
+15-key Stream Deck capability class:
 
 - an original Node.js 24 and TypeScript Stream Deck plugin;
 - a minimal Foundation Status action;
@@ -34,13 +35,14 @@ behavioral core, and the first live Stream Deck + integration:
   deterministic acceptance fixtures;
 - a generated managed Stream Deck + profile, live SDK key and encoder adapters,
   and physical-device verification on Stream Deck 7.5;
+- a generated managed Classic 15 profile, live 15-key SDK adapter, and the exact
+  accepted key-native roster, session, action, choice, and request surfaces;
 - the original Liminal Signal state palette, icon grammar, deterministic SVG
   references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
-Classic 15 live integration and broader daily-driver behavior remain later
-milestones.
+Broader daily-driver behavior remains a later milestone.
 
 ## Requirements
 

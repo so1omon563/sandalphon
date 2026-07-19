@@ -1,4 +1,4 @@
-import type { ReviewDetail } from "./application.js";
+import type { SurfaceApplicationBoundary } from "./application.js";
 import {
   createConfirmationState,
   reduceConfirmation,
@@ -11,7 +11,6 @@ import type {
   SandalphonSnapshot,
   SessionSnapshot,
 } from "./domain/model.js";
-import type { IntentResult, OfferInvocation } from "./domain/offers.js";
 import { segmentRenderableDetail } from "./detailText.js";
 import {
   moveStreamDeckPlusChoice,
@@ -19,13 +18,7 @@ import {
   type StreamDeckPlusDetailPage,
 } from "./streamDeckPlus.js";
 
-export interface PlusApplicationBoundary {
-  readonly snapshot: SandalphonSnapshot;
-  readonly reviewDetail: ReviewDetail | undefined;
-  onSnapshot(listener: (snapshot: SandalphonSnapshot) => void): () => void;
-  selectSession(sessionId: string): Promise<void>;
-  invoke(invocation: OfferInvocation): Promise<IntentResult>;
-}
+export type PlusApplicationBoundary = SurfaceApplicationBoundary;
 
 export interface PlusKeyView {
   readonly index: number;

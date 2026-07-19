@@ -59,6 +59,8 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
 - dev.so1omon.sandalphon.sdPlugin contains the Stream Deck manifest, generated
   bin/plugin.js bundle, and runtime assets.
 - src/plugin.ts owns SDK registration and connection.
+- src/application.ts owns the shared live Codex lifecycle and the narrow
+  application boundary consumed by both reference-device surfaces.
 - src/actions contains Stream Deck event adapters. Keep business rules out of
   individual action handlers.
 - src/domain contains the transport-neutral state model, reducer, action-offer
@@ -67,14 +69,19 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   coherent device-neutral frames.
 - src/classic15.ts defines the exact managed Classic 15 role map, bounded
   detail pagination, and key-based ordered-choice movement.
+- src/classic15Mvp.ts and src/streamDeckClassic15Adapter.ts apply that map to
+  the live application boundary and the exact 5-by-3 SDK device contract.
 - src/streamDeckPlus.ts defines the exact managed Stream Deck + key, encoder,
   touch, bounded-detail, and ordered-choice contract.
 - src/detailText.ts contains the shared visible-detail grapheme safety boundary
   used by both reference profiles.
 - src/harness.ts provides deterministic simulated Codex and surface boundaries;
   it is test support for the product contract, not live transport.
-- src/foundation.ts retains the minimal installed-plugin status contract until
-  later milestones wire the domain core into the Stream Deck runtime.
+- src/plusMvp.ts and src/streamDeckPlusAdapter.ts apply the managed Plus map to
+  the same live application boundary and the exact key, dial, and strip SDK
+  contract.
+- src/foundation.ts owns package action identifiers and device-specific managed
+  profile names used by the entry action and generated profiles.
 - test contains Vitest unit and manifest-contract coverage.
 - docs/architecture/decisions contains numbered ADRs.
 - artwork/source contains editable original asset sources.

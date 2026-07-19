@@ -52,6 +52,21 @@ input exercised, expected result, and observed result.
 
 Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 
+### Stream Deck 15-key verification — 2026-07-19
+
+- Hardware: Stream Deck Mk.2, using the supported 5-by-3 Stream Deck capability
+  profile.
+- Stream Deck application: 7.5.0 (22885).
+- Profile: generated `Sandalphon Classic 15` single-page profile with 15 managed
+  key contexts.
+- Verified: normal packaged installation without developer mode, successful
+  profile import and selection, clean dynamic images on every physical key, and
+  a physical selected-session press changing the device from the roster to the
+  expected session controls.
+- Physical feedback finding: imported profile titles must be suppressed both in
+  the generated profile state and by the live adapter so they cannot overlap the
+  SVG-rendered labels.
+
 ### Stream Deck + verification — 2026-07-19
 
 - Hardware: standard Stream Deck +.

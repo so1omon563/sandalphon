@@ -48,6 +48,14 @@ export interface ReviewDetail {
   readonly inspection: InspectionLevel;
 }
 
+export interface SurfaceApplicationBoundary {
+  readonly snapshot: SandalphonSnapshot;
+  readonly reviewDetail: ReviewDetail | undefined;
+  onSnapshot(listener: (snapshot: SandalphonSnapshot) => void): () => void;
+  selectSession(sessionId: string): Promise<void>;
+  invoke(invocation: OfferInvocation): Promise<IntentResult>;
+}
+
 interface PendingProviderRequest {
   readonly rpcId: RequestId;
   readonly requestId: string;

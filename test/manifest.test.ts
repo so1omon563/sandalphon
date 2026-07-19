@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FOUNDATION_STATUS_ACTION,
+  MANAGED_CLASSIC15_ACTION,
   MANAGED_PLUS_ACTION,
   MANAGED_PLUS_ENCODER_ACTION,
 } from "../src/foundation.js";
@@ -77,9 +78,10 @@ describe("Stream Deck manifest", () => {
     expect(foundationAction?.SupportedInKeyLogicActions).toBe(false);
   });
 
-  it("separates managed Plus key and encoder action contracts", () => {
+  it("separates managed Classic and Plus action contracts", () => {
     expect(manifest.Actions.map(({ UUID }) => UUID)).toEqual([
       FOUNDATION_STATUS_ACTION,
+      MANAGED_CLASSIC15_ACTION,
       MANAGED_PLUS_ACTION,
       MANAGED_PLUS_ENCODER_ACTION,
     ]);
@@ -90,6 +92,12 @@ describe("Stream Deck manifest", () => {
       VisibleInActionsList: false,
     });
     expect(manifest.Actions[2]).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      SupportedInKeyLogicActions: false,
+      VisibleInActionsList: false,
+    });
+    expect(manifest.Actions[3]).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
       Encoder: { layout: "$A1" },
       SupportedInMultiActions: false,
@@ -98,8 +106,15 @@ describe("Stream Deck manifest", () => {
     });
   });
 
-  it("bundles one immutable Stream Deck + profile without surprise switching", () => {
+  it("bundles immutable reference-device profiles without surprise switching", () => {
     expect(manifest.Profiles).toEqual([
+      {
+        AutoInstall: true,
+        DeviceType: 0,
+        DontAutoSwitchWhenInstalled: true,
+        Name: "profiles/Sandalphon Classic 15",
+        Readonly: true,
+      },
       {
         AutoInstall: true,
         DeviceType: 7,

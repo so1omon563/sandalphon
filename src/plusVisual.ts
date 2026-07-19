@@ -22,8 +22,18 @@ export const LIMINAL_SIGNAL_STATE_ACCENTS: Record<PrimaryState, string> = {
 };
 
 export function renderPlusKey(view: PlusKeyView): string {
-  const label = compactLabel(view.label, 24);
-  const lines = splitLabel(label);
+  return renderManagedKey(view);
+}
+
+export function renderManagedKey(view: {
+  readonly label: string;
+  readonly lines?: readonly string[];
+  readonly enabled: boolean;
+  readonly state: PrimaryState;
+}): string {
+  const lines = view.lines
+    ? view.lines.slice(0, 2)
+    : splitLabel(compactLabel(view.label, 24));
   const accent = LIMINAL_SIGNAL_STATE_ACCENTS[view.state];
   const opacity = view.enabled ? 1 : 0.52;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">

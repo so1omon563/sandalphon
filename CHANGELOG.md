@@ -29,6 +29,8 @@ All notable changes to Sandalphon are recorded here.
   next-turn reasoning integration.
 - Managed Stream Deck + profile with eight dynamic keys, four coordinated dial
   actions, original Liminal Signal rendering, and physical-device validation.
+- Managed Classic 15 profile with 15 dynamic keys, device-aware profile entry,
+  live roster, session, action, choice, request-review, and exit behavior.
 - Bounded 16 MiB raw UTF-8 JSON-RPC line handling for long `thread/resume`
   history pages, while malformed and oversized local-process traffic still
   fails closed.
