@@ -117,6 +117,8 @@ Use Node.js 24 or newer and Stream Deck 7.1 or newer.
 - make build: bundle the plugin into the sdPlugin directory.
 - make validate: run official Stream Deck validation.
 - make package: produce a local installer under dist.
+- make release-candidate: run the canonical gate, create the real installer,
+  and record its source commit, package metadata, size, and SHA-256 evidence.
 - make check: run every pre-PR quality gate.
 
 Use npm ci from a clean checkout. Commit package-lock.json whenever dependency
@@ -172,6 +174,8 @@ manifest contract tests plus the official validate and pack checks.
 - Use exactly one #patch, #minor, or #major marker in titles when a merge should
   create a version tag. Add #release only when the same merge should publish a
   GitHub Release and plugin package. Explain intentional no-bump PRs.
+- Release publication additionally requires every applicable item in
+  docs/release-gate.md and an exact candidate-artifact provenance record.
 - Keep Linear work In Review while its PR is open and move it to Done only after
   merge.
 - Codex review is the default. Merge only after required CI passes, the branch

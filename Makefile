@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck assets test coverage build validate package check
+.PHONY: install format lint typecheck assets test coverage build validate package release-candidate check
 
 NPM ?= npm
 
@@ -31,6 +31,9 @@ validate:
 
 package:
 	$(NPM) run package:plugin
+
+release-candidate:
+	$(NPM) run release:candidate
 
 check:
 	$(NPM) run check

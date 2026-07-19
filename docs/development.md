@@ -44,6 +44,20 @@ coverage, bundle output, manifest structure, and a package dry run.
 This creates an installable streamDeckPlugin file under dist. Local package
 artifacts and generated bundles are ignored by Git.
 
+## Release Candidate
+
+Use the dedicated release target only after the manual gates in
+[First Public Release Gate](release-gate.md) are ready for candidate evidence:
+
+    npm ci
+    make release-candidate
+
+This reruns the complete repository gate, creates the real installer with the
+official Stream Deck pack command, and writes its source commit, package
+identity, compatibility metadata, byte count, and SHA-256 digest to
+`dist/release-evidence.json`. A rebuild is a new candidate and requires new
+evidence.
+
 ## Device Verification
 
 Automated checks cannot prove physical interaction quality. Device milestones

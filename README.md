@@ -40,7 +40,8 @@ behavioral core, and verified live integrations for Stream Deck + and the
 - the original Liminal Signal state palette, icon grammar, deterministic SVG
   references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
-- CI and opt-in semantic version tagging.
+- CI, opt-in semantic version tagging, and an evidence-backed
+  first-public-release gate.
 
 Broader daily-driver behavior remains a later milestone.
 
@@ -49,7 +50,8 @@ Broader daily-driver behavior remains a later milestone.
 - macOS 13 or newer
 - Node.js 24 or newer
 - Stream Deck 7.1 or newer
-- Elgato Stream Deck hardware for device verification
+- Codex CLI 0.144.1
+- Stream Deck Mk.2 or standard Stream Deck + for the supported hardware paths
 
 ## Development
 
@@ -66,7 +68,15 @@ To create a local installer:
 
     make package
 
+To build an evidence-bearing release candidate after all manual release gates
+are satisfied:
+
+    make release-candidate
+
 See [Development](docs/development.md) for the complete local workflow.
+The [first public release gate](docs/release-gate.md) defines the exact support
+boundary, physical evidence, install/upgrade/removal checks, security and
+privacy claims, and artifact provenance required before publication.
 
 ## Design
 

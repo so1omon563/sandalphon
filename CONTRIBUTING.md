@@ -31,6 +31,11 @@ npm run dev:restart restarts the plugin in Stream Deck.
   GitHub Release and installable plugin.
 - Explain why a maintenance PR intentionally omits a version marker.
 
+Release preparation must satisfy the
+[first public release gate](docs/release-gate.md). Do not add `#release` while
+the recorded decision is no-ship or while the candidate artifact differs from
+the reviewed bytes.
+
 Main is protected. Required CI, mergeability, resolved review threads, and the
 bounded Codex review must complete before merge.
 
