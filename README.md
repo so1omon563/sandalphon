@@ -23,13 +23,16 @@ behavioral core:
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - explicit Classic 15 and Stream Deck + capability frames plus simulated Codex
   and surface adapters;
+- an exact Classic 15 managed interaction map with stable anchors, key-native
+  ordered choices, bounded request review, and deterministic acceptance
+  fixtures;
 - the original Liminal Signal state palette, icon grammar, deterministic SVG
   references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
-Live Codex transport, Stream Deck SDK event wiring, exact managed Classic 15
-and Stream Deck + layouts, and daily-driver behavior are intentionally
+Live Codex transport, Stream Deck SDK event wiring, the managed Stream Deck +
+layout, physical-device validation, and daily-driver behavior are intentionally
 delivered in later milestones.
 
 ## Requirements
@@ -67,6 +70,8 @@ See [Design](DESIGN.md) and the
 [architecture decisions](docs/architecture/decisions).
 Visual implementation follows the [Liminal Signal system](docs/visual-language.md)
 and [asset policy](ASSETS.md).
+The accepted Classic profile follows the
+[Classic 15 interaction map](docs/classic-15-interaction-map.md).
 
 ## Independent Implementation
 

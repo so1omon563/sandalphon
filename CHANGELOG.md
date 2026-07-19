@@ -18,3 +18,6 @@ All notable changes to Sandalphon are recorded here.
 - Original Liminal Signal palette, state glyphs, label and motion constraints,
   deterministic Classic and Plus SVG references, contrast tests, and explicit
   asset provenance policy.
+- Exact Classic 15 stable anchors, roster and contextual pages, key-based
+  ordered choices, bounded consequential review, recovery feedback, and
+  deterministic layout acceptance fixtures.
