@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  advanceInvocation,
   createInvocationLedger,
   dispatchOffer,
   releaseEffect,
@@ -173,6 +174,31 @@ describe("action offers", () => {
       result: { status: "accepted", kind: "ApproveRequest" },
     });
     ledger = first.ledger;
+    expect(offer(state, "ApproveRequest")?.state).toBe("available");
+    expect(
+      toSnapshot(state, ledger.claimedEffects).sessions[0]?.actionOffers.filter(
+        ({ kind }) =>
+          kind === "ApproveRequest" ||
+          kind === "RejectRequest" ||
+          kind === "CancelRequest",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        kind: "ApproveRequest",
+        state: "disabled",
+        reason: "alreadyResolving",
+      }),
+      expect.objectContaining({
+        kind: "RejectRequest",
+        state: "disabled",
+        reason: "alreadyResolving",
+      }),
+      expect.objectContaining({
+        kind: "CancelRequest",
+        state: "disabled",
+        reason: "alreadyResolving",
+      }),
+    ]);
     expect(
       dispatchOffer(state, ledger, {
         invocationId: "invoke-1",
@@ -197,6 +223,29 @@ describe("action offers", () => {
         offerToken: token ?? "",
       }).shouldDispatch,
     ).toBe(true);
+  });
+
+  it("tracks pending, uncertain, and authoritative intent outcomes", () => {
+    const state = waitingState();
+    const accepted = dispatchOffer(state, createInvocationLedger(), {
+      invocationId: "invoke-1",
+      offerToken: offer(state, "ApproveRequest")?.offerToken ?? "",
+    }).ledger;
+    expect(advanceInvocation(accepted, "missing", "pending")).toBe(accepted);
+
+    const pending = advanceInvocation(accepted, "invoke-1", "pending");
+    expect(pending.invocationResults["invoke-1"]?.status).toBe("pending");
+    expect(pending.claimedEffects).toHaveLength(1);
+    const uncertain = advanceInvocation(pending, "invoke-1", "uncertain");
+    expect(uncertain.invocationResults["invoke-1"]?.status).toBe("uncertain");
+    expect(uncertain.claimedEffects).toHaveLength(1);
+    const completed = advanceInvocation(uncertain, "invoke-1", "completed");
+    expect(completed.invocationResults["invoke-1"]?.status).toBe("completed");
+    expect(completed.claimedEffects).toEqual([]);
+
+    const failed = advanceInvocation(pending, "invoke-1", "failed");
+    expect(failed.invocationResults["invoke-1"]?.status).toBe("failed");
+    expect(failed.claimedEffects).toEqual([]);
   });
 
   it("rejects stale tokens and invalid or missing choices locally", () => {

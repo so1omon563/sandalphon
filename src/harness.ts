@@ -1,4 +1,5 @@
 import {
+  advanceInvocation,
   createInvocationLedger,
   dispatchOffer,
   toSnapshot,
@@ -25,7 +26,7 @@ export class SimulatedCodex {
   readonly dispatched: OfferInvocation[] = [];
 
   get snapshot(): SandalphonSnapshot {
-    return toSnapshot(this.#state);
+    return toSnapshot(this.#state, this.#ledger.claimedEffects);
   }
 
   receive(event: CoreEvent): SandalphonSnapshot {
@@ -38,6 +39,14 @@ export class SimulatedCodex {
     this.#ledger = decision.ledger;
     if (decision.shouldDispatch) this.dispatched.push(invocation);
     return decision.result;
+  }
+
+  advance(
+    invocationId: string,
+    status: "pending" | "completed" | "failed" | "uncertain",
+  ): IntentResult | undefined {
+    this.#ledger = advanceInvocation(this.#ledger, invocationId, status);
+    return this.#ledger.invocationResults[invocationId];
   }
 }
 

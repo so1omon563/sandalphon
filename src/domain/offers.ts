@@ -27,7 +27,8 @@ export interface OfferInvocation {
 }
 
 export interface IntentResult {
-  readonly status: "rejected" | "accepted";
+  readonly status:
+    "rejected" | "accepted" | "pending" | "completed" | "failed" | "uncertain";
   readonly reason?: "staleOffer" | "invalidOption" | "alreadyResolving";
   readonly kind?: ActionKind;
   readonly effectKey?: string;
@@ -48,12 +49,19 @@ export function createInvocationLedger(): InvocationLedger {
   return { invocationResults: {}, claimedEffects: [] };
 }
 
-export function toSnapshot(state: CoreState): SandalphonSnapshot {
+export function toSnapshot(
+  state: CoreState,
+  claimedEffects: readonly string[] = [],
+): SandalphonSnapshot {
   const sessions = state.sessions.map((session) => ({
     ...session,
     primaryState: derivePrimaryState(state, session),
     actionOffers: issueOffers(state, session).map(({ candidate, token }) =>
-      publicOffer(candidate, token),
+      publicOffer(
+        candidate,
+        token,
+        claimedEffects.includes(candidate.effectKey),
+      ),
     ),
   }));
 
@@ -148,6 +156,26 @@ export function releaseEffect(
   return {
     ...ledger,
     claimedEffects: ledger.claimedEffects.filter((key) => key !== effectKey),
+  };
+}
+
+export function advanceInvocation(
+  ledger: InvocationLedger,
+  invocationId: string,
+  status: "pending" | "completed" | "failed" | "uncertain",
+): InvocationLedger {
+  const current = ledger.invocationResults[invocationId];
+  if (!current?.effectKey) return ledger;
+  const result: IntentResult = { ...current, status };
+  const terminal = status === "completed" || status === "failed";
+  return {
+    invocationResults: {
+      ...ledger.invocationResults,
+      [invocationId]: result,
+    },
+    claimedEffects: terminal
+      ? ledger.claimedEffects.filter((key) => key !== current.effectKey)
+      : ledger.claimedEffects,
   };
 }
 
@@ -332,13 +360,17 @@ function candidate(
   };
 }
 
-function publicOffer(candidate: OfferCandidate, token: string): ActionOffer {
+function publicOffer(
+  candidate: OfferCandidate,
+  token: string,
+  effectClaimed: boolean,
+): ActionOffer {
+  const reason =
+    candidate.reason ?? (effectClaimed ? "alreadyResolving" : undefined);
   return {
     kind: candidate.kind,
-    state: candidate.reason ? "disabled" : "available",
-    ...(candidate.reason
-      ? { reason: candidate.reason }
-      : { offerToken: token }),
+    state: reason ? "disabled" : "available",
+    ...(reason ? { reason } : { offerToken: token }),
     ...(candidate.optionIds ? { optionIds: candidate.optionIds } : {}),
     safety: candidate.safety,
   };

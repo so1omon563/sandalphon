@@ -66,6 +66,19 @@ describe("deterministic harness", () => {
     expect(codex.invoke(invocation).status).toBe("accepted");
     expect(codex.invoke(invocation).status).toBe("accepted");
     expect(codex.dispatched).toEqual([invocation]);
+    expect(
+      codex.snapshot.sessions[0]?.actionOffers.find(
+        ({ kind }) => kind === "ChangeNextTurnOptions",
+      ),
+    ).toMatchObject({ state: "disabled", reason: "alreadyResolving" });
+    expect(codex.advance("missing", "pending")).toBeUndefined();
+    expect(codex.advance("invoke-1", "pending")?.status).toBe("pending");
+    expect(codex.advance("invoke-1", "completed")?.status).toBe("completed");
+    expect(
+      codex.snapshot.sessions[0]?.actionOffers.find(
+        ({ kind }) => kind === "ChangeNextTurnOptions",
+      )?.state,
+    ).toBe("available");
   });
 
   it("invalidates old offers across reconnect until reconciliation", () => {
