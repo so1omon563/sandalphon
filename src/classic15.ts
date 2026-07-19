@@ -89,11 +89,18 @@ export type Classic15DetailPagination =
       readonly available: false;
       readonly reason: "detailTooLarge";
       readonly requiredPages: number;
+    }
+  | {
+      readonly available: false;
+      readonly reason: "detailUnrenderable";
     };
 
 const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
   granularity: "grapheme",
 });
+const CONTROL_OR_FORMAT_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const EMOJI_ZWJ_SEQUENCE =
+  /^\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*(?:\u200d\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*)+$/u;
 
 const VIEW_ROLES = {
   home: [
@@ -217,6 +224,10 @@ export function paginateClassic15Detail(
     GRAPHEME_SEGMENTER.segment(text),
     ({ segment }) => segment,
   );
+  if (graphemes.some((grapheme) => !isRenderableGrapheme(grapheme))) {
+    return { available: false, reason: "detailUnrenderable" };
+  }
+
   const lines =
     graphemes.length === 0
       ? [""]
@@ -271,4 +282,9 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
     result.push(values.slice(index, index + size));
   }
   return result;
+}
+
+function isRenderableGrapheme(grapheme: string): boolean {
+  if (!CONTROL_OR_FORMAT_CHARACTER.test(grapheme)) return true;
+  return EMOJI_ZWJ_SEQUENCE.test(grapheme);
 }

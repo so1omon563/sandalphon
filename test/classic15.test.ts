@@ -133,6 +133,21 @@ describe("Classic 15 interaction contract", () => {
     expect(result.pages[0]?.cells[0]?.lines).toEqual([firstLine, "y"]);
   });
 
+  it("fails closed for unescaped control and directional characters", () => {
+    expect(paginateClassic15Detail("line\nbreak")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
+    expect(paginateClassic15Detail("safe\u202etext")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
+    expect(paginateClassic15Detail("safe\u200dtext")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
+  });
+
   it("fails closed when complete detail exceeds the bounded review surface", () => {
     const pageCapacity = 6 * 2 * CLASSIC15_DETAIL_LINE_LENGTH;
     const result = paginateClassic15Detail(

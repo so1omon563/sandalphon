@@ -205,10 +205,13 @@ The six detail cells are read in key order `K1`, `K2`, `K3`, `K4`, `K6`,
 are first serialized in a visible, reversible form, then paged without
 ellipsis or omitted characters. The executable paginator preserves up to 12
 pages, or 1,728 displayed Unicode grapheme clusters. When complete context
-exceeds that bound or cannot be represented faithfully, Approve and other
-complete-inspection actions are unavailable with `Review in Codex`; a
-target-level Reject or Cancel may remain available when its own exact context
-fits.
+contains unescaped control, invisible-format, line-separator, or bidirectional
+control characters, exceeds that bound, or cannot otherwise be represented
+faithfully, Approve and other complete-inspection actions are unavailable with
+`Review in Codex`; a target-level Reject or Cancel may remain available when
+its own exact context fits. A validated emoji ZWJ grapheme remains renderable;
+an isolated invisible joiner does not. Callers may replace rejected characters
+only through a documented visible, reversible escaping step before pagination.
 
 ### Decision positions
 
