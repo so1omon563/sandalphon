@@ -155,6 +155,11 @@ describe("Classic 15 interaction contract", () => {
       reason: "detailUnrenderable",
     });
     expect(paginateClassic15Detail("❤️").available).toBe(true);
+    expect(paginateClassic15Detail("1️").available).toBe(true);
+    expect(paginateClassic15Detail("A️")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
   });
 
   it("fails closed when complete detail exceeds the bounded review surface", () => {

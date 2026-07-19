@@ -219,6 +219,11 @@ describe("Stream Deck + interaction contract", () => {
       reason: "detailUnrenderable",
     });
     expect(paginateStreamDeckPlusDetail("❤️").available).toBe(true);
+    expect(paginateStreamDeckPlusDetail("1️").available).toBe(true);
+    expect(paginateStreamDeckPlusDetail("A️")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
   });
 
   it("fails closed when complete detail exceeds the strip bound", () => {

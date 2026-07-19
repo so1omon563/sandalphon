@@ -4,7 +4,7 @@ const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
 const UNRENDERABLE_CHARACTER =
   /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/u;
 const EMOJI_PRESENTATION_SEQUENCE =
-  /^\p{Extended_Pictographic}(?:\ufe0f)?(?:\p{Emoji_Modifier})?$/u;
+  /^(?:\p{Extended_Pictographic}(?:\ufe0f)?(?:\p{Emoji_Modifier})?|[#*0-9]\ufe0f)$/u;
 const EMOJI_ZWJ_SEQUENCE =
   /^\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*(?:\u200d\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*)+$/u;
 
