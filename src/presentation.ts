@@ -1,4 +1,5 @@
 import type { ActionKind, SandalphonSnapshot } from "./domain/model.js";
+import { moveStreamDeckPlusChoice } from "./streamDeckPlus.js";
 
 export type SurfaceProfile = "classic15" | "streamDeckPlus";
 export type SurfaceScope = "managed" | "composable";
@@ -137,13 +138,18 @@ export function rotatePreview(
   runtime: SurfaceRuntime,
   ticks: number,
   optionCount: number,
+  pressed = false,
 ): SurfaceRuntime {
   if (runtime.profile !== "streamDeckPlus" || optionCount <= 0 || ticks === 0) {
     return runtime;
   }
-  const previewIndex =
-    (runtime.local.previewIndex + ticks + optionCount * Math.abs(ticks)) %
-    optionCount;
+  const previewIndex = moveStreamDeckPlusChoice(
+    runtime.local.previewIndex,
+    ticks,
+    optionCount,
+    pressed,
+  );
+  if (previewIndex === runtime.local.previewIndex) return runtime;
   return {
     ...runtime,
     local: {

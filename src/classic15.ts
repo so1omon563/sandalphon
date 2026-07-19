@@ -1,4 +1,5 @@
 import type { SurfaceView } from "./presentation.js";
+import { segmentRenderableDetail } from "./detailText.js";
 
 export const CLASSIC15_COLUMNS = 5;
 export const CLASSIC15_ROWS = 3;
@@ -94,13 +95,6 @@ export type Classic15DetailPagination =
       readonly available: false;
       readonly reason: "detailUnrenderable";
     };
-
-const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
-  granularity: "grapheme",
-});
-const CONTROL_OR_FORMAT_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
-const EMOJI_ZWJ_SEQUENCE =
-  /^\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*(?:\u200d\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*)+$/u;
 
 const VIEW_ROLES = {
   home: [
@@ -220,11 +214,8 @@ export function classic15Layout(view: SurfaceView): readonly Classic15Cell[] {
 export function paginateClassic15Detail(
   text: string,
 ): Classic15DetailPagination {
-  const graphemes = Array.from(
-    GRAPHEME_SEGMENTER.segment(text),
-    ({ segment }) => segment,
-  );
-  if (graphemes.some((grapheme) => !isRenderableGrapheme(grapheme))) {
+  const graphemes = segmentRenderableDetail(text);
+  if (!graphemes) {
     return { available: false, reason: "detailUnrenderable" };
   }
 
@@ -282,9 +273,4 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
     result.push(values.slice(index, index + size));
   }
   return result;
-}
-
-function isRenderableGrapheme(grapheme: string): boolean {
-  if (!CONTROL_OR_FORMAT_CHARACTER.test(grapheme)) return true;
-  return EMOJI_ZWJ_SEQUENCE.test(grapheme);
 }

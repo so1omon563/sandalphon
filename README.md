@@ -26,14 +26,16 @@ behavioral core:
 - an exact Classic 15 managed interaction map with stable anchors, key-native
   ordered choices, bounded request review, and deterministic acceptance
   fixtures;
+- an exact Stream Deck + managed interaction map with contextual dial lanes,
+  separate press commits, coordinated strip review, conservative touch, and
+  deterministic acceptance fixtures;
 - the original Liminal Signal state palette, icon grammar, deterministic SVG
   references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
-Live Codex transport, Stream Deck SDK event wiring, the managed Stream Deck +
-layout, physical-device validation, and daily-driver behavior are intentionally
-delivered in later milestones.
+Live Codex transport, Stream Deck SDK event wiring, physical-device validation,
+and daily-driver behavior are intentionally delivered in later milestones.
 
 ## Requirements
 
@@ -72,6 +74,8 @@ Visual implementation follows the [Liminal Signal system](docs/visual-language.m
 and [asset policy](ASSETS.md).
 The accepted Classic profile follows the
 [Classic 15 interaction map](docs/classic-15-interaction-map.md).
+The accepted Plus profile follows the
+[Stream Deck + interaction map](docs/stream-deck-plus-interaction-map.md).
 
 ## Independent Implementation
 

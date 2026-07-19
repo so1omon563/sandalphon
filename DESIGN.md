@@ -93,6 +93,11 @@ selection, roster paging, local navigation, ordered choices, consequential
 review, and recovery. See the
 [Classic 15 Interaction Map](docs/classic-15-interaction-map.md).
 
+The managed Stream Deck + experience has an exact eight-key and four-encoder
+contract for roster and action previews, dial-press choice commit, coordinated
+request detail, conservative touch, consequential review, and recovery. See
+the [Stream Deck + Interaction Map](docs/stream-deck-plus-interaction-map.md).
+
 ## Scope Discipline
 
 The initial implementation does not introduce provider, hardware, persistence,
