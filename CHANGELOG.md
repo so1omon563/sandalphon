@@ -24,3 +24,10 @@ All notable changes to Sandalphon are recorded here.
 - Exact Stream Deck + key anchors, contextual encoder lanes, separate dial
   preview and press commit, coordinated touch-strip review, conservative touch
   behavior, recovery feedback, and deterministic acceptance fixtures.
+- Live Codex 0.144.1 app-server discovery, authentication reuse, historical
+  thread selection, explicit resume, activity, approval, interruption, and
+  next-turn reasoning integration.
+- Managed Stream Deck + profile with eight dynamic keys, four coordinated dial
+  actions, original Liminal Signal rendering, and physical-device validation.
+- Bounded 16 MiB JSON-RPC line handling for long `thread/resume` history pages,
+  while malformed and oversized local-process traffic still fails closed.

@@ -6,20 +6,66 @@
         "Keypad"
       ],
       "Icon": "imgs/actions/foundation-status",
-      "Name": "Foundation Status",
+      "Name": "Enter Sandalphon",
       "States": [
         {
           "Image": "imgs/actions/foundation-status-key",
           "ShowTitle": true,
-          "Title": "Foundation\nReady",
+          "Title": "Enter\nSandalphon",
           "TitleAlignment": "bottom"
         }
       ],
       "SupportedInKeyLogicActions": false,
       "SupportedInMultiActions": false,
-      "Tooltip": "Verify that the Sandalphon plugin foundation is running.",
+      "Tooltip": "Open Sandalphon's managed Stream Deck + profile.",
       "UserTitleEnabled": false,
       "UUID": "dev.so1omon.sandalphon.foundation-status"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/actions/foundation-status",
+      "Name": "Managed Plus Key",
+      "States": [
+        {
+          "Image": "imgs/actions/foundation-status-key",
+          "ShowTitle": false,
+          "Title": "Sandalphon",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "One managed key in Sandalphon's Stream Deck + profile.",
+      "UserTitleEnabled": false,
+      "VisibleInActionsList": false,
+      "UUID": "dev.so1omon.sandalphon.managed-plus"
+    },
+    {
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "$A1"
+      },
+      "Icon": "imgs/actions/foundation-status",
+      "Name": "Managed Plus Encoder",
+      "States": [
+        {
+          "Image": "imgs/actions/foundation-status-key",
+          "ShowTitle": false,
+          "Title": "Sandalphon",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "One managed dial in Sandalphon's Stream Deck + profile.",
+      "UserTitleEnabled": false,
+      "VisibleInActionsList": false,
+      "UUID": "dev.so1omon.sandalphon.managed-plus-encoder"
     }
   ],
   "Author": "Jedidiah Foster",
@@ -36,6 +82,15 @@
     {
       "Platform": "mac",
       "MinimumVersion": "13"
+    }
+  ],
+  "Profiles": [
+    {
+      "AutoInstall": true,
+      "DeviceType": 7,
+      "DontAutoSwitchWhenInstalled": true,
+      "Name": "profiles/Sandalphon Plus",
+      "Readonly": true
     }
   ],
   "SDKVersion": 3,

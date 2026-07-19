@@ -11,8 +11,8 @@ agent work: useful controls in, legible state and attention out.
 
 ## Current Status
 
-The repository currently contains the independent foundation and deterministic
-behavioral core:
+The repository currently contains the independent foundation, deterministic
+behavioral core, and the first live Stream Deck + integration:
 
 - an original Node.js 24 and TypeScript Stream Deck plugin;
 - a minimal Foundation Status action;
@@ -21,21 +21,26 @@ behavioral core:
 - immutable agent/session/run state reduction with latched terminal results;
 - revision- and connection-bound action offers with fail-closed validation;
 - deterministic confirmation, invocation locking, and duplicate suppression;
-- explicit Classic 15 and Stream Deck + capability frames plus simulated Codex
-  and surface adapters;
+- an owned Codex app-server lifecycle with validated local configuration,
+  bounded JSON-RPC framing, live session discovery, resume, and next-turn
+  settings;
+- explicit Classic 15 and Stream Deck + capability frames plus deterministic
+  simulated boundaries;
 - an exact Classic 15 managed interaction map with stable anchors, key-native
   ordered choices, bounded request review, and deterministic acceptance
   fixtures;
 - an exact Stream Deck + managed interaction map with contextual dial lanes,
   separate press commits, coordinated strip review, conservative touch, and
   deterministic acceptance fixtures;
+- a generated managed Stream Deck + profile, live SDK key and encoder adapters,
+  and physical-device verification on Stream Deck 7.5;
 - the original Liminal Signal state palette, icon grammar, deterministic SVG
   references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
-Live Codex transport, Stream Deck SDK event wiring, physical-device validation,
-and daily-driver behavior are intentionally delivered in later milestones.
+Classic 15 live integration and broader daily-driver behavior remain later
+milestones.
 
 ## Requirements
 

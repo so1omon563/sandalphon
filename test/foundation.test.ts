@@ -5,8 +5,8 @@ import { FOUNDATION_VIEW } from "../src/foundation.js";
 describe("foundation view", () => {
   it("identifies the bootstrap as ready without claiming agent integration", () => {
     expect(FOUNDATION_VIEW).toEqual({
-      title: "Foundation\nReady",
-      logMessage: "Sandalphon plugin foundation is ready.",
+      title: "Enter\nSandalphon",
+      logMessage: "Sandalphon is ready to open its managed profile.",
     });
   });
 

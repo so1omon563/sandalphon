@@ -76,6 +76,9 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
   Favorites, and Custom.
 - Rotation changes only local preview. Session selection occurs on a new `E2`
   or `E3` press and acknowledges no result.
+- An uncommitted `E2` session is titled Preview; the title returns to Session
+  only after the selecting press is reflected in the current snapshot.
+- A lane omits rotate or press affordances when no distinct valid choice exists.
 - `K2` is labeled Start, Resume, Cancel run, or Retry only when the current
   exact offer supports that state. Consequential variants enter review; the
   entry press never dispatches them.
@@ -99,6 +102,8 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
   result acknowledgement follows the accepted inspection rule.
 - `E1` press invokes only a current release-level offer or enters the current
   safety review. It never performs the final reviewPress or reviewHold step.
+- The dedicated `E2` reasoning choice is not duplicated in the `E1` action
+  catalog.
 - `E2` is enabled only for an advertised turn-boundary choice. Rotation does
   not wrap; press revalidates and commits the current preview without starting
   work.

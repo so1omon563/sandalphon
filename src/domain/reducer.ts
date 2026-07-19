@@ -80,6 +80,12 @@ type ProviderSessionEvent =
       readonly type: "markStale";
       readonly connectionEpoch: number;
       readonly sessionId: string;
+    }
+  | {
+      readonly type: "nextTurnReasoningChanged";
+      readonly connectionEpoch: number;
+      readonly sessionId: string;
+      readonly reasoningEffort: string;
     };
 
 export function createCoreState(): CoreState {
@@ -289,6 +295,24 @@ function reduceSessionEvent(
       break;
     case "markStale":
       next = { ...session, freshness: "stale" };
+      break;
+    case "nextTurnReasoningChanged":
+      if (
+        session.run.phase !== "idle" ||
+        !session.nextTurnSettings.reasoningOptions.includes(
+          event.reasoningEffort,
+        )
+      ) {
+        return state;
+      }
+      next = {
+        ...session,
+        nextTurnSettings: {
+          ...session.nextTurnSettings,
+          revision: session.nextTurnSettings.revision + 1,
+          reasoningEffort: event.reasoningEffort,
+        },
+      };
       break;
   }
 
