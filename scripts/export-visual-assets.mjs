@@ -1,4 +1,4 @@
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +6,10 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const languagePath = resolve(repositoryRoot, "artwork/visual-language.json");
 const language = JSON.parse(await readFile(languagePath, "utf8"));
 const checkOnly = process.argv.includes("--check");
+const generatedRoots = [
+  resolve(repositoryRoot, "artwork/generated/key"),
+  resolve(repositoryRoot, "artwork/generated/touch"),
+];
 
 const outputs = language.stateOrder.flatMap((stateName) => {
   const state = language.states[stateName];
@@ -23,6 +27,19 @@ const outputs = language.stateOrder.flatMap((stateName) => {
 });
 
 const stale = [];
+const expectedPaths = new Set(outputs.map(({ path }) => path));
+for (const root of generatedRoots) {
+  for (const entry of await directoryEntries(root)) {
+    const path = resolve(root, entry.name);
+    if (expectedPaths.has(path)) continue;
+    if (checkOnly || !entry.isFile()) {
+      stale.push(relativePath(path));
+    } else {
+      await unlink(path);
+    }
+  }
+}
+
 for (const output of outputs) {
   if (checkOnly) {
     let current;
@@ -56,7 +73,7 @@ function renderKey(stateName, state) {
   <rect width="${width}" height="${height}" rx="${cornerRadius}" fill="${colors.canvas}" />
   <rect x="8" y="8" width="128" height="128" rx="14" fill="${colors.surface}" />
   <rect x="8" y="8" width="8" height="128" rx="4" fill="${state.accent}" />
-  ${renderGlyph(state.glyph, state.accent, 72, 53, 1)}
+  ${renderGlyph(state.glyph, state.accent, 72, 53, 1, geometry)}
   <text x="72" y="116" fill="${colors.text}" font-family="${typography.family}" font-size="${typography.key.size}" font-weight="${typography.key.weight}" text-anchor="middle">${state.label}</text>
   <metadata>state=${stateName}; source=artwork/visual-language.json; license=MIT</metadata>
 </svg>
@@ -69,7 +86,7 @@ function renderTouch(stateName, state) {
   return `${svgOpen(width, height, `${state.label} touch-strip status`)}
   <rect width="${width}" height="${height}" rx="${cornerRadius}" fill="${colors.canvas}" />
   <rect x="6" y="6" width="188" height="88" rx="9" fill="${colors.surface}" />
-  ${renderGlyph(state.glyph, state.accent, 35, 48, 0.72)}
+  ${renderGlyph(state.glyph, state.accent, 35, 48, 0.72, geometry)}
   <text x="68" y="44" fill="${colors.text}" font-family="${typography.family}" font-size="${typography.touch.titleSize}" font-weight="${typography.touch.weight}">${state.label}</text>
   <text x="68" y="66" fill="${colors.mutedText}" font-family="${typography.family}" font-size="${typography.touch.detailSize}" font-weight="500">Agent state</text>
   <rect x="12" y="84" width="176" height="4" rx="2" fill="${state.accent}" />
@@ -78,9 +95,9 @@ function renderTouch(stateName, state) {
 `;
 }
 
-function renderGlyph(glyph, color, x, y, scale) {
+function renderGlyph(glyph, color, x, y, scale, geometry) {
   const transform = `translate(${x} ${y}) scale(${scale})`;
-  const stroke = `fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"`;
+  const stroke = `fill="none" stroke="${color}" stroke-width="${geometry.strokeWidth}" stroke-linecap="${geometry.lineCap}" stroke-linejoin="${geometry.lineJoin}"`;
   switch (glyph) {
     case "rest":
       return `<g transform="${transform}" ${stroke}><circle r="18" /><path d="M-9 0h18" /></g>`;
@@ -105,4 +122,13 @@ function svgOpen(width, height, label) {
 
 function relativePath(path) {
   return path.slice(repositoryRoot.length + 1);
+}
+
+async function directoryEntries(path) {
+  try {
+    return await readdir(path, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
 }
