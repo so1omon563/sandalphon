@@ -296,10 +296,12 @@ describe("action offers", () => {
     const completed = advanceInvocation(uncertain, "invoke-1", "completed");
     expect(completed.invocationResults["invoke-1"]?.status).toBe("completed");
     expect(completed.claimedEffects).toEqual([]);
+    expect(advanceInvocation(completed, "invoke-1", "pending")).toBe(completed);
 
     const failed = advanceInvocation(pending, "invoke-1", "failed");
     expect(failed.invocationResults["invoke-1"]?.status).toBe("failed");
     expect(failed.claimedEffects).toEqual([]);
+    expect(advanceInvocation(failed, "invoke-1", "uncertain")).toBe(failed);
 
     const withRejection = dispatchOffer(state, accepted, {
       invocationId: "bad",

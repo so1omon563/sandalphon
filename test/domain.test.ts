@@ -314,5 +314,39 @@ describe("domain reducer", () => {
     });
     expect(reconciled.sessions[0]?.freshness).toBe("current");
     expect(toSnapshot(reconciled).sessions[0]?.primaryState).toBe("idle");
+
+    expect(
+      reduceCore(reconciled, {
+        type: "connectionReady",
+        connectionEpoch: 1,
+      }),
+    ).toBe(reconciled);
+    expect(
+      reduceCore(reconciled, {
+        type: "connectionReady",
+        connectionEpoch: 2,
+      }),
+    ).toBe(reconciled);
+  });
+
+  it("ignores request resolution after the request is no longer pending", () => {
+    let state = waitingState();
+    state = reduceCore(state, {
+      type: "runCompleted",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      runId: "run-1",
+      outcome: "completed",
+      retryable: false,
+    });
+    const completed = state;
+    state = reduceCore(state, {
+      type: "requestResolved",
+      connectionEpoch: 1,
+      sessionId: "session-1",
+      requestId: "request-1",
+    });
+    expect(state).toBe(completed);
+    expect(state.sessions[0]?.run.phase).toBe("idle");
   });
 });

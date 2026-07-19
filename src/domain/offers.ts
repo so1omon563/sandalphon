@@ -166,6 +166,9 @@ export function advanceInvocation(
 ): InvocationLedger {
   const current = ledger.invocationResults[invocationId];
   if (!current?.effectKey) return ledger;
+  if (current.status === "completed" || current.status === "failed") {
+    return ledger;
+  }
   const result: IntentResult = { ...current, status };
   const terminal = status === "completed" || status === "failed";
   return {

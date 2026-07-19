@@ -121,6 +121,7 @@ export function reduceCore(state: CoreState, event: CoreEvent): CoreState {
 
   switch (event.type) {
     case "connectionReady":
+      if (event.connectionEpoch <= state.connectionEpoch) return state;
       return revise(state, {
         ...state,
         connectionEpoch: event.connectionEpoch,
@@ -216,6 +217,9 @@ function reduceSessionEvent(
       break;
     }
     case "requestResolved": {
+      if (!session.pendingRequests.some(({ id }) => id === event.requestId)) {
+        return state;
+      }
       const pendingRequests = session.pendingRequests.filter(
         ({ id }) => id !== event.requestId,
       );
