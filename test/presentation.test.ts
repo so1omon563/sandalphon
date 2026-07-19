@@ -188,10 +188,11 @@ describe("presentation", () => {
     expect(frame.encoderViews[0]?.optionIds).toBeUndefined();
   });
 
-  it("previews Plus choices without committing and wraps in both directions", () => {
+  it("previews Plus choices without committing, wrapping, or pressed rotation", () => {
     const plus = plusRuntime();
     expect(rotatePreview(plus, 1, 3).local.previewIndex).toBe(1);
-    expect(rotatePreview(plus, -1, 3).local.previewIndex).toBe(2);
+    expect(rotatePreview(plus, -1, 3)).toBe(plus);
+    expect(rotatePreview(plus, 1, 3, true)).toBe(plus);
     expect(rotatePreview(plus, 0, 3)).toBe(plus);
     expect(rotatePreview(plus, 1, 0)).toBe(plus);
     const classic = classicRuntime();

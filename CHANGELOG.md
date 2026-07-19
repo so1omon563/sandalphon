@@ -21,3 +21,6 @@ All notable changes to Sandalphon are recorded here.
 - Exact Classic 15 stable anchors, roster and contextual pages, key-based
   ordered choices, bounded consequential review, recovery feedback, and
   deterministic layout acceptance fixtures.
+- Exact Stream Deck + key anchors, contextual encoder lanes, separate dial
+  preview and press commit, coordinated touch-strip review, conservative touch
+  behavior, recovery feedback, and deterministic acceptance fixtures.
