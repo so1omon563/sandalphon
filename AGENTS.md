@@ -58,7 +58,14 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
 - src/plugin.ts owns SDK registration and connection.
 - src/actions contains Stream Deck event adapters. Keep business rules out of
   individual action handlers.
-- src/foundation.ts is the current minimal pure foundation contract.
+- src/domain contains the transport-neutral state model, reducer, action-offer
+  validation, invocation locking, and consequential confirmation reducer.
+- src/presentation.ts resolves the two reference capability profiles into
+  coherent device-neutral frames.
+- src/harness.ts provides deterministic simulated Codex and surface boundaries;
+  it is test support for the product contract, not live transport.
+- src/foundation.ts retains the minimal installed-plugin status contract until
+  later milestones wire the domain core into the Stream Deck runtime.
 - test contains Vitest unit and manifest-contract coverage.
 - docs/architecture/decisions contains numbered ADRs.
 - artwork/source contains editable original asset sources.

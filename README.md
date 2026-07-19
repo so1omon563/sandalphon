@@ -11,17 +11,24 @@ agent work: useful controls in, legible state and attention out.
 
 ## Current Status
 
-The repository currently contains the independent foundation:
+The repository currently contains the independent foundation and deterministic
+behavioral core:
 
 - an original Node.js 24 and TypeScript Stream Deck plugin;
 - a minimal Foundation Status action;
 - strict formatting, linting, type checking, tests, coverage, build, validation,
   and packaging gates;
+- immutable agent/session/run state reduction with latched terminal results;
+- revision- and connection-bound action offers with fail-closed validation;
+- deterministic confirmation, invocation locking, and duplicate suppression;
+- explicit Classic 15 and Stream Deck + capability frames plus simulated Codex
+  and surface adapters;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
-Codex transport, domain state, managed Classic 15 and Stream Deck + profiles,
-and daily-driver behavior are intentionally delivered in later milestones.
+Live Codex transport, Stream Deck SDK event wiring, exact managed Classic 15
+and Stream Deck + layouts, and daily-driver behavior are intentionally
+delivered in later milestones.
 
 ## Requirements
 

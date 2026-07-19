@@ -13,3 +13,5 @@ All notable changes to Sandalphon are recorded here.
   validation, and package dry-run gates.
 - CI, opt-in semantic version tagging, contribution, design, security,
   licensing, and architecture-decision conventions.
+- Deterministic agent state, action-offer, confirmation, capability-frame, and
+  simulated-adapter contracts with fail-closed stale-input and recovery tests.
