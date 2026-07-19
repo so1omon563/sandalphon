@@ -88,6 +88,11 @@ Editable JSON and SVG sources are authoritative, generated references are
 deterministic, and every current asset is repository-authored under MIT. See
 [Visual Language](docs/visual-language.md) and [Asset Policy](ASSETS.md).
 
+The Classic 15 managed experience has an exact 5-by-3 spatial contract for
+selection, roster paging, local navigation, ordered choices, consequential
+review, and recovery. See the
+[Classic 15 Interaction Map](docs/classic-15-interaction-map.md).
+
 ## Scope Discipline
 
 The initial implementation does not introduce provider, hardware, persistence,

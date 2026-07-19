@@ -41,7 +41,8 @@ There are no child AGENTS.md files yet. This root owns the contracts for:
 - src: plugin bootstrap, application/domain seams, Stream Deck presentation,
   and supported agent integrations.
 - test: deterministic unit and contract tests.
-- docs: development guidance and architecture decisions.
+- docs: development guidance, architecture decisions, and the accepted Classic
+  15 interaction map.
 - artwork: editable sources for original Sandalphon visual assets.
 - scripts: deterministic repository tooling, including visual-asset export and
   stale-output checks.
@@ -64,6 +65,8 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   validation, invocation locking, and consequential confirmation reducer.
 - src/presentation.ts resolves the two reference capability profiles into
   coherent device-neutral frames.
+- src/classic15.ts defines the exact managed Classic 15 role map, bounded
+  detail pagination, and key-based ordered-choice movement.
 - src/harness.ts provides deterministic simulated Codex and surface boundaries;
   it is test support for the product contract, not live transport.
 - src/foundation.ts retains the minimal installed-plugin status contract until
