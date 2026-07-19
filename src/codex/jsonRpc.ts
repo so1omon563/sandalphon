@@ -10,8 +10,8 @@ export interface RpcMessage {
   readonly params?: unknown;
   readonly result?: unknown;
   readonly error?: {
-    readonly code?: number;
-    readonly message?: string;
+    readonly code: number;
+    readonly message: string;
   };
 }
 
@@ -79,19 +79,35 @@ export class JsonRpcPeer {
       return;
     }
 
-    if (typeof message.id === "number" && !message.method) {
-      const pending = this.#pending.get(message.id);
-      if (!pending) return;
-      this.#pending.delete(message.id);
-      if (message.error) {
-        pending.reject(new Error("appServerRequestFailed"));
-      } else {
-        pending.resolve(message.result);
-      }
-      return;
-    }
     if (typeof message.method === "string") {
       this.#onServerMessage(message);
+      return;
+    }
+    if (message.method !== undefined || typeof message.id !== "number") {
+      this.close(new Error("appServerInvalidMessage"));
+      return;
+    }
+
+    const hasResult = Object.hasOwn(message, "result");
+    const hasError = Object.hasOwn(message, "error");
+    if (
+      hasResult === hasError ||
+      (hasError &&
+        (!isRecord(message.error) ||
+          typeof message.error.code !== "number" ||
+          typeof message.error.message !== "string"))
+    ) {
+      this.close(new Error("appServerInvalidMessage"));
+      return;
+    }
+
+    const pending = this.#pending.get(message.id);
+    if (!pending) return;
+    this.#pending.delete(message.id);
+    if (message.error) {
+      pending.reject(new Error("appServerRequestFailed"));
+    } else {
+      pending.resolve(message.result);
     }
   }
 
@@ -107,6 +123,8 @@ export class JsonRpcPeer {
   }
 }
 
-function isRecord(value: unknown): value is RpcMessage {
+function isRecord(
+  value: unknown,
+): value is RpcMessage & Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

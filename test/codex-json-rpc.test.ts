@@ -95,5 +95,23 @@ describe("Codex JSON-RPC peer", () => {
     oversized.receive("x".repeat(MAX_APP_SERVER_LINE_LENGTH + 1));
     expect(oversized.closed).toBe(true);
     await expect(oversizedPending).rejects.toThrow("appServerLineTooLarge");
+
+    const incomplete = new JsonRpcPeer(
+      () => undefined,
+      () => undefined,
+    );
+    const incompletePending = incomplete.request("thread/resume", {});
+    incomplete.receive('{"id":1}');
+    await expect(incompletePending).rejects.toThrow("appServerInvalidMessage");
+
+    const conflicting = new JsonRpcPeer(
+      () => undefined,
+      () => undefined,
+    );
+    const conflictingPending = conflicting.request("thread/list", {});
+    conflicting.receive(
+      '{"id":1,"result":{},"error":{"code":-1,"message":"error"}}',
+    );
+    await expect(conflictingPending).rejects.toThrow("appServerInvalidMessage");
   });
 });

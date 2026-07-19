@@ -206,11 +206,11 @@ describe("Stream Deck + MVP surface", () => {
   });
 
   it("renders bounded unavailable feedback and emits Exit locally", async () => {
-    const snapshot = toSnapshot(readyState());
-    const application = new SurfaceApplication({
-      ...snapshot,
-      integration: { phase: "unavailable", reason: "unsupportedVersion" },
+    const state = reduceCore(createCoreState(), {
+      type: "connectionUnavailable",
+      reason: "unsupportedVersion",
     });
+    const application = new SurfaceApplication(toSnapshot(state));
     const surface = new PlusMvpSurface(application);
     expect(surface.frame.view).toBe("unavailable");
     expect(surface.frame.encoders.slice(0, 2)).toMatchObject([

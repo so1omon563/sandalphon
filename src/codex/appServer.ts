@@ -1,8 +1,9 @@
+import { Buffer } from "node:buffer";
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
-import { promisify } from "node:util";
+import { promisify, TextDecoder } from "node:util";
 
 import {
   selectCodexBinary,
@@ -16,6 +17,7 @@ import {
 } from "./jsonRpc.js";
 
 const execFileAsync = promisify(execFile);
+const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 
 export interface CodexThreadSummary {
   readonly id: string;
@@ -100,26 +102,21 @@ export class LocalCodexRuntime implements CodexRuntime {
       peer.close(error);
       for (const listener of closeListeners) listener();
     };
-    let buffer = "";
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      buffer += chunk;
-      let newline = buffer.indexOf("\n");
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline);
-        buffer = buffer.slice(newline + 1);
-        if (line.trim().length > 0) {
+    let pendingBytes: Buffer = Buffer.alloc(0);
+    child.stdout.on("data", (chunk: Buffer) => {
+      try {
+        const decoded = decodeAppServerChunk(pendingBytes, chunk);
+        pendingBytes = decoded.pending;
+        for (const line of decoded.lines) {
           peer.receive(line);
           if (peer.closed) {
-            close(new Error("appServerProtocolError"));
-            child.kill();
-            return;
+            throw new Error("appServerProtocolError");
           }
         }
-        newline = buffer.indexOf("\n");
-      }
-      if (buffer.length > MAX_APP_SERVER_LINE_LENGTH) {
-        close(new Error("appServerLineTooLarge"));
+      } catch (error) {
+        close(
+          error instanceof Error ? error : new Error("appServerProtocolError"),
+        );
         child.kill();
       }
     });
@@ -145,8 +142,56 @@ export class LocalCodexRuntime implements CodexRuntime {
       },
     };
 
+    return initializeCodexConnection(connection);
+  }
+}
+
+export interface DecodedAppServerChunk {
+  readonly pending: Buffer;
+  readonly lines: readonly string[];
+}
+
+export function decodeAppServerChunk(
+  pending: Buffer,
+  chunk: Buffer,
+): DecodedAppServerChunk {
+  const bytes = pending.length === 0 ? chunk : Buffer.concat([pending, chunk]);
+  const lines: string[] = [];
+  let start = 0;
+  let newline = bytes.indexOf(0x0a, start);
+  while (newline >= 0) {
+    const line = bytes.subarray(start, newline);
+    if (line.length > MAX_APP_SERVER_LINE_LENGTH) {
+      throw new Error("appServerLineTooLarge");
+    }
+    if (line.length > 0) {
+      let decoded: string;
+      try {
+        decoded = UTF8_DECODER.decode(line);
+      } catch {
+        throw new Error("appServerInvalidMessage");
+      }
+      if (decoded.trim().length > 0) lines.push(decoded);
+    }
+    start = newline + 1;
+    newline = bytes.indexOf(0x0a, start);
+  }
+  const remainder = bytes.subarray(start);
+  if (remainder.length > MAX_APP_SERVER_LINE_LENGTH) {
+    throw new Error("appServerLineTooLarge");
+  }
+  return { pending: Buffer.from(remainder), lines };
+}
+
+export async function initializeCodexConnection(
+  connection: CodexConnection,
+): Promise<CodexConnection> {
+  try {
     await initialize(connection);
     return connection;
+  } catch (error) {
+    connection.close();
+    throw error;
   }
 }
 
@@ -203,7 +248,6 @@ async function initialize(connection: CodexConnection): Promise<void> {
     readonly requiresOpenaiAuth: boolean;
   }>("account/read", { refreshToken: false });
   if (account.requiresOpenaiAuth && account.account === null) {
-    connection.close();
     throw new Error("codexUnauthenticated");
   }
 }

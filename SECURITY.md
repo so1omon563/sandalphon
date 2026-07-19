@@ -27,8 +27,9 @@ plugin packaging, or update integrity may be affected.
 Security-sensitive areas include:
 
 - Codex child-process ownership and app-server message validation;
-- the 16 MiB per-line Codex app-server boundary, which accepts bounded resume
-  history pages and closes the transport on malformed or oversized traffic;
+- the 16 MiB raw UTF-8 per-line Codex app-server boundary, which accepts bounded
+  resume history pages and closes the transport on malformed or oversized
+  traffic;
 - approval, interruption, retry, redirect, and action-offer validation;
 - settings validation, migration, and secret exclusion;
 - content-free logging and error handling;

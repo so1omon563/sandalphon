@@ -299,12 +299,12 @@ export class PlusMvpSurface {
   }
 
   async #activateKey(index: number, now: number): Promise<void> {
-    const selected = this.#selectedSession();
-    if (!selected) return;
     if (index === 7) {
       for (const listener of this.#exitListeners) listener();
       return;
     }
+    const selected = this.#selectedSession();
+    if (!selected) return;
     if (index === 4) {
       this.#view = "home";
       this.#review = undefined;

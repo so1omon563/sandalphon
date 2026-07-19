@@ -62,8 +62,8 @@ Do not claim Classic 15 or Stream Deck + behavior from a build alone.
   session preview and explicit selection, touch navigation, historical-thread
   Resume, and next-turn reasoning preview.
 - Long-thread evidence: Resume accepted a 5.74 MiB JSON-RPC history response
-  without disconnecting after the bounded transport limit was raised to
-  16 MiB. The prior 1 MiB limit failed closed as Offline/disconnected.
+  without disconnecting after the bounded raw UTF-8 transport limit was raised
+  to 16 MiB. The prior 1 MiB limit failed closed as Offline/disconnected.
 - Physical feedback finding: an uncommitted session now labels its strip lane
   Preview and returns to Session only after the selecting dial press. Lanes
   omit rotate or press descriptions when no distinct valid choice exists.

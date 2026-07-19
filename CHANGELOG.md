@@ -29,5 +29,6 @@ All notable changes to Sandalphon are recorded here.
   next-turn reasoning integration.
 - Managed Stream Deck + profile with eight dynamic keys, four coordinated dial
   actions, original Liminal Signal rendering, and physical-device validation.
-- Bounded 16 MiB JSON-RPC line handling for long `thread/resume` history pages,
-  while malformed and oversized local-process traffic still fails closed.
+- Bounded 16 MiB raw UTF-8 JSON-RPC line handling for long `thread/resume`
+  history pages, while malformed and oversized local-process traffic still
+  fails closed.
