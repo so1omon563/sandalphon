@@ -68,6 +68,13 @@ Do not claim Classic 15 or Stream Deck + behavior from a build alone.
   while correctly withholding stale session authority. Selecting the session
   and explicitly invoking Resume restored the idle state without reinstalling
   the plugin or profile.
+- Accepted validation boundary: the shipped v0 controls cannot originate a new
+  turn or submit composer input, so an idle resumed session cannot deliberately
+  produce live attention or a consequential offer on the Sandalphon-owned
+  connection. Deterministic Classic tests cover request attention, complete
+  review, stale-frame rejection, separate confirmation, and the 800 ms approval
+  hold. An organically reachable live attention and consequential-action case
+  remains part of SO1-175 daily-driver validation.
 - Physical feedback finding: imported profile titles must be suppressed both in
   the generated profile state and by the live adapter so they cannot overlap the
   SVG-rendered labels.
