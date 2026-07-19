@@ -11,6 +11,12 @@ const OUTPUT_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../dev.so1omon.sandalphon.sdPlugin/profiles/Sandalphon Plus.streamDeckProfile",
 );
+const CLASSIC15_PROFILE_DIRECTORY =
+  "7C65D87C-68CB-4F42-82C6-109E6A5DF372.sdProfile";
+const CLASSIC15_OUTPUT_PATH = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../dev.so1omon.sandalphon.sdPlugin/profiles/Sandalphon Classic 15.streamDeckProfile",
+);
 
 const profileManifest = {
   Device: {
@@ -37,6 +43,8 @@ function profileAction(name, uuid) {
         FontSize: 9,
         FontUnderline: false,
         Image: "",
+        ShowTitle: false,
+        Title: "",
         TitleAlignment: "bottom",
         TitleColor: "#ffffff",
       },
@@ -103,6 +111,38 @@ const entries = [
   {
     name: `${PROFILE_DIRECTORY}\\Profiles\\${PROFILE_PAGE_DIRECTORY}\\manifest.json`,
     value: JSON.stringify(pageManifest),
+  },
+];
+
+const classic15Actions = Object.fromEntries(
+  Array.from({ length: 15 }, (_, index) => {
+    const position = `${index % 5},${Math.floor(index / 5)}`;
+    return [
+      position,
+      profileAction(
+        "Managed Classic 15 Key",
+        "dev.so1omon.sandalphon.managed-classic15",
+      ),
+    ];
+  }),
+);
+
+const classic15Manifest = {
+  Actions: classic15Actions,
+  DeviceModel: "20GBA9901",
+  Name: "Sandalphon Classic 15",
+  Version: "1.0",
+};
+
+const classic15Entries = [
+  {
+    directory: true,
+    name: `${CLASSIC15_PROFILE_DIRECTORY}/`,
+    value: "",
+  },
+  {
+    name: `${CLASSIC15_PROFILE_DIRECTORY}/manifest.json`,
+    value: JSON.stringify(classic15Manifest),
   },
 ];
 
@@ -193,17 +233,28 @@ function createZip(files) {
   return Buffer.concat([...localParts, centralDirectory, end]);
 }
 
-const expected = createZip(entries);
+const outputs = [
+  { path: OUTPUT_PATH, expected: createZip(entries), name: "Stream Deck +" },
+  {
+    path: CLASSIC15_OUTPUT_PATH,
+    expected: createZip(classic15Entries),
+    name: "Stream Deck Classic 15",
+  },
+];
 
 if (process.argv.includes("--check")) {
-  const current = await readFile(OUTPUT_PATH).catch(() => undefined);
-  if (current === undefined || !current.equals(expected)) {
-    console.error(
-      "Bundled Stream Deck + profile is stale; run npm run profile:generate.",
-    );
-    process.exitCode = 1;
+  for (const output of outputs) {
+    const current = await readFile(output.path).catch(() => undefined);
+    if (current === undefined || !current.equals(output.expected)) {
+      console.error(
+        `Bundled ${output.name} profile is stale; run npm run profile:generate.`,
+      );
+      process.exitCode = 1;
+    }
   }
 } else {
-  await mkdir(dirname(OUTPUT_PATH), { recursive: true });
-  await writeFile(OUTPUT_PATH, expected);
+  for (const output of outputs) {
+    await mkdir(dirname(output.path), { recursive: true });
+    await writeFile(output.path, output.expected);
+  }
 }

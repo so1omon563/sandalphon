@@ -67,9 +67,9 @@ or racing device input inside the current process.
 Consequential confirmation is a separate deterministic reducer. Review,
 inspection, arming, 800 ms hold, expiry, invalidation, and dispatch do not
 change provider truth by themselves. Simulated Codex, Classic 15, and Stream
-Deck + boundaries prove these rules deterministically; the managed Plus adapter
-then applies the same contracts to the live Codex app-server and Stream Deck
-SDK.
+Deck + boundaries prove these rules deterministically; the managed Classic 15
+and Plus adapters then apply the same contracts to the live Codex app-server
+and Stream Deck SDK.
 
 ## Safety
 

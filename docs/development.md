@@ -52,6 +52,33 @@ input exercised, expected result, and observed result.
 
 Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 
+### Stream Deck 15-key verification — 2026-07-19
+
+- Hardware: Stream Deck Mk.2, using the supported 5-by-3 Stream Deck capability
+  profile.
+- Stream Deck application: 7.5.0 (22885).
+- Profile: generated `Sandalphon Classic 15` single-page profile with 15 managed
+  key contexts.
+- Verified: normal packaged installation without developer mode, successful
+  profile import and selection, clean dynamic images on every physical key, and
+  a physical selected-session press changing the device from the roster to the
+  expected session controls. A physical Resume action changed the selected
+  historical session from unavailable to idle.
+- Restart and recovery: quitting and reopening Stream Deck restored the profile
+  while correctly withholding stale session authority. Selecting the session
+  and explicitly invoking Resume restored the idle state without reinstalling
+  the plugin or profile.
+- Accepted validation boundary: the shipped v0 controls cannot originate a new
+  turn or submit composer input, so an idle resumed session cannot deliberately
+  produce live attention or a consequential offer on the Sandalphon-owned
+  connection. Deterministic Classic tests cover request attention, complete
+  review, stale-frame rejection, separate confirmation, and the 800 ms approval
+  hold. An organically reachable live attention and consequential-action case
+  remains part of SO1-175 daily-driver validation.
+- Physical feedback finding: imported profile titles must be suppressed both in
+  the generated profile state and by the live adapter so they cannot overlap the
+  SVG-rendered labels.
+
 ### Stream Deck + verification — 2026-07-19
 
 - Hardware: standard Stream Deck +.

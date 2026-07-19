@@ -17,9 +17,30 @@
       ],
       "SupportedInKeyLogicActions": false,
       "SupportedInMultiActions": false,
-      "Tooltip": "Open Sandalphon's managed Stream Deck + profile.",
+      "Tooltip": "Open Sandalphon's managed profile for this Stream Deck.",
       "UserTitleEnabled": false,
       "UUID": "dev.so1omon.sandalphon.foundation-status"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/actions/foundation-status",
+      "Name": "Managed Classic 15 Key",
+      "States": [
+        {
+          "Image": "imgs/actions/foundation-status-key",
+          "ShowTitle": false,
+          "Title": "Sandalphon",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "One managed key in Sandalphon's Stream Deck Classic 15 profile.",
+      "UserTitleEnabled": false,
+      "VisibleInActionsList": false,
+      "UUID": "dev.so1omon.sandalphon.managed-classic15"
     },
     {
       "Controllers": [
@@ -85,6 +106,13 @@
     }
   ],
   "Profiles": [
+    {
+      "AutoInstall": true,
+      "DeviceType": 0,
+      "DontAutoSwitchWhenInstalled": true,
+      "Name": "profiles/Sandalphon Classic 15",
+      "Readonly": true
+    },
     {
       "AutoInstall": true,
       "DeviceType": 7,
