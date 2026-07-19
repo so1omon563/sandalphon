@@ -15,3 +15,6 @@ All notable changes to Sandalphon are recorded here.
   licensing, and architecture-decision conventions.
 - Deterministic agent state, action-offer, confirmation, capability-frame, and
   simulated-adapter contracts with fail-closed stale-input and recovery tests.
+- Original Liminal Signal palette, state glyphs, label and motion constraints,
+  deterministic Classic and Plus SVG references, contrast tests, and explicit
+  asset provenance policy.

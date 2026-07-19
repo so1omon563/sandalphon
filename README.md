@@ -23,6 +23,8 @@ behavioral core:
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - explicit Classic 15 and Stream Deck + capability frames plus simulated Codex
   and surface adapters;
+- the original Liminal Signal state palette, icon grammar, deterministic SVG
+  references, and redistributable asset-provenance policy;
 - public contribution, design, security, licensing, and architecture guidance;
 - CI and opt-in semantic version tagging.
 
@@ -63,6 +65,8 @@ speculative provider or hardware frameworks.
 
 See [Design](DESIGN.md) and the
 [architecture decisions](docs/architecture/decisions).
+Visual implementation follows the [Liminal Signal system](docs/visual-language.md)
+and [asset policy](ASSETS.md).
 
 ## Independent Implementation
 

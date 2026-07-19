@@ -12,6 +12,8 @@
   "packageManager": "npm@11.17.0",
   "scripts": {
     "build": "rollup --config",
+    "assets:generate": "node scripts/export-visual-assets.mjs",
+    "assets:check": "node scripts/export-visual-assets.mjs --check",
     "watch": "rollup --config --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -25,7 +27,7 @@
     "dev:link": "npm run build && streamdeck link dev.so1omon.sandalphon.sdPlugin",
     "dev:restart": "streamdeck restart dev.so1omon.sandalphon",
     "dev:unlink": "streamdeck unlink dev.so1omon.sandalphon",
-    "check": "npm run format && npm run lint && npm run typecheck && npm run test:coverage && npm run package:check"
+    "check": "npm run format && npm run lint && npm run typecheck && npm run assets:check && npm run test:coverage && npm run package:check"
   },
   "dependencies": {
     "@elgato/streamdeck": "2.1.0"

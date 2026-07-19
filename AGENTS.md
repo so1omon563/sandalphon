@@ -43,6 +43,8 @@ There are no child AGENTS.md files yet. This root owns the contracts for:
 - test: deterministic unit and contract tests.
 - docs: development guidance and architecture decisions.
 - artwork: editable sources for original Sandalphon visual assets.
+- scripts: deterministic repository tooling, including visual-asset export and
+  stale-output checks.
 - Root project files: public introduction, design, contribution, security,
   licensing, changelog, build, formatting, and package configuration.
 
@@ -131,6 +133,8 @@ manifest contract tests plus the official validate and pack checks.
 ## Testing Guidelines
 
 - Add deterministic tests for every behavior or contract change.
+- Keep `artwork/visual-language.json` authoritative for semantic visual tokens;
+  regenerate and commit `artwork/generated` outputs after token changes.
 - Prefer pure fixtures and fake boundaries over live Codex, network, or Stream
   Deck dependencies.
 - Keep manifest, package identity, minimum runtime, and action safety properties
