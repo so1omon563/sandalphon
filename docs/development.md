@@ -62,7 +62,12 @@ Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 - Verified: normal packaged installation without developer mode, successful
   profile import and selection, clean dynamic images on every physical key, and
   a physical selected-session press changing the device from the roster to the
-  expected session controls.
+  expected session controls. A physical Resume action changed the selected
+  historical session from unavailable to idle.
+- Restart and recovery: quitting and reopening Stream Deck restored the profile
+  while correctly withholding stale session authority. Selecting the session
+  and explicitly invoking Resume restored the idle state without reinstalling
+  the plugin or profile.
 - Physical feedback finding: imported profile titles must be suppressed both in
   the generated profile state and by the live adapter so they cannot overlap the
   SVG-rendered labels.
