@@ -1,7 +1,10 @@
 const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
   granularity: "grapheme",
 });
-const CONTROL_OR_FORMAT_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const UNRENDERABLE_CHARACTER =
+  /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/u;
+const EMOJI_PRESENTATION_SEQUENCE =
+  /^\p{Extended_Pictographic}(?:\ufe0f)?(?:\p{Emoji_Modifier})?$/u;
 const EMOJI_ZWJ_SEQUENCE =
   /^\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*(?:\u200d\p{Extended_Pictographic}(?:\p{Emoji_Modifier}|\ufe0f)*)+$/u;
 
@@ -16,6 +19,9 @@ export function segmentRenderableDetail(
 }
 
 function isRenderableGrapheme(grapheme: string): boolean {
-  if (!CONTROL_OR_FORMAT_CHARACTER.test(grapheme)) return true;
-  return EMOJI_ZWJ_SEQUENCE.test(grapheme);
+  if (!UNRENDERABLE_CHARACTER.test(grapheme)) return true;
+  return (
+    EMOJI_PRESENTATION_SEQUENCE.test(grapheme) ||
+    EMOJI_ZWJ_SEQUENCE.test(grapheme)
+  );
 }

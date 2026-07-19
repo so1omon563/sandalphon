@@ -153,9 +153,10 @@ Each quarter contains at most two 18-grapheme lines. Decision-critical fields
 are first serialized into visible reversible text and then paged without
 ellipsis or omission. The executable paginator preserves up to twelve pages,
 or 1,728 displayed grapheme clusters. An invalid control, invisible-format,
+standalone variation selector, surrogate, private-use, unassigned,
 line-separator, isolated joiner, oversized value, or other unfaithful content
 makes complete-inspection actions unavailable with `Review in Codex`.
-Validated emoji joiner sequences remain intact.
+Validated emoji presentation and joiner sequences remain intact.
 
 ### Decision positions
 

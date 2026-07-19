@@ -197,7 +197,7 @@ describe("Stream Deck + interaction contract", () => {
     expect(result.pages[0]?.cells[0]?.lines).toEqual([firstLine, "y"]);
   });
 
-  it("fails closed for unrenderable control and directional characters", () => {
+  it("fails closed for unrenderable, invisible, and malformed characters", () => {
     expect(paginateStreamDeckPlusDetail("line\nbreak")).toEqual({
       available: false,
       reason: "detailUnrenderable",
@@ -210,6 +210,15 @@ describe("Stream Deck + interaction contract", () => {
       available: false,
       reason: "detailUnrenderable",
     });
+    expect(paginateStreamDeckPlusDetail("\ufe0f")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
+    expect(paginateStreamDeckPlusDetail("\ud800")).toEqual({
+      available: false,
+      reason: "detailUnrenderable",
+    });
+    expect(paginateStreamDeckPlusDetail("❤️").available).toBe(true);
   });
 
   it("fails closed when complete detail exceeds the strip bound", () => {
