@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" role="img" aria-label="Offline touch-strip status">
+  <rect width="200" height="100" rx="12" fill="#090D1C" />
+  <rect x="6" y="6" width="188" height="88" rx="9" fill="#172348" />
+  <g transform="translate(35 48) scale(0.72)" fill="none" stroke="#A7B0C0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><circle r="22" /><path d="M-15 15l30 -30" /></g>
+  <text x="68" y="44" fill="#F5FBFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600">Offline</text>
+  <text x="68" y="66" fill="#C4CEE0" font-family="system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif" font-size="13" font-weight="500">Agent state</text>
+  <rect x="12" y="84" width="176" height="4" rx="2" fill="#A7B0C0" />
+  <metadata>state=unavailable; source=artwork/visual-language.json; license=MIT</metadata>
+</svg>

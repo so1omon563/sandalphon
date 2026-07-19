@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "name": "Liminal Signal",
+  "license": "MIT",
+  "provenance": "repository-authored",
+  "colors": {
+    "canvas": "#090D1C",
+    "surface": "#172348",
+    "text": "#F5FBFF",
+    "mutedText": "#C4CEE0",
+    "focus": "#9A87FF"
+  },
+  "stateOrder": [
+    "idle",
+    "working",
+    "waiting",
+    "completed",
+    "failed",
+    "unavailable"
+  ],
+  "states": {
+    "idle": {
+      "accent": "#8AA7FF",
+      "glyph": "rest",
+      "label": "Idle"
+    },
+    "working": {
+      "accent": "#72E2F1",
+      "glyph": "flow",
+      "label": "Working"
+    },
+    "waiting": {
+      "accent": "#FFD166",
+      "glyph": "pause",
+      "label": "Waiting"
+    },
+    "completed": {
+      "accent": "#72E6A5",
+      "glyph": "check",
+      "label": "Complete"
+    },
+    "failed": {
+      "accent": "#FF7B72",
+      "glyph": "cross",
+      "label": "Failed"
+    },
+    "unavailable": {
+      "accent": "#A7B0C0",
+      "glyph": "blocked",
+      "label": "Offline"
+    }
+  },
+  "typography": {
+    "family": "system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif",
+    "key": {
+      "size": 18,
+      "weight": 700,
+      "maxLines": 2,
+      "maxCharactersPerLine": 12
+    },
+    "touch": {
+      "titleSize": 16,
+      "detailSize": 13,
+      "weight": 600,
+      "maxCharacters": 18
+    }
+  },
+  "geometry": {
+    "key": {
+      "width": 144,
+      "height": 144,
+      "safeInset": 12,
+      "cornerRadius": 18
+    },
+    "touchQuarter": {
+      "width": 200,
+      "height": 100,
+      "safeInset": 12,
+      "cornerRadius": 12
+    },
+    "strokeWidth": 7,
+    "lineCap": "round",
+    "lineJoin": "round"
+  },
+  "motion": {
+    "animatedAssets": false,
+    "looping": false,
+    "attentionTreatment": "static-accent-and-glyph",
+    "transientFeedback": "stream-deck-show-ok-or-alert"
+  }
+}

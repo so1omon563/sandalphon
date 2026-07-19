@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck test coverage build validate package check
+.PHONY: install format lint typecheck assets test coverage build validate package check
 
 NPM ?= npm
 
@@ -13,6 +13,9 @@ lint:
 
 typecheck:
 	$(NPM) run typecheck
+
+assets:
+	$(NPM) run assets:generate
 
 test:
 	$(NPM) test

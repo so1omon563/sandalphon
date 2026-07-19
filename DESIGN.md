@@ -75,6 +75,19 @@ Physical input is not authority by itself. Consequential actions require
 current, inspectable context and fixed confirmation semantics. Stale,
 ambiguous, unsupported, or unowned state narrows capability and fails closed.
 
+## Visual Language
+
+Liminal Signal is Sandalphon's original visual system. It uses one deep dark
+surface, system typography, the existing bridge identity, and six semantic
+state treatments. Every state combines an exact label, a unique geometric
+glyph, and a contrast-tested accent; color never carries meaning alone.
+
+Classic 15 and Stream Deck + share these semantics while using compositions
+native to their displays. V0 status is static: no looping or animated assets.
+Editable JSON and SVG sources are authoritative, generated references are
+deterministic, and every current asset is repository-authored under MIT. See
+[Visual Language](docs/visual-language.md) and [Asset Policy](ASSETS.md).
+
 ## Scope Discipline
 
 The initial implementation does not introduce provider, hardware, persistence,

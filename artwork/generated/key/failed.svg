@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144" role="img" aria-label="Failed key status">
+  <rect width="144" height="144" rx="18" fill="#090D1C" />
+  <rect x="8" y="8" width="128" height="128" rx="14" fill="#172348" />
+  <rect x="8" y="8" width="8" height="128" rx="4" fill="#FF7B72" />
+  <g transform="translate(72 53) scale(1)" fill="none" stroke="#FF7B72" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M-17 -17l34 34M17 -17l-34 34" /></g>
+  <text x="72" y="116" fill="#F5FBFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle">Failed</text>
+  <metadata>state=failed; source=artwork/visual-language.json; license=MIT</metadata>
+</svg>
