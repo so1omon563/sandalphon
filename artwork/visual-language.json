@@ -50,6 +50,62 @@
       "label": "Offline"
     }
   },
+  "actionIconOrder": [
+    "session",
+    "resume",
+    "inspect",
+    "details",
+    "exit",
+    "attention",
+    "review",
+    "reasoning",
+    "retry",
+    "cancel",
+    "back",
+    "home",
+    "previous",
+    "next",
+    "roster",
+    "actions",
+    "apply",
+    "approve",
+    "reject",
+    "offline"
+  ],
+  "actionIcons": {
+    "session": { "glyph": "session", "label": "Session", "accent": "#9A87FF" },
+    "resume": { "glyph": "resume", "label": "Resume", "accent": "#9A87FF" },
+    "inspect": { "glyph": "inspect", "label": "Inspect", "accent": "#9A87FF" },
+    "details": { "glyph": "details", "label": "Details", "accent": "#9A87FF" },
+    "exit": { "glyph": "exit", "label": "Exit", "accent": "#9A87FF" },
+    "attention": {
+      "glyph": "attention",
+      "label": "Attention",
+      "accent": "#FFD166"
+    },
+    "review": { "glyph": "review", "label": "Review", "accent": "#9A87FF" },
+    "reasoning": {
+      "glyph": "reasoning",
+      "label": "Reasoning",
+      "accent": "#9A87FF"
+    },
+    "retry": { "glyph": "retry", "label": "Retry", "accent": "#9A87FF" },
+    "cancel": { "glyph": "cancel", "label": "Cancel", "accent": "#FF7B72" },
+    "back": { "glyph": "back", "label": "Back", "accent": "#9A87FF" },
+    "home": { "glyph": "home", "label": "Home", "accent": "#9A87FF" },
+    "previous": {
+      "glyph": "previous",
+      "label": "Previous",
+      "accent": "#9A87FF"
+    },
+    "next": { "glyph": "next", "label": "Next", "accent": "#9A87FF" },
+    "roster": { "glyph": "roster", "label": "Roster", "accent": "#9A87FF" },
+    "actions": { "glyph": "actions", "label": "Actions", "accent": "#9A87FF" },
+    "apply": { "glyph": "apply", "label": "Apply", "accent": "#72E6A5" },
+    "approve": { "glyph": "approve", "label": "Approve", "accent": "#72E6A5" },
+    "reject": { "glyph": "reject", "label": "Reject", "accent": "#FF7B72" },
+    "offline": { "glyph": "offline", "label": "Offline", "accent": "#A7B0C0" }
+  },
   "typography": {
     "family": "system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Arial, sans-serif",
     "key": {

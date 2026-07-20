@@ -92,15 +92,18 @@ describe("Stream Deck + MVP surface", () => {
     const surface = new PlusMvpSurface(application);
     expect(surface.frame.view).toBe("home");
     expect(surface.frame.keys.slice(0, 3)).toMatchObject([
-      { label: "First thread", state: "unavailable" },
-      { label: "Inspect" },
+      { label: "First thread", state: "unavailable", icon: "session" },
+      { label: "" },
       { label: "Resume", enabled: true },
     ]);
     expect(surface.frame.encoders[2]).toMatchObject({
-      title: "Session",
-      detail: "First thread",
+      title: "Sessions",
+      detail: "First thread · 1/2",
       press: "",
     });
+    expect(surface.frame.encoders[0]).toMatchObject({ title: "", detail: "" });
+    expect(surface.frame.encoders[1]).toMatchObject({ title: "", detail: "" });
+    expect(surface.frame.encoders[3]).toMatchObject({ title: "", detail: "" });
     surface.dispose();
   });
 
@@ -109,24 +112,24 @@ describe("Stream Deck + MVP surface", () => {
     const surface = new PlusMvpSurface(application);
     surface.rotateEncoder(2, 1, false, 100);
     expect(surface.frame.encoders[2]).toMatchObject({
-      title: "Preview",
-      detail: "Second thread",
+      title: "Preview session",
+      detail: "Second thread · 2/2",
       press: "Select",
     });
     await surface.pressEncoder(2, 120);
     expect(application.selectSession).toHaveBeenCalledWith("thread-2");
     expect(surface.frame.encoders[2]).toMatchObject({
-      title: "Session",
-      detail: "Second thread",
+      title: "Sessions",
+      detail: "Second thread · 2/2",
       press: "",
     });
     surface.rotateEncoder(2, 1, true, 130);
-    expect(surface.frame.encoders[2]?.detail).toBe("Second thread");
+    expect(surface.frame.encoders[2]?.detail).toBe("Second thread · 2/2");
 
     surface.touchEncoder(2, true);
     expect(surface.frame.view).toBe("home");
     surface.touchEncoder(2, false);
-    expect(surface.frame.view).toBe("session");
+    expect(surface.frame.view).toBe("home");
   });
 
   it("invokes a release-level primary action only on a matching key release", async () => {
@@ -149,16 +152,19 @@ describe("Stream Deck + MVP surface", () => {
   it("previews and commits an advertised reasoning option with a dial press", async () => {
     const application = new SurfaceApplication(toSnapshot(readyState()));
     const surface = new PlusMvpSurface(application);
-    await releaseKey(surface, 1);
+    await releaseKey(surface, 6);
     expect(surface.frame.view).toBe("session");
     expect(surface.frame.encoders[1]).toMatchObject({
-      title: "Action",
-      detail: "None",
+      title: "",
+      detail: "",
       rotate: "",
       press: "",
     });
     surface.rotateEncoder(2, 1, false, 200);
-    expect(surface.frame.encoders[2]?.detail).toBe("high");
+    expect(surface.frame.encoders[2]).toMatchObject({
+      title: "Preview reasoning",
+      detail: "high",
+    });
     await surface.pressEncoder(2, 220);
     expect(application.invoke).toHaveBeenCalledWith(
       expect.objectContaining({ optionId: "high" }),
@@ -215,12 +221,50 @@ describe("Stream Deck + MVP surface", () => {
     expect(surface.frame.view).toBe("unavailable");
     expect(surface.frame.encoders.slice(0, 2)).toMatchObject([
       { title: "Offline", detail: "unsupportedVersion" },
-      { detail: "No live controls" },
+      { title: "", detail: "" },
     ]);
     const exit = vi.fn();
     surface.onExit(exit);
-    await releaseKey(surface, 7);
+    surface.keyDown(7, 100);
     expect(exit).toHaveBeenCalledOnce();
+    await surface.keyUp(7, 110);
+    expect(exit).toHaveBeenCalledOnce();
+  });
+
+  it("keeps home quiet and reveals only contextual controls", () => {
+    const surface = new PlusMvpSurface(
+      new SurfaceApplication(historicalSnapshot()),
+    );
+
+    expect(
+      surface.frame.keys
+        .filter(({ label }) => label.length > 0)
+        .map(({ index }) => index),
+    ).toEqual([0, 2, 7]);
+    expect(
+      surface.frame.encoders
+        .filter(({ title, detail }) => title || detail)
+        .map(({ index }) => index),
+    ).toEqual([2]);
+  });
+
+  it("reveals Details only when it contains secondary context", async () => {
+    const historical = new PlusMvpSurface(
+      new SurfaceApplication(historicalSnapshot()),
+    );
+    expect(historical.frame.keys[6]?.label).toBe("");
+
+    const ready = new PlusMvpSurface(
+      new SurfaceApplication(toSnapshot(readyState())),
+    );
+    expect(ready.frame.keys[6]).toMatchObject({
+      label: "Details",
+      enabled: true,
+    });
+    await releaseKey(ready, 6);
+    expect(ready.frame.view).toBe("session");
+    expect(ready.frame.encoders[1]).toMatchObject({ title: "", detail: "" });
+    expect(ready.frame.encoders[2]?.title).toBe("Reasoning");
   });
 
   it("publishes new frames and sanitizes unsafe provider labels", () => {

@@ -39,11 +39,18 @@ defined in [`src/classic15.ts`](../src/classic15.ts).
 | `K11` | Previous/decrease                             | Moves one page, session, detail page, or ordered option according to the visible view.                       |
 | `K12` | Position/value                                | Names the current roster, page, session position, or choice preview. It never commits a choice.              |
 | `K13` | Next/increase                                 | Mirrors `K11` in the forward direction.                                                                      |
-| `K14` | Exit Sandalphon                               | Returns to the prior Stream Deck profile. It does not stop Codex or acknowledge state.                       |
+| `K14` | Exit Sandalphon                               | Requests the prior Stream Deck profile. It does not stop Codex or acknowledge state.                         |
 
 Every frame labels before accepting a new meaning. A held key cannot cross a
 frame revision into a different action. The bottom row remains local
-navigation in every managed view, and `K14` always exits the managed profile.
+navigation in every managed view, and `K14` always requests managed-profile
+exit.
+
+The official plugin API cannot select a user-defined profile. `K14` can return
+only while Stream Deck still has a prior-profile context from entry during the
+current application session. A full application restart while the managed
+profile is active loses that usable return target. SO1-177 treats this as a
+release blocker for both managed profiles.
 
 ## Rendering Contract
 
@@ -57,8 +64,11 @@ navigation in every managed view, and `K14` always exits the managed profile.
   the session inspection view.
 - Waiting, failed, completed, and unavailable remain persistent until the
   authoritative domain rule clears them. No state pulses, flashes, or cycles.
-- Empty cells render the dark surface and accept no input. Disabled controls
-  keep their label and expose a stable reason through inspection.
+- Empty cells render only the dark canvas and accept no input. Primary
+  navigation frames also leave unavailable actions empty; they do not repeat
+  disabled labels or unavailable glyphs. Offline and consequential-review
+  frames may keep non-actionable context visible when it explains recovery or
+  a pending decision.
 - `showOk` and `showAlert` are transient acknowledgements only. The complete
   frame is immediately reapplied from current truth.
 
@@ -70,88 +80,66 @@ are Recent, Favorites, and Custom.
 
 | `K0` Selected | `K1` Roster 1       | `K2` Roster 2       | `K3` Roster 3   | `K4` Roster 4  |
 | ------------- | ------------------- | ------------------- | --------------- | -------------- |
-| `K5` Roster 5 | `K6` Roster 6       | `K7` Roster 7       | `K8` Roster 8   | `K9` Attention |
-| `K10` Home    | `K11` Previous page | `K12` Roster / page | `K13` Next page | `K14` Exit     |
+| `K5` Empty    | `K6` Empty          | `K7` Empty          | `K8` Empty      | `K9` Attention |
+| `K10` Empty   | `K11` Previous page | `K12` Roster / page | `K13` Next page | `K14` Exit     |
 
 - `K0` always shows the selected session. Pressing it opens Session.
-- `K1` through `K8` show eight other sessions per page. Pressing one changes
+- `K1` through `K4` show four other sessions per page. Pressing one changes
   selection only; the next frame moves that session to `K0`. A later press on
   `K0` opens it. No double-tap or foreground-app behavior exists.
 - `K12` shows, for example, `Priority` and `1/3`. Pressing it opens a local
   choice view for Priority, Recent, Favorites, or Custom.
 - `K9` opens the selected session's current request when one exists. Otherwise
   it opens the Priority roster filtered to sessions needing attention; the
-  user still selects a session explicitly. With no attention it reads
-  `No alerts` and is disabled.
+  user still selects a session explicitly. With no attention it is blank and
+  disabled.
 - Later attention never steals selection. Selection and paging never
   acknowledge a result.
 - An unassigned Custom cell shows Start only when a complete `StartWork` offer
   exists. Otherwise it shows Empty or Unconfigured and has no token.
 
-This preserves nine simultaneous session identities—one selected and eight
-candidates—without adopting an external device's slot count or arrangement.
+Five simultaneous identities—one selected and four candidates—leave the
+middle row quiet enough to scan. Previous and Next appear only when another
+page exists; Home is omitted because the frame is already Home.
 
 ## Session
 
-| `K0` Selected | `K1` Inspect           | `K2` Start / Resume    | `K3` Review        | `K4` Reasoning |
-| ------------- | ---------------------- | ---------------------- | ------------------ | -------------- |
-| `K5` Fork     | `K6` More actions      | `K7` Retry             | `K8` Cancel run    | `K9` Attention |
-| `K10` Back    | `K11` Previous session | `K12` Session position | `K13` Next session | `K14` Exit     |
+| `K0` Selected | `K1` Inspect           | `K2` Resume            | `K3` Review        | `K4` Reasoning       |
+| ------------- | ---------------------- | ---------------------- | ------------------ | -------------------- |
+| `K5` Empty    | `K6` Empty             | `K7` Retry             | `K8` Cancel run    | `K9` Other attention |
+| `K10` Back    | `K11` Previous session | `K12` Session position | `K13` Next session | `K14` Exit           |
 
 - Inspect opens current activity, exact request, or exact result detail.
-  Displaying every page for an exact terminal result acknowledges that result.
-  The Actions catalog may instead offer explicit Acknowledge for the same
-  current result.
-- `K2` says Start only with explicit structured input or an eligible preset;
-  it says Resume only for a known safely resumable historical session. These
-  mutually exclusive labels never imply that arbitrary historical sessions
-  are controllable.
-- Review and Fork appear only at an advertised safe boundary.
+  An exact terminal result exposes a separate Acknowledge key only after its
+  detail has been inspected completely.
+- `K2` says Resume only for a known safely resumable historical session. It
+  never implies that arbitrary historical sessions are controllable.
+- Review appears only for a selected pending request. Other attention appears
+  only when another thread genuinely needs attention; it never duplicates the
+  selected request's Review control.
 - Reasoning opens the ordered Choice view for currently advertised next-turn
   effort. It cannot change an active run.
 - Retry and Cancel Run have separate permanent positions. Each opens its own
   review frame and never dispatches on the entry press.
-- More Actions opens the complete action catalog. Missing offers remain
-  disabled with reasons rather than falling back to commands or keystrokes.
-
-## Actions
-
-| `K0` Selected | `K1` Action 1       | `K2` Action 2        | `K3` Action 3   | `K4` Action 4  |
-| ------------- | ------------------- | -------------------- | --------------- | -------------- |
-| `K5` Action 5 | `K6` Action 6       | `K7` Action 7        | `K8` Action 8   | `K9` Attention |
-| `K10` Back    | `K11` Previous page | `K12` Actions / page | `K13` Next page | `K14` Exit     |
-
-The first page keeps the primary order: Inspect/Acknowledge, Start/Resume,
-Review, Reasoning, Fork, Presets, Retry, and Cancel Run. Presets opens later
-pages containing configured Redirect and Skill presets in validated
-configuration order. Retry and Cancel remain available at `K7` and `K8` on
-Session even when the catalog grows.
-
-A catalog cell invokes only its current typed offer. Unsupported Start, Fork,
-Review, Redirect, or Skill behavior is displayed as unavailable until the
-integration advertises a complete corresponding offer. There is no generic
-command, prompt, JSON-RPC, macro, terminal, browser, commit, or pull-request
-fallback.
+- An action is visible only while its exact current offer is available.
+  Missing actions leave a blank cell rather than a disabled control. They
+  never fall back to commands or keystrokes.
 
 ## Intent Trace
 
 | Sandalphon intent or operation         | Default entry                                              | Final activation                                                                |
 | -------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Select Session                         | Home `K1`–`K8`, or Session `K11`/`K13`                     | Same current key release; selection alone acknowledges nothing                  |
-| Start Work                             | Session `K2`, Custom empty slot, or validated preset       | Current Start offer after complete configured input                             |
+| Select Session                         | Home `K1`–`K4`, or Session `K11`/`K13`                     | Same current key release; selection alone acknowledges nothing                  |
 | Resume Session                         | Session `K2`                                               | Current safely resumable offer; reconciliation precedes live actions            |
-| Fork Session                           | Session `K5`                                               | Current supported safe-boundary offer                                           |
-| Inspect                                | Session `K1` or Actions                                    | Current detail target; exact result inspection follows the acknowledgement rule |
-| Acknowledge Result                     | Actions                                                    | Current exact result offer only                                                 |
-| Review                                 | Session `K3` or Actions                                    | Current turn-boundary review offer                                              |
+| Inspect                                | Session `K1`                                               | Current detail target; exact result inspection follows the acknowledgement rule |
+| Acknowledge Result                     | Result review `K9`                                         | Current exact result offer after complete inspection                            |
+| Review                                 | Session `K3`                                               | Current turn-boundary review offer                                              |
 | Approve Request                        | Home/Session `K9` to Request                               | New 800 ms hold at Request `K9` after complete inspection                       |
 | Reject Request                         | Request `K7`                                               | New press at Request `K7` after target inspection                               |
 | Cancel Request                         | Request `K5`                                               | New 800 ms hold at Request `K5`; success waits for interrupted run evidence     |
-| Redirect Run                           | Actions configured preset                                  | New press at Request `K9` after complete input inspection                       |
 | Cancel Run                             | Session `K8` or Request `K5` when no request cancel exists | New 800 ms hold at Request `K5`; success waits for interrupted run evidence     |
-| Retry Work                             | Session `K7` or Actions                                    | New press at Request `K9` after complete new-run-plan inspection                |
+| Retry Work                             | Session `K7`                                               | New press at Request `K9` after complete new-run-plan inspection                |
 | Change Next-Turn Options               | Session `K4`                                               | Choice `K8` Apply after a separate preview                                      |
-| Invoke Skill                           | Actions configured preset                                  | Current complete skill offer; any consequential result follows its safety plan  |
 | Recover Integration                    | Unavailable `K9`                                           | Current recovery offer; never replays a prior intent                            |
 | Roster view, page, preview, Back, Exit | Bottom navigation row                                      | Local presentation change only                                                  |
 
@@ -285,14 +273,15 @@ retry remains Working/Retrying and exposes no Retry key.
 
 Managed geometry and safety do not leak into user profiles:
 
-- Status renders its own integration or selected-session state.
-- Session selects or enters one configured session or repository context.
-- Enter Sandalphon explicitly switches to the bundled managed profile.
-- Next-turn Reasoning may preview a setting and enter the managed Choice flow;
-  it cannot alter an active run.
-- Redirect preset may enter managed review but cannot confirm from its
-  standalone key.
-- Recover shows the exact failure and invokes only a current recovery offer.
+- Session Status renders its own integration or selected-session state.
+- Resume Session dispatches only an unchanged current `ResumeSession` offer.
+- Attention selects an attention session without deciding its request.
+- Open Managed Surface explicitly enters the optional bundled reference and
+  consequential-review profile.
+
+The first composable slice uses the same three key actions on Classic and Plus.
+The Plus-only Sessions dial has no invented Classic equivalent; bounded
+composable Classic session navigation remains a later SO1-178 validation step.
 
 Foreign actions are never inspected, relabeled, moved, or controlled. User
 title or image overrides may reduce composable live-state fidelity, so no
@@ -312,10 +301,11 @@ private interface.
 ## Acceptance Walkthrough
 
 1. **First run:** with no validated CLI, all 15 cells form the Configuration
-   required Offline frame. Exit works; Recover cannot broaden setup authority.
-2. **Dense roster:** Priority shows one fixed selected session plus eight other
-   sessions. Paging and roster-view choice preserve selection. Long labels do
-   not displace exact state labels.
+   required Offline frame. Exit requests the prior profile when Stream Deck
+   still owns that context; Recover cannot broaden setup authority.
+2. **Quiet roster:** Priority shows one fixed selected session plus at most
+   four alternatives. Paging controls appear only when needed, selection is
+   preserved, and the unused middle-row cells stay dark.
 3. **Attention without theft:** a nonselected session begins waiting. Its tile
    and `K9` show attention, but `K0` does not change until the user selects it.
 4. **Working session:** Session shows privacy-safe activity, disables

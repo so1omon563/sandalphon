@@ -46,34 +46,31 @@ separate taps, and does not turn timing into an undocumented gesture.
 
 ## Stable Key Anchors
 
-| Key  | Stable responsibility                   | Rule                                                                                         |
-| ---- | --------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `K0` | Selected session or unavailable state   | Attention never steals selection.                                                            |
-| `K3` | Attention or positive authorization     | Opens attention normally and becomes Approve or positive review confirmation only in review. |
-| `K4` | Home/Back                               | Local navigation only; it never changes provider state.                                      |
-| `K5` | Review entry or cancellation in request | Cancellation is distinct from rejection and approval.                                        |
-| `K6` | Actions or rejection in request         | Reject remains a separate physical decision.                                                 |
-| `K7` | Exit Sandalphon                         | Returns to the prior Stream Deck profile without stopping Codex or acknowledging results.    |
+| Key  | Stable responsibility                 | Rule                                                                                         |
+| ---- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `K0` | Selected session or unavailable state | Attention never steals selection.                                                            |
+| `K3` | Attention or positive authorization   | Opens attention normally and becomes Approve or positive review confirmation only in review. |
+| `K4` | Home/Back                             | Local navigation only; it never changes provider state.                                      |
+| `K5` | Cancellation in request review        | Cancellation is distinct from rejection and approval.                                        |
+| `K6` | Details or rejection in request       | Home opens Details here; Reject remains a separate physical decision in review.              |
+| `K7` | Exit Sandalphon                       | Requests the prior Stream Deck profile without stopping Codex or acknowledging results.      |
 
 Every changed meaning is labeled in a new frame before input is accepted. A
 held key, dial press, or touch cannot cross a frame revision into a new role.
 
 ## Home
 
-| `K0` Selected | `K1` Inspect | `K2` Run action | `K3` Attention |
-| ------------- | ------------ | --------------- | -------------- |
-| `K4` Home     | `K5` Review  | `K6` Actions    | `K7` Exit      |
+| `K0` Selected | `K1` Empty | `K2` Run action | `K3` Review request |
+| ------------- | ---------- | --------------- | ------------------- |
+| `K4` Empty    | `K5` Empty | `K6` Details    | `K7` Exit           |
 
 | Lane | Strip feedback                         | Rotate                    | Press                    |
 | ---- | -------------------------------------- | ------------------------- | ------------------------ |
-| `E0` | Roster view: Priority/Recent/etc.      | Preview roster view       | Apply local roster view  |
-| `E1` | Roster page and bounded count          | Preview roster page       | Apply local roster page  |
+| `E0` | Empty                                  | None                      | None                     |
+| `E1` | Empty                                  | None                      | None                     |
 | `E2` | Privacy-safe session preview and state | Preview another session   | Select previewed session |
-| `E3` | Attention count and preview            | Preview attention session | Select it explicitly     |
+| `E3` | Attention count and preview, if any    | Preview attention session | Select it explicitly     |
 
-- Priority orders actionable waits, unacknowledged failure, unacknowledged
-  completion, active work, and recency. Other roster views remain Recent,
-  Favorites, and Custom.
 - Rotation changes only local preview. Session selection occurs on a new `E2`
   or `E3` press and acknowledges no result.
 - An uncommitted `E2` session is titled Preview; the title returns to Session
@@ -82,24 +79,27 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
 - `K2` is labeled Start, Resume, Cancel run, or Retry only when the current
   exact offer supports that state. Consequential variants enter review; the
   entry press never dispatches them.
-- `K3` opens the current selected request when one exists. Otherwise it opens
-  the attention context. It never changes selection automatically.
+- `K3` exists only when the selected session has a request. Other attention is
+  isolated to `E3` and never changes selection automatically.
+- Details appears only when it can reveal a secondary action, reasoning
+  control, or live activity. It does not open a submenu that merely duplicates
+  the primary action already visible on `K2`.
+- Empty keys and lanes render as the dark canvas, without a card, state glyph,
+  label, rail, or trigger description.
 
 ## Session
 
-| `K0` Selected | `K1` Inspect | `K2` Run action | `K3` Attention |
-| ------------- | ------------ | --------------- | -------------- |
-| `K4` Back     | `K5` Review  | `K6` Actions    | `K7` Exit      |
+| `K0` Selected | `K1` Empty | `K2` Run action | `K3` Review request |
+| ------------- | ---------- | --------------- | ------------------- |
+| `K4` Back     | `K5` Empty | `K6` Empty      | `K7` Exit           |
 
-| Lane | Strip feedback                                | Rotate                 | Press                         |
-| ---- | --------------------------------------------- | ---------------------- | ----------------------------- |
-| `E0` | Session identity, state, and position         | Preview session        | Select previewed session      |
-| `E1` | Current action and availability               | Preview action         | Activate or enter its review  |
-| `E2` | Current next-turn choice and preview          | Preview ordered option | Commit current advertised one |
-| `E3` | Activity, request, or result detail and pages | Preview detail page    | Jump to first unread page     |
+| Lane | Strip feedback                    | Rotate                 | Press                         |
+| ---- | --------------------------------- | ---------------------- | ----------------------------- |
+| `E0` | Empty                             | None                   | None                          |
+| `E1` | Current action, when available    | Preview action         | Activate or enter its review  |
+| `E2` | Next-turn choice, when advertised | Preview ordered option | Commit current advertised one |
+| `E3` | Current activity, while active    | None                   | None                          |
 
-- Inspect opens the current activity, request, or exact result detail. Exact
-  result acknowledgement follows the accepted inspection rule.
 - `E1` press invokes only a current release-level offer or enters the current
   safety review. It never performs the final reviewPress or reviewHold step.
 - The dedicated `E2` reasoning choice is not duplicated in the `E1` action
@@ -107,24 +107,20 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
 - `E2` is enabled only for an advertised turn-boundary choice. Rotation does
   not wrap; press revalidates and commits the current preview without starting
   work.
-- `E3` is local inspection navigation. Displayed complete pages create local
-  inspection receipts for the exact offer and frame; press does not invoke a
-  provider action.
+- An uncommitted value is titled `Preview reasoning`. Only an authoritative
+  snapshot matching the committed value returns the lane title to `Reasoning`.
+- A lane disappears again when its contextual action, setting, or activity is
+  no longer present.
 
-## Actions
+## Contextual Actions
 
-| `K0` Selected | `K1` Inspect | `K2` Run action | `K3` Attention |
-| ------------- | ------------ | --------------- | -------------- |
-| `K4` Back     | `K5` Context | `K6` Chosen     | `K7` Exit      |
-
-`E1` rotates the action catalog and `E2` moves its bounded page. `K6` and an
-`E1` press are equivalent entry controls for the currently displayed offer;
-both revalidate the same token. Release-level actions may dispatch once.
-Consequential actions only enter their dedicated review frame.
+`E1` rotates the currently available action catalog. An `E1` press revalidates
+the displayed token. Release-level actions may dispatch once; consequential
+actions only enter their dedicated review frame.
 
 The first catalog order is Inspect/Acknowledge, Start/Resume, Review,
 Reasoning, Fork, configured Presets, Retry, and Cancel Run. Unsupported
-operations remain disabled with a stable reason. There is no command, prompt,
+operations remain absent. There is no command, prompt,
 keystroke, terminal, browser, commit, or pull-request fallback.
 
 ## Ordered Choice
@@ -234,22 +230,40 @@ Working/Retrying and exposes no explicit Retry control.
 
 ## Composable Actions
 
-Managed geometry and authority do not leak into user profiles. Status,
-Session, Enter Sandalphon, next-turn Reasoning, Redirect preset, and Recover
-actions own only their action context. A standalone encoder may use one
-quarter-local layout and its labeled rotate/press behavior, but cannot
-coordinate foreign quarters or confirm a high-consequence action.
+Managed geometry and authority do not leak into user profiles. The first
+ordinary-profile set is deliberately small:
+
+- Session Status renders the selected session name and primary state.
+- Resume Session appears only for the exact current `ResumeSession` offer and
+  revalidates the offer on release.
+- Attention renders only when attention exists; pressing it selects an
+  attention session but never decides its request.
+- Sessions owns one dial and one strip quarter. Rotation previews locally and
+  press selects; it never coordinates foreign quarters.
+
+Open Managed Surface remains an explicit optional route to complete review and
+consequential confirmation. It is not the normal daily-driver entry point.
 
 Foreign actions are never inspected, relabeled, moved, or controlled. User
 title or image overrides may reduce composable fidelity, so no composable
 action is the sole consequential review surface.
 
+The official plugin API cannot select a user-defined profile. `K7` can return
+only while Stream Deck still has a prior-profile context from entry during the
+current application session. A full application restart while the managed
+profile is active loses that usable return target. SO1-177 treats this as a
+release blocker for managed-profile daily use. SO1-178 therefore keeps the
+managed profile as a reference surface and moves daily use into the user's
+ordinary profile, where no Sandalphon Exit is required.
+
 ## Acceptance Walkthrough
 
 1. **First run:** missing validated configuration produces the static Offline
-   frame. Exit works; Recover cannot broaden setup authority.
-2. **Roster navigation:** `E0` and `E1` preview roster view and page. `E2`
-   previews sessions and a separate press selects one without acknowledgement.
+   frame. Exit requests the prior profile when Stream Deck still owns that
+   context; Recover cannot broaden setup authority.
+2. **Quiet roster navigation:** only `E2` previews sessions; a separate press
+   selects one without acknowledgement. Other lanes stay dark unless genuine
+   attention exists.
 3. **Attention without theft:** `E3` previews attention sessions and press
    selects explicitly. Later attention never changes `K0` on its own.
 4. **Working session:** `K2` becomes Cancel run only for the exact active run,

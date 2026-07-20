@@ -37,6 +37,7 @@ describe("Stream Deck + live visuals", () => {
       label: "Approve & continue",
       enabled: true,
       state: "completed",
+      icon: "state",
     });
     expect(completed).toMatch(/^data:image\/svg\+xml;base64,/);
     const completedSvg = decodeSvg(completed);
@@ -50,10 +51,59 @@ describe("Stream Deck + live visuals", () => {
       label: "Unavailable",
       enabled: false,
       state: "unavailable",
+      icon: "state",
     });
     const disabledSvg = decodeSvg(disabled);
-    expect(disabledSvg).toContain('opacity="0.52"');
+    expect(disabledSvg).toContain('opacity="1"');
     expect(disabledSvg).toContain("#A7B0C0");
+  });
+
+  it("renders unused keys as a quiet blank surface", () => {
+    const blank = renderPlusKey({
+      index: 4,
+      label: "",
+      enabled: false,
+      state: "unavailable",
+      icon: "state",
+    });
+    const blankSvg = decodeSvg(blank);
+
+    expect(blankSvg).toContain("role=blank");
+    expect(blankSvg).toContain('fill="#000000"');
+    expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.canvas);
+    expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.surface);
+    expect(blankSvg).not.toContain("#A7B0C0");
+  });
+
+  it("keeps action controls distinct from session state", () => {
+    const action = renderPlusKey({
+      index: 2,
+      label: "Resume",
+      enabled: true,
+      state: "unavailable",
+      icon: "resume",
+    });
+    const actionSvg = decodeSvg(action);
+
+    expect(actionSvg).toContain(LIMINAL_SIGNAL_COLORS.focus);
+    expect(actionSvg).not.toContain(LIMINAL_SIGNAL_STATE_ACCENTS.unavailable);
+    expect(actionSvg).toContain("M58 34l30 19-30 19z");
+  });
+
+  it("keeps session identity recognizable while its accent follows state", () => {
+    const session = renderPlusKey({
+      index: 0,
+      label: "A long selected session name",
+      enabled: false,
+      state: "unavailable",
+      icon: "session",
+    });
+    const sessionSvg = decodeSvg(session);
+
+    expect(sessionSvg).toContain('opacity="1"');
+    expect(sessionSvg).toContain(LIMINAL_SIGNAL_STATE_ACCENTS.unavailable);
+    expect(sessionSvg).toContain('width="46" height="42"');
+    expect(sessionSvg).not.toContain("M57 68l30-30");
   });
 });
 

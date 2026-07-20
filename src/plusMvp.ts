@@ -12,6 +12,7 @@ import type {
   SessionSnapshot,
 } from "./domain/model.js";
 import { segmentRenderableDetail } from "./detailText.js";
+import { actionIcon, type KeyIcon } from "./keyIcons.js";
 import {
   moveStreamDeckPlusChoice,
   paginateStreamDeckPlusDetail,
@@ -25,6 +26,7 @@ export interface PlusKeyView {
   readonly label: string;
   readonly enabled: boolean;
   readonly state: PrimaryState;
+  readonly icon: KeyIcon;
 }
 
 export interface PlusEncoderView {
@@ -142,6 +144,11 @@ export class PlusMvpSurface {
   keyDown(index: number, now: number): void {
     const frame = this.frame;
     if (!frame.keys[index]?.enabled) return;
+    if (index === 7) {
+      this.#pressed = undefined;
+      for (const listener of this.#exitListeners) listener();
+      return;
+    }
     if (frame.view === "request" && [3, 5, 6].includes(index)) {
       void this.#decisionDown(index, now);
       return;
@@ -217,7 +224,7 @@ export class PlusMvpSurface {
       this.#actionPreview = moveStreamDeckPlusChoice(
         this.#actionPreview,
         ticks,
-        this.#catalog(selected).length,
+        this.#secondaryCatalog(selected).length,
         false,
       );
       this.#advanceFrame();
@@ -254,12 +261,15 @@ export class PlusMvpSurface {
     const selected = this.#selectedSession();
     if (!selected) return;
     if (this.frame.view === "home" && (index === 2 || index === 3)) {
-      const target = this.#snapshot.sessions[this.#sessionPreview];
+      const target =
+        index === 3
+          ? this.#attentionSessions()[this.#attentionPreviewIndex()]
+          : this.#snapshot.sessions[this.#sessionPreview];
       if (target) await this.#application.selectSession(target.id);
       return;
     }
     if (this.frame.view === "session" && index === 1) {
-      const offer = this.#catalog(selected)[this.#actionPreview];
+      const offer = this.#secondaryCatalog(selected)[this.#actionPreview];
       if (offer) await this.#activateOffer(offer, now);
       return;
     }
@@ -285,17 +295,19 @@ export class PlusMvpSurface {
 
   touchEncoder(index: number, hold: boolean): void {
     if (hold) return;
-    if (this.frame.view === "home" && index === 2) {
+    const selected = this.#selectedSession();
+    if (
+      this.frame.view === "home" &&
+      index === 2 &&
+      selected &&
+      this.#hasDetails(selected)
+    ) {
       this.#view = "session";
       this.#advanceFrame();
     }
   }
 
   async #activateKey(index: number, now: number): Promise<void> {
-    if (index === 7) {
-      for (const listener of this.#exitListeners) listener();
-      return;
-    }
     const selected = this.#selectedSession();
     if (!selected) return;
     if (index === 4) {
@@ -488,7 +500,7 @@ export class PlusMvpSurface {
     this.#actionPreview = moveStreamDeckPlusChoice(
       this.#actionPreview,
       0,
-      selected ? this.#catalog(selected).length : 0,
+      selected ? this.#secondaryCatalog(selected).length : 0,
       false,
     );
   }
@@ -530,6 +542,21 @@ export class PlusMvpSurface {
     );
   }
 
+  #secondaryCatalog(selected: SessionSnapshot): readonly ActionOffer[] {
+    const primary = this.#primaryOffer(selected);
+    return this.#catalog(selected).filter(
+      ({ offerToken }) => offerToken !== primary?.offerToken,
+    );
+  }
+
+  #hasDetails(selected: SessionSnapshot): boolean {
+    return (
+      this.#secondaryCatalog(selected).length > 0 ||
+      this.#reasoningOffer(selected) !== undefined ||
+      selected.activity !== "none"
+    );
+  }
+
   #attentionSessions(): readonly SessionSnapshot[] {
     return this.#snapshot.sessions.filter(
       ({ attention }) => attention.length > 0,
@@ -551,7 +578,7 @@ export class PlusMvpSurface {
   ): PlusKeyView[] {
     if (view === "unavailable") {
       return keyLabels(
-        ["Offline", "Reason", "Recovery", "Recover", "Home", "", "", "Exit"],
+        ["Offline", "", "", "", "Home", "", "", "Exit"],
         state,
         [4, 7],
       );
@@ -577,29 +604,29 @@ export class PlusMvpSurface {
       ] as const) {
         if (review?.offers[kind]?.state === "available") enabled.push(index);
       }
-      return keyLabels(labels, state, enabled);
+      return withSessionIdentity(keyLabels(labels, state, enabled));
     }
     const primary = this.#primaryOffer(selected);
-    const primaryLabel = primary ? actionLabel(primary.kind) : "No action";
+    const hasDetails = this.#hasDetails(selected);
     const common = [
       compactLabel(selected.name, 12),
-      "Inspect",
-      primaryLabel,
-      selected.pendingRequests.length > 0 ? "Review" : "Attention",
-      view === "home" ? "Home" : "Back",
-      "Review",
-      "Actions",
+      "",
+      primary ? actionLabel(primary.kind) : "",
+      selected.pendingRequests.length > 0 ? "Review request" : "",
+      view === "session" ? "Back" : "",
+      "",
+      view === "home" && hasDetails ? "Details" : "",
       "Exit",
     ];
-    return keyLabels(common, state, [
-      0,
-      1,
-      ...(primary ? [2] : []),
-      ...(selected.pendingRequests.length > 0 ? [3] : []),
-      4,
-      6,
-      7,
-    ]);
+    return withSessionIdentity(
+      keyLabels(common, state, [
+        ...(primary ? [2] : []),
+        ...(selected.pendingRequests.length > 0 ? [3] : []),
+        ...(view === "session" ? [4] : []),
+        ...(view === "home" && hasDetails ? [6] : []),
+        7,
+      ]),
+    );
   }
 
   #encoderViews(
@@ -609,15 +636,12 @@ export class PlusMvpSurface {
   ): PlusEncoderView[] {
     if (view === "unavailable" || !selected) {
       const reason = this.#snapshot.integration.reason ?? "starting";
-      return Array.from({ length: 4 }, (_, index) => ({
-        index,
-        title: index === 0 ? "Offline" : "Sandalphon",
-        detail: index === 0 ? reason : "No live controls",
-        state: "unavailable" as const,
-        rotate: "",
-        press: "",
-        touch: "",
-      }));
+      return [
+        encoder(0, "Offline", reason, "unavailable", "", "", ""),
+        blankEncoder(1),
+        blankEncoder(2),
+        blankEncoder(3),
+      ];
     }
     if (view === "request" && this.#review) {
       const page = this.#review.pages[this.#detailPage];
@@ -639,77 +663,71 @@ export class PlusMvpSurface {
       const previewIsSelected = preview.id === selected.id;
       const attention = this.#attentionSessions();
       return [
-        encoder(
-          0,
-          "Threads",
-          `${this.#sessionPreview + 1}/${this.#snapshot.sessions.length}`,
-          state,
-          "Roster",
-          "Apply",
-          "Focus",
-        ),
-        encoder(1, "Recent", "Newest first", state, "View", "Apply", "Focus"),
+        blankEncoder(0),
+        blankEncoder(1),
         encoder(
           2,
-          previewIsSelected ? "Session" : "Preview",
-          compactLabel(preview.name, 18),
+          previewIsSelected ? "Sessions" : "Preview session",
+          `${compactLabel(preview.name, 18)} · ${this.#sessionPreview + 1}/${this.#snapshot.sessions.length}`,
           preview.primaryState,
           this.#snapshot.sessions.length > 1 ? "Preview" : "",
           previewIsSelected ? "" : "Select",
           "Open",
         ),
-        encoder(
-          3,
-          "Attention",
-          `${attention.length} pending`,
-          state,
-          "Preview",
-          "Select",
-          "Open",
-        ),
+        attention.length > 0
+          ? encoder(
+              3,
+              "Attention",
+              `${attention.length} pending`,
+              state,
+              attention.length > 1 ? "Preview" : "",
+              "Select",
+              "Open",
+            )
+          : blankEncoder(3),
       ];
     }
-    const catalog = this.#catalog(selected);
+    const catalog = this.#secondaryCatalog(selected);
     const action = catalog[this.#actionPreview];
     const reasoning = this.#reasoningOffer(selected);
     const option = reasoning?.optionIds?.[this.#reasoningPreview];
     return [
-      encoder(
-        0,
-        "Session",
-        compactLabel(selected.name, 18),
-        state,
-        "",
-        "",
-        "Focus",
-      ),
-      encoder(
-        1,
-        "Action",
-        action ? actionLabel(action.kind) : "None",
-        state,
-        catalog.length > 1 ? "Preview" : "",
-        action ? "Activate" : "",
-        "Focus",
-      ),
-      encoder(
-        2,
-        "Reasoning",
-        option ?? selected.nextTurnSettings.reasoningEffort,
-        state,
-        (reasoning?.optionIds?.length ?? 0) > 1 ? "Preview" : "",
-        reasoning ? "Commit" : "",
-        "Focus",
-      ),
-      encoder(
-        3,
-        "Activity",
-        activityLabel(selected.activity),
-        state,
-        "",
-        "",
-        "Focus",
-      ),
+      blankEncoder(0),
+      action
+        ? encoder(
+            1,
+            "Actions",
+            actionLabel(action.kind),
+            state,
+            catalog.length > 1 ? "Preview" : "",
+            "Activate",
+            "Focus",
+          )
+        : blankEncoder(1),
+      reasoning
+        ? encoder(
+            2,
+            option === selected.nextTurnSettings.reasoningEffort
+              ? "Reasoning"
+              : "Preview reasoning",
+            option ?? selected.nextTurnSettings.reasoningEffort,
+            state,
+            (reasoning.optionIds?.length ?? 0) > 1 ? "Preview" : "",
+            "Commit",
+            "Focus",
+          )
+        : blankEncoder(2),
+      selected.activity !== "none"
+        ? encoder(
+            3,
+            "Activity",
+            activityLabel(selected.activity),
+            state,
+            "",
+            "",
+            "Focus",
+          )
+        : blankEncoder(3),
     ];
   }
 
@@ -735,13 +753,21 @@ function keyLabels(
   labels: readonly string[],
   state: PrimaryState,
   enabled: readonly number[],
+  stateKeys: readonly number[] = [0],
 ): PlusKeyView[] {
   return labels.map((label, index) => ({
     index,
     label,
     enabled: enabled.includes(index),
     state,
+    icon: stateKeys.includes(index) ? "state" : actionIcon(label),
   }));
+}
+
+function withSessionIdentity(keys: PlusKeyView[]): PlusKeyView[] {
+  const selected = keys[0];
+  if (selected) keys[0] = { ...selected, icon: "session" };
+  return keys;
 }
 
 function encoder(
@@ -754,6 +780,10 @@ function encoder(
   touch: string,
 ): PlusEncoderView {
   return { index, title, detail, state, rotate, press, touch };
+}
+
+function blankEncoder(index: number): PlusEncoderView {
+  return encoder(index, "", "", "idle", "", "", "");
 }
 
 function actionLabel(kind: ActionKind): string {
@@ -802,7 +832,7 @@ function decisionLabel(
         ? "CancelRun"
         : kind;
   const offer = review?.offers[actual];
-  if (!offer || offer.state !== "available") return "Unavailable";
+  if (!offer || offer.state !== "available") return "";
   const label = actionLabel(actual);
   if (armed !== actual) return label;
   return offer.safety.confirmation === "reviewHold"

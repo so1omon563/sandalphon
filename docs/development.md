@@ -20,6 +20,19 @@ local Node versions may run the checks, but CI and the plugin manifest use Node
 The link command builds the plugin first, then enables Stream Deck developer
 mode and points the desktop application at the repository sdPlugin directory.
 
+`npm run dev:restart` reloads the JavaScript bundle, but Stream Deck 7.5 caches
+managed action contexts and touch-strip layout files. After adding or changing
+a profile, action context, or layout JSON file, fully quit and reopen the
+Stream Deck application before judging the hardware result. A plugin-only
+restart may continue displaying the prior frame or Elgato fallback glyphs.
+Use Command-Q and confirm the Stream Deck application has actually exited
+before reopening it; closing the window or receiving a successful plugin
+restart response does not prove that action contexts reconnected.
+Select a normal user profile before the full application restart. Stream Deck
+does not preserve a plugin-usable prior-profile return target when it restarts
+inside a managed profile, and the official plugin API cannot select a
+user-defined recovery profile.
+
 ## Daily Commands
 
     make format
@@ -108,6 +121,15 @@ Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 - Physical feedback finding: an uncommitted session now labels its strip lane
   Preview and returns to Session only after the selecting dial press. Lanes
   omit rotate or press descriptions when no distinct valid choice exists.
+- Blocking finding: after the Stream Deck application restarted with the
+  managed profile active, the Exit key request could not return to a normal
+  user profile. The SDK only exposes return-to-previous for this case and
+  forbids plugins from selecting user-defined profiles. The managed surface is
+  not daily-driver-ready until it has a restart-safe escape design.
+- Daily-driver direction: bundled managed profiles remain optional reference
+  and consequential-review surfaces. The composable actions are placed in an
+  ordinary user profile, so restarting Stream Deck does not require a
+  Sandalphon Exit path. See [Composable Controls](composable-controls.md).
 
 ## Node Resolution on macOS
 

@@ -33,8 +33,10 @@ export class StreamDeckPlusAdapter {
     this.#surface = surface;
     surface.onFrame((frame) => this.#scheduleRender(frame));
     surface.onExit(() => {
-      for (const deviceId of this.#deviceIds()) {
-        void streamDeck.profiles.switchToProfile(deviceId);
+      for (const { action, index } of this.#keys.values()) {
+        if (index === 7) {
+          void streamDeck.profiles.switchToProfile(action.device.id);
+        }
       }
     });
   }
@@ -136,6 +138,7 @@ export class StreamDeckPlusAdapter {
           label: "Loading",
           enabled: false,
           state: "unavailable" as const,
+          icon: "state" as const,
         };
     if (!view) return;
     try {
@@ -154,16 +157,24 @@ export class StreamDeckPlusAdapter {
       ? frame.encoders[index]
       : loadingEncoder(index);
     if (!view) return;
-    const feedback: FeedbackPayload = {
-      heading: view.title,
-      detail: view.detail,
-      rail: {
-        value: 100,
-        bar_bg_c: "#172348",
-        bar_fill_c: LIMINAL_SIGNAL_STATE_ACCENTS[view.state],
-      },
-    };
+    const populated = Boolean(view.title || view.detail);
+    const feedback: FeedbackPayload = populated
+      ? {
+          heading: view.title,
+          detail: view.detail,
+          rail: {
+            value: 100,
+            bar_bg_c: "#172348",
+            bar_fill_c: LIMINAL_SIGNAL_STATE_ACCENTS[view.state],
+          },
+        }
+      : { blank: " " };
     try {
+      await action.setFeedbackLayout(
+        populated
+          ? "layouts/plus-quarter.json"
+          : "layouts/plus-quarter-blank.json",
+      );
       await action.setFeedback(feedback);
       await action.setTriggerDescription({
         rotate: view.rotate,
@@ -184,15 +195,6 @@ export class StreamDeckPlusAdapter {
       ({ action }) => action.device.id === deviceId,
     );
     return keys.length === 8 && encoders.length === 4;
-  }
-
-  #deviceIds(): string[] {
-    return [
-      ...new Set([
-        ...[...this.#keys.values()].map(({ action }) => action.device.id),
-        ...[...this.#encoders.values()].map(({ action }) => action.device.id),
-      ]),
-    ];
   }
 }
 

@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 
 import type { PrimaryState } from "./domain/model.js";
+import type { KeyIcon } from "./keyIcons.js";
 import type { PlusKeyView } from "./plusMvp.js";
 import { compactLabel } from "./plusMvp.js";
 
@@ -30,22 +31,92 @@ export function renderManagedKey(view: {
   readonly lines?: readonly string[];
   readonly enabled: boolean;
   readonly state: PrimaryState;
+  readonly icon?: KeyIcon;
 }): string {
+  if (!view.label.trim() && !view.lines?.some((line) => line.trim())) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#000000"/>
+  <metadata>source=artwork/visual-language.json; license=MIT; role=blank</metadata>
+</svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
   const lines = view.lines
     ? view.lines.slice(0, 2)
     : splitLabel(compactLabel(view.label, 24));
-  const accent = LIMINAL_SIGNAL_STATE_ACCENTS[view.state];
-  const opacity = view.enabled ? 1 : 0.52;
+  const icon = view.icon ?? "state";
+  const accent = iconAccent(icon, view.state);
+  const opacity =
+    view.enabled || icon === "state" || icon === "session" ? 1 : 0.52;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <rect width="144" height="144" rx="18" fill="${LIMINAL_SIGNAL_COLORS.canvas}"/>
   <rect x="8" y="8" width="128" height="128" rx="14" fill="${LIMINAL_SIGNAL_COLORS.surface}" opacity="${opacity}"/>
   <rect x="8" y="8" width="8" height="128" rx="4" fill="${accent}" opacity="${opacity}"/>
-  ${stateGlyph(view.state, accent, opacity)}
+  ${icon === "state" ? stateGlyph(view.state, accent, opacity) : actionGlyph(icon, accent, opacity)}
   <text x="72" y="${lines.length === 1 ? 116 : 105}" fill="${LIMINAL_SIGNAL_COLORS.text}" font-family="system-ui,-apple-system,BlinkMacSystemFont,Helvetica Neue,Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" opacity="${opacity}">${escapeXml(lines[0] ?? "")}</text>
   ${lines[1] ? `<text x="72" y="126" fill="${LIMINAL_SIGNAL_COLORS.text}" font-family="system-ui,-apple-system,BlinkMacSystemFont,Helvetica Neue,Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" opacity="${opacity}">${escapeXml(lines[1])}</text>` : ""}
   <metadata>source=artwork/visual-language.json; license=MIT</metadata>
 </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+function iconAccent(icon: KeyIcon, state: PrimaryState): string {
+  if (icon === "state" || icon === "session")
+    return LIMINAL_SIGNAL_STATE_ACCENTS[state];
+  if (icon === "attention") return LIMINAL_SIGNAL_STATE_ACCENTS.waiting;
+  if (icon === "cancel" || icon === "reject")
+    return LIMINAL_SIGNAL_STATE_ACCENTS.failed;
+  if (icon === "approve" || icon === "apply")
+    return LIMINAL_SIGNAL_STATE_ACCENTS.completed;
+  return LIMINAL_SIGNAL_COLORS.focus;
+}
+
+function actionGlyph(
+  icon: Exclude<KeyIcon, "state">,
+  accent: string,
+  opacity: number,
+): string {
+  const common = `fill="none" stroke="${accent}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}"`;
+  switch (icon) {
+    case "session":
+      return `<g ${common}><rect x="49" y="32" width="46" height="42" rx="5"/><path d="M58 44h28M58 55h22M58 66h16"/></g>`;
+    case "resume":
+      return `<g ${common}><path d="M58 34l30 19-30 19z"/></g>`;
+    case "inspect":
+      return `<g ${common}><circle cx="67" cy="49" r="17"/><path d="M80 62l15 15"/></g>`;
+    case "details":
+      return `<g ${common}><path d="M57 38h30M57 53h30M57 68h22"/></g>`;
+    case "exit":
+      return `<g ${common}><path d="M54 31h23v44H54M68 53h28M86 43l10 10-10 10"/></g>`;
+    case "attention":
+      return `<g ${common}><path d="M54 65h36l-6-9V45a12 12 0 0 0-24 0v11zM68 74h8"/></g>`;
+    case "review":
+      return `<g ${common}><path d="M47 53s10-17 25-17 25 17 25 17-10 17-25 17-25-17-25-17z"/><circle cx="72" cy="53" r="7"/></g>`;
+    case "reasoning":
+      return `<g ${common}><circle cx="54" cy="39" r="6"/><circle cx="90" cy="39" r="6"/><circle cx="72" cy="69" r="6"/><path d="M60 42l9 20M84 42l-9 20"/></g>`;
+    case "retry":
+      return `<g ${common}><path d="M91 44a22 22 0 1 0 1 20M91 44V29M91 44H76"/></g>`;
+    case "cancel":
+      return `<g ${common}><rect x="53" y="34" width="38" height="38" rx="4"/></g>`;
+    case "back":
+      return `<g ${common}><path d="M93 53H51M64 38L49 53l15 15"/></g>`;
+    case "home":
+      return `<g ${common}><path d="M49 52l23-20 23 20M56 48v25h32V48"/></g>`;
+    case "previous":
+      return `<g ${common}><path d="M82 34L63 53l19 19"/></g>`;
+    case "next":
+      return `<g ${common}><path d="M62 34l19 19-19 19"/></g>`;
+    case "roster":
+      return `<g ${common}><rect x="50" y="32" width="17" height="17" rx="2"/><rect x="77" y="32" width="17" height="17" rx="2"/><rect x="50" y="59" width="17" height="17" rx="2"/><rect x="77" y="59" width="17" height="17" rx="2"/></g>`;
+    case "actions":
+      return `<g ${common}><path d="M53 37h38M53 53h38M53 69h38"/><circle cx="47" cy="37" r="2"/><circle cx="47" cy="53" r="2"/><circle cx="47" cy="69" r="2"/></g>`;
+    case "apply":
+    case "approve":
+      return `<g ${common}><path d="M49 53l14 15 31-34"/></g>`;
+    case "reject":
+      return `<g ${common}><path d="M55 36l34 34M89 36L55 70"/></g>`;
+    case "offline":
+      return `<g ${common}><circle cx="72" cy="53" r="22"/><path d="M57 68l30-30"/></g>`;
+  }
 }
 
 function splitLabel(label: string): readonly string[] {
