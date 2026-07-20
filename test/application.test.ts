@@ -188,6 +188,99 @@ describe("Sandalphon application", () => {
     expect(stale).toMatchObject({ status: "rejected", reason: "staleOffer" });
   });
 
+  it("starts official review and compaction work and follows terminal turns", async () => {
+    const { application, connection } = await startedApplication();
+    connection.results.set("thread/resume", {});
+    await application.invoke({
+      invocationId: "resume-1",
+      offerToken: availableOffer(application, "ResumeSession"),
+    });
+
+    const reviewToken = availableOffer(application, "ReviewChanges");
+    connection.results.set("review/start", {
+      turn: { id: "review-turn" },
+      reviewThreadId: "thread-1",
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-1",
+        offerToken: reviewToken,
+      }),
+    ).toMatchObject({ status: "pending", kind: "ReviewChanges" });
+    expect(connection.requests).toContainEqual({
+      method: "review/start",
+      params: {
+        threadId: "thread-1",
+        target: { type: "uncommittedChanges" },
+        delivery: "inline",
+      },
+    });
+    connection.emit({
+      method: "turn/started",
+      params: { threadId: "thread-1", turn: { id: "review-turn" } },
+    });
+    connection.emit({
+      method: "turn/completed",
+      params: {
+        threadId: "thread-1",
+        turn: { id: "review-turn", status: "completed" },
+      },
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-1",
+        offerToken: reviewToken,
+      }),
+    ).toMatchObject({ status: "completed", kind: "ReviewChanges" });
+
+    const compactToken = availableOffer(application, "CompactThread");
+    connection.results.set("thread/compact/start", {});
+    expect(
+      await application.invoke({
+        invocationId: "compact-1",
+        offerToken: compactToken,
+      }),
+    ).toMatchObject({ status: "pending", kind: "CompactThread" });
+    expect(connection.requests).toContainEqual({
+      method: "thread/compact/start",
+      params: { threadId: "thread-1" },
+    });
+    connection.emit({
+      method: "turn/started",
+      params: { threadId: "thread-1", turn: { id: "compact-turn" } },
+    });
+    connection.emit({
+      method: "turn/completed",
+      params: {
+        threadId: "thread-1",
+        turn: { id: "compact-turn", status: "failed" },
+      },
+    });
+    expect(
+      await application.invoke({
+        invocationId: "compact-1",
+        offerToken: compactToken,
+      }),
+    ).toMatchObject({ status: "failed", kind: "CompactThread" });
+  });
+
+  it("releases official work authority when the provider rejects the request", async () => {
+    const { application, connection } = await startedApplication();
+    connection.results.set("thread/resume", {});
+    await application.invoke({
+      invocationId: "resume-1",
+      offerToken: availableOffer(application, "ResumeSession"),
+    });
+    connection.results.set("review/start", new Error("review unavailable"));
+    expect(
+      await application.invoke({
+        invocationId: "review-failed",
+        offerToken: availableOffer(application, "ReviewChanges"),
+      }),
+    ).toMatchObject({ status: "failed", kind: "ReviewChanges" });
+    expect(availableOffer(application, "CompactThread")).toBeTruthy();
+  });
+
   it("projects approval requests and resolves an exact consequential decision", async () => {
     const { application, connection } = await startedApplication();
     connection.results.set("thread/resume", {});

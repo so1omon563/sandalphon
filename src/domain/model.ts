@@ -97,6 +97,8 @@ export interface CoreState {
 export type ActionKind =
   | "ResumeSession"
   | "Inspect"
+  | "ReviewChanges"
+  | "CompactThread"
   | "AcknowledgeResult"
   | "ApproveRequest"
   | "RejectRequest"

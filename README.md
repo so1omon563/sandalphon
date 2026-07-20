@@ -24,8 +24,8 @@ behavioral core, and verified live integrations for Stream Deck + and the
 - revision- and connection-bound action offers with fail-closed validation;
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - an owned Codex app-server lifecycle with validated local configuration,
-  bounded JSON-RPC framing, live session discovery, resume, and next-turn
-  settings;
+  bounded JSON-RPC framing, live session discovery, resume, official change
+  review and context compaction, and next-turn settings;
 - explicit Classic 15 and Stream Deck + capability frames plus deterministic
   simulated boundaries;
 - an exact Classic 15 managed interaction map with stable anchors, key-native

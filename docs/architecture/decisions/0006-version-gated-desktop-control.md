@@ -116,6 +116,12 @@ current authority proves the operation. The same intent may have different
 availability across tasks; Sandalphon never sends one action through both
 planes or silently falls back after a failed dispatch.
 
+The first implemented expansion of the official plane exposes Review changes
+and Compact on both managed layouts. Both require an idle app-server-owned
+session, share one start-work effect lock, dispatch `review/start` or
+`thread/compact/start`, and remain pending until the correlated turn reaches a
+terminal state.
+
 The pure contract in `src/desktopControlContract.ts` encodes the feasibility
 gate without attaching to the desktop app. A later source-clean adapter may
 implement the live proof from this contract and public official interfaces.

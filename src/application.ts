@@ -71,6 +71,8 @@ export class SandalphonApplication {
   readonly #providerRequests = new Map<RequestId, PendingProviderRequest>();
   readonly #resolvingRequests = new Map<RequestId, string>();
   readonly #interruptions = new Map<string, string>();
+  readonly #pendingOfficialTurns = new Map<string, string>();
+  readonly #officialTurnInvocations = new Map<string, string>();
   #settings: SandalphonSettings = {
     schemaVersion: SANDALPHON_SETTINGS_SCHEMA_VERSION,
   };
@@ -240,6 +242,36 @@ export class SandalphonApplication {
       return;
     }
 
+    if (kind === "ReviewChanges" || kind === "CompactThread") {
+      this.#pendingOfficialTurns.set(selected.id, invocation.invocationId);
+      try {
+        let response: unknown;
+        if (kind === "ReviewChanges") {
+          response = await connection.request("review/start", {
+            threadId: selected.id,
+            target: { type: "uncommittedChanges" },
+            delivery: "inline",
+          });
+        } else {
+          response = await connection.request("thread/compact/start", {
+            threadId: selected.id,
+          });
+        }
+        const result = asRecord(response);
+        const turn = result && asRecord(result.turn);
+        const turnId = turn && stringField(turn, "id");
+        if (turnId) {
+          this.#pendingOfficialTurns.delete(selected.id);
+          this.#officialTurnInvocations.set(turnId, invocation.invocationId);
+        }
+      } catch (error) {
+        this.#pendingOfficialTurns.delete(selected.id);
+        throw error;
+      }
+      this.#pending(invocation.invocationId);
+      return;
+    }
+
     if (kind === "Inspect" || kind === "AcknowledgeResult") {
       if (selected.resultLatch) {
         this.#state = reduceCore(this.#state, {
@@ -311,6 +343,11 @@ export class SandalphonApplication {
       const turn = asRecord(params.turn);
       const turnId = turn && stringField(turn, "id");
       if (threadId && turnId) {
+        const invocationId = this.#pendingOfficialTurns.get(threadId);
+        if (invocationId) {
+          this.#pendingOfficialTurns.delete(threadId);
+          this.#officialTurnInvocations.set(turnId, invocationId);
+        }
         this.#state = reduceCore(this.#state, {
           type: "runStarted",
           connectionEpoch: this.#state.connectionEpoch,
@@ -367,6 +404,15 @@ export class SandalphonApplication {
     if (invocationId) {
       this.#complete(invocationId);
       this.#interruptions.delete(turnId);
+    }
+    const officialInvocationId = this.#officialTurnInvocations.get(turnId);
+    if (officialInvocationId) {
+      this.#ledger = advanceInvocation(
+        this.#ledger,
+        officialInvocationId,
+        outcome === "completed" ? "completed" : "failed",
+      );
+      this.#officialTurnInvocations.delete(turnId);
     }
   }
 
@@ -463,6 +509,8 @@ export class SandalphonApplication {
   #disconnect(): void {
     if (!this.#connection) return;
     this.#connection = undefined;
+    this.#pendingOfficialTurns.clear();
+    this.#officialTurnInvocations.clear();
     this.#ledger = markClaimedEffectsUncertain(this.#ledger);
     this.#state = reduceCore(this.#state, { type: "disconnect" });
     this.#emit();

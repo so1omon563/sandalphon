@@ -28,6 +28,9 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- Official `review/start` and `thread/compact/start` controls for idle owned
+  sessions, with terminal-turn tracking and mutually exclusive work startup on
+  both managed device layouts.
 - A disabled-by-default desktop-control feasibility contract with exact version
   and capability gating, revision-bound task-selection offers, stale-target
   rejection, and fail-closed cleanup semantics.

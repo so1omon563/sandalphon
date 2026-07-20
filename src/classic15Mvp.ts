@@ -270,10 +270,15 @@ export class Classic15MvpSurface {
     }
     if (index === 3) {
       if (selected.pendingRequests.length > 0) this.#openProviderReview(now);
+      else await this.#activateKind(selected, "ReviewChanges", now);
       return;
     }
     if (index === 4) {
       this.#openReasoningChoice(selected);
+      return;
+    }
+    if (index === 6) {
+      await this.#activateKind(selected, "CompactThread", now);
       return;
     }
     if (index === 7) {
@@ -755,10 +760,14 @@ export class Classic15MvpSurface {
               : "Inspect"
             : "",
         offerAvailable(selected, "ResumeSession") ? "Resume" : "",
-        pendingRequest ? "Review request" : "",
+        pendingRequest
+          ? "Review request"
+          : offerAvailable(selected, "ReviewChanges")
+            ? "Review changes"
+            : "",
         offerAvailable(selected, "ChangeNextTurnOptions") ? "Reasoning" : "",
         "",
-        "",
+        offerAvailable(selected, "CompactThread") ? "Compact" : "",
         offerAvailable(selected, "RetryWork") ? "Retry" : "",
         offerAvailable(selected, "CancelRun") ? "Cancel run" : "",
         !pendingRequest && attentionElsewhere ? "Other attention" : "",
@@ -774,7 +783,9 @@ export class Classic15MvpSurface {
       for (const [index, kind] of [
         [1, selected.pendingRequests.length > 0 ? undefined : "Inspect"],
         [2, "ResumeSession"],
+        [3, pendingRequest ? undefined : "ReviewChanges"],
         [4, "ChangeNextTurnOptions"],
+        [6, "CompactThread"],
         [7, "RetryWork"],
         [8, "CancelRun"],
       ] as const) {
@@ -930,6 +941,8 @@ function actionLabel(kind: ActionKind): string {
   const labels: Record<ActionKind, string> = {
     ResumeSession: "Resume",
     Inspect: "Inspect",
+    ReviewChanges: "Review changes",
+    CompactThread: "Compact",
     AcknowledgeResult: "Acknowledge",
     ApproveRequest: "Approve",
     RejectRequest: "Reject",

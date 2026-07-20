@@ -104,7 +104,7 @@ describe("presentation", () => {
   it("keeps consequential confirmation unavailable in composable scope", () => {
     const runtime = {
       ...classicRuntime("composable"),
-      visibleControls: Array.from({ length: 6 }, (_, index) => ({
+      visibleControls: Array.from({ length: 7 }, (_, index) => ({
         id: `owned-${index}`,
         controller: "keypad" as const,
         owned: true,

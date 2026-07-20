@@ -113,6 +113,38 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     surface.dispose();
   });
 
+  it("exposes official review and compaction on distinct session keys", async () => {
+    const snapshot = toSnapshot(readyState());
+    const application = new SurfaceApplication(snapshot);
+    const surface = new Classic15MvpSurface(application);
+    await releaseKey(surface, 0);
+    expect(surface.frame.keys[3]).toMatchObject({
+      label: "Review changes",
+      enabled: true,
+    });
+    expect(surface.frame.keys[6]).toMatchObject({
+      label: "Compact",
+      enabled: true,
+    });
+
+    const reviewToken = snapshot.sessions[0]?.actionOffers.find(
+      ({ kind }) => kind === "ReviewChanges",
+    )?.offerToken;
+    const compactToken = snapshot.sessions[0]?.actionOffers.find(
+      ({ kind }) => kind === "CompactThread",
+    )?.offerToken;
+    await releaseKey(surface, 3, 200);
+    await releaseKey(surface, 6, 300);
+    expect(application.invoke).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ offerToken: reviewToken }),
+    );
+    expect(application.invoke).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ offerToken: compactToken }),
+    );
+  });
+
   it("limits the home roster to four alternatives and reveals paging only when needed", () => {
     let state = reduceCore(createCoreState(), {
       type: "connectionReady",
@@ -287,7 +319,10 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     const surface = new Classic15MvpSurface(application);
     await releaseKey(surface, 0);
 
-    expect(surface.frame.keys[6]).toMatchObject({ label: "", enabled: false });
+    expect(surface.frame.keys[6]).toMatchObject({
+      label: "Compact",
+      enabled: true,
+    });
     expect(surface.frame.keys[1]).toMatchObject({
       label: "Inspect result",
       enabled: true,
