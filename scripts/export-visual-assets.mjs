@@ -34,7 +34,27 @@ const actionOutputs = language.actionIconOrder.map((iconName) => {
     content: renderActionKey(iconName, icon),
   };
 });
-const outputs = [...stateOutputs, ...actionOutputs];
+const pluginActionOutputs = [
+  {
+    path: resolve(
+      repositoryRoot,
+      "dev.so1omon.sandalphon.sdPlugin/imgs/actions/composable-status.svg",
+    ),
+    content: renderActionKey("session", language.actionIcons.session),
+  },
+  ...[
+    ["composable-resume", "resume"],
+    ["composable-attention", "attention"],
+    ["composable-session-dial", "roster"],
+  ].map(([fileName, iconName]) => ({
+    path: resolve(
+      repositoryRoot,
+      `dev.so1omon.sandalphon.sdPlugin/imgs/actions/${fileName}.svg`,
+    ),
+    content: renderActionKey(iconName, language.actionIcons[iconName]),
+  })),
+];
+const outputs = [...stateOutputs, ...actionOutputs, ...pluginActionOutputs];
 
 const stale = [];
 const expectedPaths = new Set(outputs.map(({ path }) => path));
@@ -122,6 +142,8 @@ function renderActionKey(iconName, icon) {
 function renderActionGlyph(glyph, color, geometry) {
   const stroke = `fill="none" stroke="${color}" stroke-width="${geometry.strokeWidth}" stroke-linecap="${geometry.lineCap}" stroke-linejoin="${geometry.lineJoin}"`;
   const paths = {
+    session:
+      '<rect x="49" y="32" width="46" height="42" rx="5" /><path d="M58 44h28M58 55h22M58 66h16" />',
     resume: '<path d="M58 34l30 19-30 19z" />',
     inspect: '<circle cx="67" cy="49" r="17" /><path d="M80 62l15 15" />',
     details: '<path d="M57 38h30M57 53h30M57 68h22" />',

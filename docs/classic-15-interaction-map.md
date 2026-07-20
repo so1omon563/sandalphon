@@ -299,14 +299,15 @@ retry remains Working/Retrying and exposes no Retry key.
 
 Managed geometry and safety do not leak into user profiles:
 
-- Status renders its own integration or selected-session state.
-- Session selects or enters one configured session or repository context.
-- Enter Sandalphon explicitly switches to the bundled managed profile.
-- Next-turn Reasoning may preview a setting and enter the managed Choice flow;
-  it cannot alter an active run.
-- Redirect preset may enter managed review but cannot confirm from its
-  standalone key.
-- Recover shows the exact failure and invokes only a current recovery offer.
+- Session Status renders its own integration or selected-session state.
+- Resume Session dispatches only an unchanged current `ResumeSession` offer.
+- Attention selects an attention session without deciding its request.
+- Open Managed Surface explicitly enters the optional bundled reference and
+  consequential-review profile.
+
+The first composable slice uses the same three key actions on Classic and Plus.
+The Plus-only Sessions dial has no invented Classic equivalent; bounded
+composable Classic session navigation remains a later SO1-178 validation step.
 
 Foreign actions are never inspected, relabeled, moved, or controlled. User
 title or image overrides may reduce composable live-state fidelity, so no

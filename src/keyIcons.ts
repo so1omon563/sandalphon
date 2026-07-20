@@ -1,5 +1,6 @@
 export type KeyIcon =
   | "state"
+  | "session"
   | "resume"
   | "inspect"
   | "details"

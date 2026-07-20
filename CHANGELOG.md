@@ -6,17 +6,28 @@ All notable changes to Sandalphon are recorded here.
 
 ### Changed
 
+- Reframed bundled managed profiles as optional reference and consequential-
+  review surfaces instead of restart-safe daily-driver profiles, and renamed
+  the catalog entry accordingly.
 - Simplified managed Classic 15 and Stream Deck + frames with true blank
   unused controls, contextual action visibility, a four-alternative Classic
   roster page, and a single primary Plus session lane.
 - Added distinct repository-authored action and navigation glyphs so labels
   confirm rather than solely communicate each control's meaning.
+- Replaced the selected-session unavailable glyph with a dedicated session
+  identity glyph whose accent still reflects the session's actual state.
+- Made blank contextual controls render true black so they do not appear
+  faintly active beside genuinely unused keys.
+- Made composable Attention cycle through every attention session in roster
+  order instead of alternating between only the first two.
 - Made managed Exit dispatch immediately on key-down and documented the
   Stream Deck restart case where the official prior-profile API cannot return
   to a user-defined profile.
 
 ### Added
 
+- Composable Session Status, Resume Session, Attention, and Stream Deck +
+  Sessions dial actions for use alongside ordinary controls in user profiles.
 - Independent Sandalphon repository and package identity.
 - Node.js 24 TypeScript Stream Deck plugin foundation.
 - Minimal Foundation Status action and original visual assets.

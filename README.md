@@ -16,7 +16,8 @@ behavioral core, and verified live integrations for Stream Deck + and the
 15-key Stream Deck capability class:
 
 - an original Node.js 24 and TypeScript Stream Deck plugin;
-- a minimal Foundation Status action;
+- self-contained Session Status, Resume, Attention, and Stream Deck + Sessions
+  dial actions for ordinary user profiles;
 - strict formatting, linting, type checking, tests, coverage, build, validation,
   and packaging gates;
 - immutable agent/session/run state reduction with latched terminal results;
@@ -43,7 +44,10 @@ behavioral core, and verified live integrations for Stream Deck + and the
 - CI, opt-in semantic version tagging, and an evidence-backed
   first-public-release gate.
 
-Broader daily-driver behavior remains a later milestone.
+The bundled managed profiles remain optional full-surface reference and
+consequential-review environments. Normal daily use is being validated through
+the composable controls so Sandalphon can coexist with the user's ordinary
+Stream Deck actions without a profile Exit dependency.
 
 ## Requirements
 
@@ -93,6 +97,8 @@ The accepted Classic profile follows the
 [Classic 15 interaction map](docs/classic-15-interaction-map.md).
 The accepted Plus profile follows the
 [Stream Deck + interaction map](docs/stream-deck-plus-interaction-map.md).
+The ordinary-profile path follows the
+[composable controls contract](docs/composable-controls.md).
 
 ## Independent Implementation
 

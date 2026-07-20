@@ -35,7 +35,7 @@ export function renderManagedKey(view: {
 }): string {
   if (!view.label.trim() && !view.lines?.some((line) => line.trim())) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
-  <rect width="144" height="144" rx="18" fill="${LIMINAL_SIGNAL_COLORS.canvas}"/>
+  <rect width="144" height="144" fill="#000000"/>
   <metadata>source=artwork/visual-language.json; license=MIT; role=blank</metadata>
 </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
@@ -45,7 +45,8 @@ export function renderManagedKey(view: {
     : splitLabel(compactLabel(view.label, 24));
   const icon = view.icon ?? "state";
   const accent = iconAccent(icon, view.state);
-  const opacity = view.enabled || icon === "state" ? 1 : 0.52;
+  const opacity =
+    view.enabled || icon === "state" || icon === "session" ? 1 : 0.52;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <rect width="144" height="144" rx="18" fill="${LIMINAL_SIGNAL_COLORS.canvas}"/>
   <rect x="8" y="8" width="128" height="128" rx="14" fill="${LIMINAL_SIGNAL_COLORS.surface}" opacity="${opacity}"/>
@@ -59,7 +60,8 @@ export function renderManagedKey(view: {
 }
 
 function iconAccent(icon: KeyIcon, state: PrimaryState): string {
-  if (icon === "state") return LIMINAL_SIGNAL_STATE_ACCENTS[state];
+  if (icon === "state" || icon === "session")
+    return LIMINAL_SIGNAL_STATE_ACCENTS[state];
   if (icon === "attention") return LIMINAL_SIGNAL_STATE_ACCENTS.waiting;
   if (icon === "cancel" || icon === "reject")
     return LIMINAL_SIGNAL_STATE_ACCENTS.failed;
@@ -75,6 +77,8 @@ function actionGlyph(
 ): string {
   const common = `fill="none" stroke="${accent}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}"`;
   switch (icon) {
+    case "session":
+      return `<g ${common}><rect x="49" y="32" width="46" height="42" rx="5"/><path d="M58 44h28M58 55h22M58 66h16"/></g>`;
     case "resume":
       return `<g ${common}><path d="M58 34l30 19-30 19z"/></g>`;
     case "inspect":

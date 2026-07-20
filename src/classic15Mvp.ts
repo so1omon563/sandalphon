@@ -777,6 +777,8 @@ export class Classic15MvpSurface {
         const key = keys[index + 1];
         if (key) keys[index + 1] = { ...key, state: item.primaryState };
       });
+      const selectedKey = keys[0];
+      if (selectedKey) keys[0] = { ...selectedKey, icon: "session" };
       return keys;
     }
     if (view === "session") {
@@ -828,7 +830,7 @@ export class Classic15MvpSurface {
       if (position > 0) enabled.push(11);
       if (this.#snapshot.sessions.length > 1) enabled.push(12);
       if (position + 1 < this.#snapshot.sessions.length) enabled.push(13);
-      return views(labels, state, enabled);
+      return withSessionIdentity(views(labels, state, enabled));
     }
     if (view === "actions") {
       const kinds = ACTION_CATALOG.slice(
@@ -849,16 +851,18 @@ export class Classic15MvpSurface {
         "",
         "Exit",
       ];
-      return views(labels, state, [
-        0,
-        ...kinds.flatMap((kind, index) =>
-          offerAvailable(selected, kind) ? [index + 1] : [],
-        ),
-        ...(selected.pendingRequests.length > 0 ? [9] : []),
-        10,
-        12,
-        14,
-      ]);
+      return withSessionIdentity(
+        views(labels, state, [
+          0,
+          ...kinds.flatMap((kind, index) =>
+            offerAvailable(selected, kind) ? [index + 1] : [],
+          ),
+          ...(selected.pendingRequests.length > 0 ? [9] : []),
+          10,
+          12,
+          14,
+        ]),
+      );
     }
     if (view === "choice" && this.#choice) {
       const labels = [
@@ -876,17 +880,21 @@ export class Classic15MvpSurface {
         this.#choicePreview + 1 < this.#choice.options.length ? "Higher" : "",
         "Exit",
       ];
-      return views(labels, state, [
-        0,
-        1,
-        ...this.#choice.options.map((_, index) => index + 2),
-        ...(this.#choice.options.length > 0 ? [8] : []),
-        10,
-        ...(this.#choicePreview > 0 ? [11] : []),
-        12,
-        ...(this.#choicePreview + 1 < this.#choice.options.length ? [13] : []),
-        14,
-      ]);
+      return withSessionIdentity(
+        views(labels, state, [
+          0,
+          1,
+          ...this.#choice.options.map((_, index) => index + 2),
+          ...(this.#choice.options.length > 0 ? [8] : []),
+          10,
+          ...(this.#choicePreview > 0 ? [11] : []),
+          12,
+          ...(this.#choicePreview + 1 < this.#choice.options.length
+            ? [13]
+            : []),
+          14,
+        ]),
+      );
     }
     const page = this.#review?.pages[this.#detailPage];
     const labels = Array(15).fill("") as string[];
@@ -928,7 +936,7 @@ export class Classic15MvpSurface {
       )
         enabled.push(index);
     }
-    return views(labels, state, enabled, page);
+    return withSessionIdentity(views(labels, state, enabled, page));
   }
 
   #decisionLabel(
@@ -972,6 +980,12 @@ function views(
       icon: stateKeys.includes(index) ? "state" : actionIcon(label),
     };
   });
+}
+
+function withSessionIdentity(keys: Classic15KeyView[]): Classic15KeyView[] {
+  const selected = keys[0];
+  if (selected) keys[0] = { ...selected, icon: "session" };
+  return keys;
 }
 
 function offerAvailable(selected: SessionSnapshot, kind: ActionKind): boolean {

@@ -69,7 +69,8 @@ describe("Stream Deck + live visuals", () => {
     const blankSvg = decodeSvg(blank);
 
     expect(blankSvg).toContain("role=blank");
-    expect(blankSvg).toContain(LIMINAL_SIGNAL_COLORS.canvas);
+    expect(blankSvg).toContain('fill="#000000"');
+    expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.canvas);
     expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.surface);
     expect(blankSvg).not.toContain("#A7B0C0");
   });
@@ -87,6 +88,22 @@ describe("Stream Deck + live visuals", () => {
     expect(actionSvg).toContain(LIMINAL_SIGNAL_COLORS.focus);
     expect(actionSvg).not.toContain(LIMINAL_SIGNAL_STATE_ACCENTS.unavailable);
     expect(actionSvg).toContain("M58 34l30 19-30 19z");
+  });
+
+  it("keeps session identity recognizable while its accent follows state", () => {
+    const session = renderPlusKey({
+      index: 0,
+      label: "A long selected session name",
+      enabled: false,
+      state: "unavailable",
+      icon: "session",
+    });
+    const sessionSvg = decodeSvg(session);
+
+    expect(sessionSvg).toContain('opacity="1"');
+    expect(sessionSvg).toContain(LIMINAL_SIGNAL_STATE_ACCENTS.unavailable);
+    expect(sessionSvg).toContain('width="46" height="42"');
+    expect(sessionSvg).not.toContain("M57 68l30-30");
   });
 });
 

@@ -18,10 +18,12 @@ touch-strip lanes even when most lanes had no current job.
 
 - A primary navigation frame shows only current state, genuine attention,
   available actions, required local navigation, and Exit.
-- An unused key is the dark canvas only: no card, glyph, label, or input.
+- An unused key is true black: no card, glyph, label, input, or faint canvas
+  tile that could imply a hidden control.
 - An unused Plus lane has no heading, detail, rail, or trigger description.
-- Session tiles keep semantic state glyphs. Actions and navigation use distinct
-  semantic glyphs, with labels as confirmation rather than their sole identity.
+- Selected-session tiles use a dedicated session glyph with a semantic state
+  accent. Offline surfaces, actions, and navigation remain visually distinct,
+  with labels as confirmation rather than their sole identity.
 - Classic Home shows the selected thread and at most four alternatives.
 - Plus Home uses `E2` for session preview and `E3` only when attention exists.
 - Plus Details exists only when it adds secondary context and never repeats the
@@ -76,5 +78,9 @@ Record the observed result for each device after installing the current build.
   plugin API can only request the previously active profile and cannot name a
   user-defined profile; after application restart there was no usable prior
   profile context. This is a release blocker, not an accepted limitation.
+- Follow-up validation replaced the selected-session unavailable glyph with a
+  dedicated session glyph whose accent retains the actual state. After another
+  full Stream Deck restart, the new upper-left glyph rendered on the physical
+  device and was confirmed as no longer implying an unreachable-session error.
 
 Stream Deck Mk.2 validation remains pending.

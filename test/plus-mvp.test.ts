@@ -92,7 +92,7 @@ describe("Stream Deck + MVP surface", () => {
     const surface = new PlusMvpSurface(application);
     expect(surface.frame.view).toBe("home");
     expect(surface.frame.keys.slice(0, 3)).toMatchObject([
-      { label: "First thread", state: "unavailable" },
+      { label: "First thread", state: "unavailable", icon: "session" },
       { label: "" },
       { label: "Resume", enabled: true },
     ]);

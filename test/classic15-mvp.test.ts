@@ -92,6 +92,7 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     expect(surface.frame.keys[0]).toMatchObject({
       label: "First thread",
       enabled: true,
+      icon: "session",
     });
     expect(surface.frame.keys.slice(10, 15)).toMatchObject([
       { label: "" },

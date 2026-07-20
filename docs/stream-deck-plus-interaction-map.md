@@ -230,11 +230,19 @@ Working/Retrying and exposes no explicit Retry control.
 
 ## Composable Actions
 
-Managed geometry and authority do not leak into user profiles. Status,
-Session, Enter Sandalphon, next-turn Reasoning, Redirect preset, and Recover
-actions own only their action context. A standalone encoder may use one
-quarter-local layout and its labeled rotate/press behavior, but cannot
-coordinate foreign quarters or confirm a high-consequence action.
+Managed geometry and authority do not leak into user profiles. The first
+ordinary-profile set is deliberately small:
+
+- Session Status renders the selected session name and primary state.
+- Resume Session appears only for the exact current `ResumeSession` offer and
+  revalidates the offer on release.
+- Attention renders only when attention exists; pressing it selects an
+  attention session but never decides its request.
+- Sessions owns one dial and one strip quarter. Rotation previews locally and
+  press selects; it never coordinates foreign quarters.
+
+Open Managed Surface remains an explicit optional route to complete review and
+consequential confirmation. It is not the normal daily-driver entry point.
 
 Foreign actions are never inspected, relabeled, moved, or controlled. User
 title or image overrides may reduce composable fidelity, so no composable
@@ -244,8 +252,9 @@ The official plugin API cannot select a user-defined profile. `K7` can return
 only while Stream Deck still has a prior-profile context from entry during the
 current application session. A full application restart while the managed
 profile is active loses that usable return target. SO1-177 treats this as a
-release blocker; the managed profile must not be described as a reliable
-daily-driver surface until a supported restart-safe escape exists.
+release blocker for managed-profile daily use. SO1-178 therefore keeps the
+managed profile as a reference surface and moves daily use into the user's
+ordinary profile, where no Sandalphon Exit is required.
 
 ## Acceptance Walkthrough
 
