@@ -64,6 +64,9 @@ or an unresolved critical failure.
       and a standard Stream Deck + with the exact app version recorded.
 - [ ] Both managed profiles render cleanly and preserve their device-native
       interaction contracts.
+- [ ] The composable daily-driver controls coexist with ordinary actions in a
+      user profile on both reference devices and survive a full Stream Deck
+      restart without depending on managed-profile Exit.
 - [ ] Session discovery, selection, Resume, next-turn reasoning preview and
       commit, Back, and Exit produce the expected authoritative state.
 - [ ] A naturally reachable request is reviewed on hardware. Approve requires a

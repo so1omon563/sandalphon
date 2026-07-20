@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  COMPOSABLE_ATTENTION_ACTION,
+  COMPOSABLE_RESUME_ACTION,
+  COMPOSABLE_SESSION_DIAL_ACTION,
+  COMPOSABLE_STATUS_ACTION,
   FOUNDATION_STATUS_ACTION,
   MANAGED_CLASSIC15_ACTION,
   MANAGED_PLUS_ACTION,
@@ -14,6 +18,8 @@ type Manifest = {
   Actions: Array<{
     Controllers?: string[];
     Encoder?: { layout?: string };
+    Icon?: string;
+    Name?: string;
     SupportedInKeyLogicActions?: boolean;
     SupportedInMultiActions?: boolean;
     UUID: string;
@@ -70,7 +76,9 @@ describe("Stream Deck manifest", () => {
   });
 
   it("keeps the foundation action out of automation containers", () => {
-    const [foundationAction] = manifest.Actions;
+    const foundationAction = manifest.Actions.find(
+      ({ UUID }) => UUID === FOUNDATION_STATUS_ACTION,
+    );
 
     expect(foundationAction?.UUID).toBe(FOUNDATION_STATUS_ACTION);
     expect(foundationAction?.UUID.startsWith(`${manifest.UUID}.`)).toBe(true);
@@ -78,26 +86,67 @@ describe("Stream Deck manifest", () => {
     expect(foundationAction?.SupportedInKeyLogicActions).toBe(false);
   });
 
-  it("separates managed Classic and Plus action contracts", () => {
+  it("exposes distinct self-contained daily-driver controls", () => {
     expect(manifest.Actions.map(({ UUID }) => UUID)).toEqual([
+      COMPOSABLE_STATUS_ACTION,
+      COMPOSABLE_RESUME_ACTION,
+      COMPOSABLE_ATTENTION_ACTION,
+      COMPOSABLE_SESSION_DIAL_ACTION,
       FOUNDATION_STATUS_ACTION,
       MANAGED_CLASSIC15_ACTION,
       MANAGED_PLUS_ACTION,
       MANAGED_PLUS_ENCODER_ACTION,
     ]);
-    expect(manifest.Actions[1]).toMatchObject({
-      Controllers: ["Keypad"],
-      SupportedInMultiActions: false,
-      SupportedInKeyLogicActions: false,
-      VisibleInActionsList: false,
-    });
-    expect(manifest.Actions[2]).toMatchObject({
-      Controllers: ["Keypad"],
-      SupportedInMultiActions: false,
-      SupportedInKeyLogicActions: false,
-      VisibleInActionsList: false,
-    });
+    expect(manifest.Actions.slice(0, 3)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          UUID: COMPOSABLE_STATUS_ACTION,
+          Name: "Session Status",
+          Icon: "imgs/actions/composable-status",
+          Controllers: ["Keypad"],
+        }),
+        expect.objectContaining({
+          UUID: COMPOSABLE_RESUME_ACTION,
+          Name: "Resume Session",
+          Icon: "imgs/actions/composable-resume",
+          Controllers: ["Keypad"],
+        }),
+        expect.objectContaining({
+          UUID: COMPOSABLE_ATTENTION_ACTION,
+          Name: "Attention",
+          Icon: "imgs/actions/composable-attention",
+          Controllers: ["Keypad"],
+        }),
+      ]),
+    );
     expect(manifest.Actions[3]).toMatchObject({
+      UUID: COMPOSABLE_SESSION_DIAL_ACTION,
+      Name: "Sessions",
+      Icon: "imgs/actions/composable-session-dial",
+      Controllers: ["Encoder"],
+      Encoder: { layout: "layouts/plus-quarter.json" },
+    });
+    for (const composable of manifest.Actions.slice(0, 4)) {
+      expect(composable.SupportedInMultiActions).toBe(false);
+      expect(composable.SupportedInKeyLogicActions).toBe(false);
+      expect(composable.VisibleInActionsList).toBeUndefined();
+    }
+  });
+
+  it("separates hidden managed Classic and Plus action contracts", () => {
+    expect(manifest.Actions[5]).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      SupportedInKeyLogicActions: false,
+      VisibleInActionsList: false,
+    });
+    expect(manifest.Actions[6]).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      SupportedInKeyLogicActions: false,
+      VisibleInActionsList: false,
+    });
+    expect(manifest.Actions[7]).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
       Encoder: { layout: "$A1" },
       SupportedInMultiActions: false,

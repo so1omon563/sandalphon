@@ -6,6 +6,9 @@ All notable changes to Sandalphon are recorded here.
 
 ### Changed
 
+- Reframed bundled managed profiles as optional reference and consequential-
+  review surfaces instead of restart-safe daily-driver profiles, and renamed
+  the catalog entry accordingly.
 - Simplified managed Classic 15 and Stream Deck + frames with true blank
   unused controls, contextual action visibility, a four-alternative Classic
   roster page, and a single primary Plus session lane.
@@ -17,6 +20,8 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- Composable Session Status, Resume Session, Attention, and Stream Deck +
+  Sessions dial actions for use alongside ordinary controls in user profiles.
 - Independent Sandalphon repository and package identity.
 - Node.js 24 TypeScript Stream Deck plugin foundation.
 - Minimal Foundation Status action and original visual assets.

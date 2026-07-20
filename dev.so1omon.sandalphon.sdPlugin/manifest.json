@@ -5,19 +5,102 @@
       "Controllers": [
         "Keypad"
       ],
+      "Icon": "imgs/actions/composable-status",
+      "Name": "Session Status",
+      "States": [
+        {
+          "Image": "imgs/actions/composable-status",
+          "ShowTitle": false,
+          "Title": "Session Status",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Show the selected Sandalphon session and its current state.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.composable-status"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/actions/composable-resume",
+      "Name": "Resume Session",
+      "States": [
+        {
+          "Image": "imgs/actions/composable-resume",
+          "ShowTitle": false,
+          "Title": "Resume",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Resume the selected historical session when Sandalphon offers a current safe Resume action.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.composable-resume"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/actions/composable-attention",
+      "Name": "Attention",
+      "States": [
+        {
+          "Image": "imgs/actions/composable-attention",
+          "ShowTitle": false,
+          "Title": "Attention",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Show attention and select the next session that needs review without deciding the request.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.composable-attention"
+    },
+    {
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/plus-quarter.json"
+      },
+      "Icon": "imgs/actions/composable-session-dial",
+      "Name": "Sessions",
+      "States": [
+        {
+          "Image": "imgs/actions/composable-session-dial",
+          "ShowTitle": false,
+          "Title": "Sessions",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Preview sessions with the dial and press to select the previewed session.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.composable-session-dial"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
       "Icon": "imgs/actions/foundation-status",
-      "Name": "Enter Sandalphon",
+      "Name": "Open Managed Surface",
       "States": [
         {
           "Image": "imgs/actions/foundation-status-key",
           "ShowTitle": true,
-          "Title": "Enter\nSandalphon",
+          "Title": "Managed\nSurface",
           "TitleAlignment": "bottom"
         }
       ],
       "SupportedInKeyLogicActions": false,
       "SupportedInMultiActions": false,
-      "Tooltip": "Open Sandalphon's managed profile for this Stream Deck.",
+      "Tooltip": "Open Sandalphon's optional full-device reference and validation surface.",
       "UserTitleEnabled": false,
       "UUID": "dev.so1omon.sandalphon.foundation-status"
     },

@@ -34,7 +34,27 @@ const actionOutputs = language.actionIconOrder.map((iconName) => {
     content: renderActionKey(iconName, icon),
   };
 });
-const outputs = [...stateOutputs, ...actionOutputs];
+const pluginActionOutputs = [
+  {
+    path: resolve(
+      repositoryRoot,
+      "dev.so1omon.sandalphon.sdPlugin/imgs/actions/composable-status.svg",
+    ),
+    content: renderKey("idle", language.states.idle),
+  },
+  ...[
+    ["composable-resume", "resume"],
+    ["composable-attention", "attention"],
+    ["composable-session-dial", "roster"],
+  ].map(([fileName, iconName]) => ({
+    path: resolve(
+      repositoryRoot,
+      `dev.so1omon.sandalphon.sdPlugin/imgs/actions/${fileName}.svg`,
+    ),
+    content: renderActionKey(iconName, language.actionIcons[iconName]),
+  })),
+];
+const outputs = [...stateOutputs, ...actionOutputs, ...pluginActionOutputs];
 
 const stale = [];
 const expectedPaths = new Set(outputs.map(({ path }) => path));
