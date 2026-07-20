@@ -49,10 +49,13 @@ consequential-review environments. Normal daily use is being validated through
 the composable controls so Sandalphon can coexist with the user's ordinary
 Stream Deck actions without a profile Exit dependency.
 
-Daily-driver validation is currently paused while SO1-179 evaluates a narrowly
-version-gated path for direct task selection in the active Codex desktop app.
-The feasibility contract is disabled by default and is not wired to the live
-plugin or included as a supported control path.
+Daily-driver validation is currently paused while SO1-179 establishes a hybrid
+control model. Sandalphon-owned sessions use official typed app-server
+operations for Codex workflows such as turns, interruption, compaction,
+review, and model selection. A separately version-gated feasibility path is
+being evaluated only for task selection in the active Codex desktop app. That
+desktop contract is disabled by default and is not wired to the live plugin or
+included as a supported control path.
 
 ## Requirements
 
