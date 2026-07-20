@@ -18,7 +18,8 @@ touch-strip lanes even when most lanes had no current job.
 
 - A primary navigation frame shows only current state, genuine attention,
   available actions, required local navigation, and Exit.
-- An unused key is the dark canvas only: no card, glyph, label, or input.
+- An unused key is true black: no card, glyph, label, input, or faint canvas
+  tile that could imply a hidden control.
 - An unused Plus lane has no heading, detail, rail, or trigger description.
 - Selected-session tiles use a dedicated session glyph with a semantic state
   accent. Offline surfaces, actions, and navigation remain visually distinct,

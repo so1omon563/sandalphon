@@ -24,6 +24,8 @@ Sandalphon Exit control.
 The four controls may be placed anywhere in the user's profile. Sandalphon
 does not inspect, move, relabel, or coordinate neighboring foreign actions.
 Only the Sessions dial owns its 200 by 100 touch-strip quarter.
+When Resume or Attention has nothing to present, its key renders true black so
+it is physically indistinguishable from an unused key rather than a dim tile.
 
 ## Safety Boundary
 
@@ -53,3 +55,27 @@ SO1-178 validates the Stream Deck + set first in an ordinary existing profile:
 After that walkthrough, the three key controls are validated on the Stream Deck
 Mk.2 and a bounded composable session-navigation control is added only if the
 physical workflow demonstrates the need.
+
+## Stream Deck + Result — partial pass 2026-07-19
+
+- The three keys and Sessions dial were added to page 3 of an existing Default
+  Profile. The user's two existing pages and ordinary controls remained intact.
+- Session Status rendered a recognizable session glyph and selected-session
+  label. Resume and Attention appeared only when their capabilities existed.
+- Dial rotation changed the strip to a clearly labeled local `Preview` without
+  changing Session Status. A separate dial press selected the preview, returned
+  the strip to `Sessions`, and exposed Resume for the newly selected historical
+  session.
+- Pressing Resume consumed the current offer, removed the key, changed the
+  session to idle, and did not start new work.
+- Fully quitting and reopening Stream Deck while Default Profile page 3 was
+  active restored that profile, the selected session, the composable controls,
+  and the Sessions strip without a Sandalphon Exit dependency.
+- A physically blank Attention control initially retained a faint canvas tile.
+  Rendering empty controls as true black made it indistinguishable from a
+  genuinely unused key after the required full application restart.
+
+A live positive Attention case was not available during this pass, so physical
+target selection without decision remains pending. Deterministic coverage
+continues to prove stale-target rejection and selection-only authority. The
+Stream Deck Mk.2 composable walkthrough also remains pending.

@@ -35,7 +35,7 @@ export function renderManagedKey(view: {
 }): string {
   if (!view.label.trim() && !view.lines?.some((line) => line.trim())) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
-  <rect width="144" height="144" rx="18" fill="${LIMINAL_SIGNAL_COLORS.canvas}"/>
+  <rect width="144" height="144" fill="#000000"/>
   <metadata>source=artwork/visual-language.json; license=MIT; role=blank</metadata>
 </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;

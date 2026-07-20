@@ -69,7 +69,8 @@ describe("Stream Deck + live visuals", () => {
     const blankSvg = decodeSvg(blank);
 
     expect(blankSvg).toContain("role=blank");
-    expect(blankSvg).toContain(LIMINAL_SIGNAL_COLORS.canvas);
+    expect(blankSvg).toContain('fill="#000000"');
+    expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.canvas);
     expect(blankSvg).not.toContain(LIMINAL_SIGNAL_COLORS.surface);
     expect(blankSvg).not.toContain("#A7B0C0");
   });
