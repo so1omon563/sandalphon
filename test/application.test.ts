@@ -342,6 +342,10 @@ describe("Sandalphon application", () => {
 
   it.each([
     "connectionFailed",
+    "endpointUnavailable",
+    "endpointRejected",
+    "listenerRejected",
+    "processRejected",
     "rendererTimeout",
     "capabilityUnavailable",
     "invalidTaskState",

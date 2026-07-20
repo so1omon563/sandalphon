@@ -50,6 +50,7 @@ class FakeDesktopHost implements DesktopControlHost {
   version = PROVEN_DESKTOP_CONTROL_VERSION.application;
   running = false;
   discoveryAvailable = true;
+  discoveryError: string | undefined;
   endpointVersion = PROVEN_DESKTOP_CONTROL_VERSION;
   readonly session = new FakeProtocolSession();
   readonly launchControlled = vi.fn(() => {
@@ -73,6 +74,9 @@ class FakeDesktopHost implements DesktopControlHost {
     debuggerUrl: string;
     version: typeof PROVEN_DESKTOP_CONTROL_VERSION;
   }> {
+    if (this.discoveryError) {
+      return Promise.reject(new Error(this.discoveryError));
+    }
     return this.discoveryAvailable
       ? Promise.resolve({
           port: 49152,
@@ -125,6 +129,8 @@ describe("desktop control runtime", () => {
     host.session.capable = false;
     await expect(
       new LocalDesktopControlRuntime(host, {
+        endpointAttempts: 1,
+        endpointDelayMs: 0,
         initialAttempts: 2,
         initialDelayMs: 0,
         initialEvaluationTimeoutMs: 1,
@@ -166,6 +172,8 @@ describe("desktop control runtime", () => {
     host.session.timeoutsRemaining = 2;
 
     const connection = await new LocalDesktopControlRuntime(host, {
+      endpointAttempts: 1,
+      endpointDelayMs: 0,
       initialAttempts: 3,
       initialDelayMs: 0,
       initialEvaluationTimeoutMs: 1,
@@ -196,12 +204,31 @@ describe("desktop control runtime", () => {
 
     await expect(
       new LocalDesktopControlRuntime(host, {
+        endpointAttempts: 1,
+        endpointDelayMs: 0,
         initialAttempts: 2,
         initialDelayMs: 0,
         initialEvaluationTimeoutMs: 1,
       }).connect(),
     ).rejects.toThrow("rendererTimeout");
     expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
+  });
+
+  it("retains the exact content-free endpoint rejection after bounded discovery", async () => {
+    const host = new FakeDesktopHost();
+    host.discoveryAvailable = false;
+    host.discoveryError = "processRejected";
+
+    await expect(
+      new LocalDesktopControlRuntime(host, {
+        endpointAttempts: 2,
+        endpointDelayMs: 0,
+        initialAttempts: 1,
+        initialDelayMs: 0,
+        initialEvaluationTimeoutMs: 1,
+      }).connect(),
+    ).rejects.toThrow("processRejected");
+    expect(host.restoreLaunched).toHaveBeenCalledWith(42);
   });
 });
 

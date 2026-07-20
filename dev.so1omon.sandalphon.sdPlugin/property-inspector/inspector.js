@@ -69,6 +69,14 @@ function render(payload) {
     restartRequired: "Quit Codex, then retry to start controlled mode.",
     unsupportedVersion: "This Codex desktop version is not supported.",
     launchFailed: "Codex could not be started in controlled mode.",
+    endpointUnavailable:
+      "Codex opened, but its debugging endpoint did not become reachable.",
+    endpointRejected:
+      "Codex opened, but its debugging endpoint did not match the accepted contract.",
+    listenerRejected:
+      "Codex opened, but listener ownership could not be verified.",
+    processRejected:
+      "Codex opened, but the controlled process arguments could not be verified.",
     rendererTimeout:
       "Codex opened, but its renderer did not answer the bounded readiness probe.",
     capabilityUnavailable:

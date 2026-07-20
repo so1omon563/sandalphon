@@ -97,6 +97,8 @@ describe("Stream Deck manifest", () => {
     expect(propertyInspectorScript).toContain("context: propertyInspectorUUID");
     expect(propertyInspectorScript).not.toContain("context: actionContext");
     expect(propertyInspectorScript).toContain("rendererTimeout");
+    expect(propertyInspectorScript).toContain("endpointUnavailable");
+    expect(propertyInspectorScript).toContain("processRejected");
     expect(propertyInspectorScript).toContain("capabilityUnavailable");
     expect(propertyInspectorScript).toContain("invalidTaskState");
     expect(propertyInspectorScript).not.toMatch(/https?:\/\//u);

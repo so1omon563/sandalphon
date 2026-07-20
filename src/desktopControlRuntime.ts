@@ -35,6 +35,10 @@ export type DesktopControlLifecycleReason =
   | "restartRequired"
   | "unsupportedVersion"
   | "launchFailed"
+  | "endpointUnavailable"
+  | "endpointRejected"
+  | "listenerRejected"
+  | "processRejected"
   | "rendererTimeout"
   | "capabilityUnavailable"
   | "invalidTaskState"
@@ -79,12 +83,16 @@ export interface DesktopProtocolSession {
 }
 
 export interface DesktopControlTiming {
+  readonly endpointAttempts: number;
+  readonly endpointDelayMs: number;
   readonly initialAttempts: number;
   readonly initialDelayMs: number;
   readonly initialEvaluationTimeoutMs: number;
 }
 
 const DEFAULT_DESKTOP_CONTROL_TIMING: DesktopControlTiming = {
+  endpointAttempts: 100,
+  endpointDelayMs: 100,
   initialAttempts: 10,
   initialDelayMs: 250,
   initialEvaluationTimeoutMs: 2000,
@@ -122,7 +130,7 @@ export class LocalDesktopControlRuntime implements DesktopControlRuntime {
       const launchedAt = Date.now();
       const processId = await this.#host.launchControlled();
       try {
-        endpoint = await waitForEndpoint(this.#host, launchedAt);
+        endpoint = await waitForEndpoint(this.#host, launchedAt, this.#timing);
       } catch (error) {
         await this.#host.restoreLaunched(processId);
         throw error;
@@ -319,27 +327,44 @@ export class MacDesktopControlHost implements DesktopControlHost {
   }
 
   async discover(requireFreshAfter?: number): Promise<DesktopEndpoint> {
-    const [portText, metadata] = await Promise.all([
-      readFile(ACTIVE_PORT_FILE, "utf8"),
-      stat(ACTIVE_PORT_FILE),
-    ]);
+    let portText: string;
+    let metadata: Awaited<ReturnType<typeof stat>>;
+    try {
+      [portText, metadata] = await Promise.all([
+        readFile(ACTIVE_PORT_FILE, "utf8"),
+        stat(ACTIVE_PORT_FILE),
+      ]);
+    } catch {
+      throw new Error("endpointUnavailable");
+    }
     if (
       requireFreshAfter !== undefined &&
       metadata.mtimeMs < requireFreshAfter - 1000
     ) {
-      throw new Error("connectionFailed");
+      throw new Error("endpointUnavailable");
     }
     const [portLine] = portText.split(/\r?\n/u);
     const port = Number.parseInt(portLine ?? "", 10);
     if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-      throw new Error("connectionFailed");
+      throw new Error("endpointRejected");
     }
     const origin = `http://127.0.0.1:${port}`;
-    const [versionValue, targetsValue, processId] = await Promise.all([
-      fetchJson(`${origin}/json/version`),
-      fetchJson(`${origin}/json/list`),
-      listenerProcessId(port),
-    ]);
+    let versionValue: unknown;
+    let targetsValue: unknown;
+    try {
+      [versionValue, targetsValue] = await Promise.all([
+        fetchJson(`${origin}/json/version`),
+        fetchJson(`${origin}/json/list`),
+      ]);
+    } catch {
+      throw new Error("endpointUnavailable");
+    }
+    let processId: number;
+    try {
+      processId = await listenerProcessId(port);
+    } catch {
+      throw new Error("listenerRejected");
+    }
     const versionRecord = asRecord(versionValue);
     const targets = Array.isArray(targetsValue) ? targetsValue : [];
     const browser = versionRecord?.Browser;
@@ -350,11 +375,11 @@ export class MacDesktopControlHost implements DesktopControlHost {
       typeof protocol !== "string" ||
       targets.length !== 1
     ) {
-      throw new Error("connectionFailed");
+      throw new Error("endpointRejected");
     }
     const target = asRecord(targets[0]);
     if (target?.type !== "page" || target.url !== "app://-") {
-      throw new Error("connectionFailed");
+      throw new Error("endpointRejected");
     }
     const debuggerUrl = new URL(String(target.webSocketDebuggerUrl));
     if (
@@ -362,9 +387,13 @@ export class MacDesktopControlHost implements DesktopControlHost {
       debuggerUrl.hostname !== "127.0.0.1" ||
       debuggerUrl.port !== String(port)
     ) {
-      throw new Error("connectionFailed");
+      throw new Error("endpointRejected");
     }
-    await verifyControlledProcess(processId, port);
+    try {
+      await verifyControlledProcess(processId, port);
+    } catch {
+      throw new Error("processRejected");
+    }
     return {
       port,
       processId,
@@ -563,15 +592,29 @@ export function selectTaskExpression(targetId: string): string {
 async function waitForEndpoint(
   host: DesktopControlHost,
   launchedAt: number,
+  timing: DesktopControlTiming,
 ): Promise<DesktopEndpoint> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < timing.endpointAttempts; attempt += 1) {
     try {
       return await host.discover(launchedAt);
-    } catch {
-      await delay(100);
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < timing.endpointAttempts) {
+        await delay(timing.endpointDelayMs);
+      }
     }
   }
-  throw new Error("launchFailed");
+  const message = errorMessage(lastError);
+  throw new Error(
+    message === "endpointUnavailable" ||
+      message === "endpointRejected" ||
+      message === "listenerRejected" ||
+      message === "processRejected"
+      ? message
+      : "launchFailed",
+    { cause: lastError },
+  );
 }
 
 async function readDesktopTargets(
@@ -616,7 +659,7 @@ async function waitForInitialDesktopTargets(
 }
 
 function startupConnectionError(error: unknown): Error {
-  const message = error instanceof Error ? error.message : "";
+  const message = errorMessage(error);
   return new Error(
     message === "rendererTimeout" ||
       message === "capabilityUnavailable" ||
@@ -625,6 +668,10 @@ function startupConnectionError(error: unknown): Error {
       : "connectionFailed",
     { cause: error },
   );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "";
 }
 
 async function cleanupEndpoint(
