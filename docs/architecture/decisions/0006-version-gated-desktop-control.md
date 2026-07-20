@@ -88,6 +88,10 @@ satisfy all of these constraints:
 - Task identifiers and selection offers are bound to one connection epoch and
   snapshot revision. Capability loss, disconnect, malformed state, stale
   targets, or cleanup removes every offer and retained target identifier.
+- Renderer task history is projected to at most 32 actionable rows in sidebar
+  order while always retaining the selected task. Entries outside that window
+  grant no authority; malformed projected entries or ambiguous selection fail
+  closed.
 - The feasibility surface may list tasks and select a different task. It may
   not submit composer text, change reasoning, start work, answer a request,
   approve, reject, interrupt, or invoke another consequential action.

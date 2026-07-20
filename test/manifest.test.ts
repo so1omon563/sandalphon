@@ -102,7 +102,9 @@ describe("Stream Deck manifest", () => {
     expect(propertyInspectorScript).toContain("debuggerUrlRejected");
     expect(propertyInspectorScript).toContain("processRejected");
     expect(propertyInspectorScript).toContain("capabilityUnavailable");
-    expect(propertyInspectorScript).toContain("invalidTaskState");
+    expect(propertyInspectorScript).toContain("taskSetRejected");
+    expect(propertyInspectorScript).toContain("taskEntryRejected");
+    expect(propertyInspectorScript).toContain("taskSelectionRejected");
     expect(propertyInspectorScript).not.toMatch(/https?:\/\//u);
   });
 

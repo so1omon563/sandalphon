@@ -93,8 +93,10 @@ function render(payload) {
       "Codex opened, but its renderer did not answer the bounded readiness probe.",
     capabilityUnavailable:
       "Codex opened, but the exact task controls never became available.",
-    invalidTaskState:
-      "Codex returned task state outside Sandalphon's bounded contract.",
+    taskSetRejected:
+      "Codex returned a task list outside Sandalphon's bounded size.",
+    taskEntryRejected: "Codex returned a malformed or duplicate task entry.",
+    taskSelectionRejected: "Codex did not identify exactly one selected task.",
     connectionFailed: "The exact desktop capability check failed closed.",
     cleanupFailed: "Restart Codex normally to remove the debugging listener.",
   };

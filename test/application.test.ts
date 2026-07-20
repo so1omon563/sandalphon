@@ -354,7 +354,9 @@ describe("Sandalphon application", () => {
     "processRejected",
     "rendererTimeout",
     "capabilityUnavailable",
-    "invalidTaskState",
+    "taskSetRejected",
+    "taskEntryRejected",
+    "taskSelectionRejected",
   ] as const)(
     "clears opt-in after cleaned-up desktop startup failure %s",
     async (reason) => {

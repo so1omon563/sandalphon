@@ -63,6 +63,10 @@ Sandalphon then launches the exact application executable with a random
 `127.0.0.1` debugging port, verifies the application, Chromium engine, CDP
 protocol, page endpoint, process arguments, and live task capabilities, and
 shows only opaque task-selection state to the shared application boundary.
+The renderer projection retains at most 32 task rows in sidebar order and
+always includes the selected task even when it falls beyond that window. A
+larger history therefore does not invalidate desktop authority; malformed or
+duplicate projected entries and ambiguous selection still fail closed.
 The plugin reserves that port before launch, passes it explicitly, and recovers
 it from the verified main-process arguments after plugin restarts. Production
 does not trust the shared `DevToolsActivePort` file because unrelated Codex
@@ -89,9 +93,9 @@ explicit consent.
 
 If the bounded attempt fails, the property inspector reports only its startup
 category: endpoint availability or shape, listener or process verification,
-renderer timeout, unavailable exact capability, invalid bounded task state, or
-a generic connection failure. These categories contain no task IDs, titles,
-prompts, responses, or renderer payloads.
+renderer timeout, unavailable exact capability, rejected task-set size, entry
+shape, selection state, or a generic connection failure. These categories
+contain no task IDs, titles, prompts, responses, or renderer payloads.
 
 Listener discovery may report multiple Chromium process owners. Sandalphon
 grants authority only when exactly one reported owner is the Codex main

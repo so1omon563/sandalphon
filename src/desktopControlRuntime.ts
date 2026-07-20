@@ -39,7 +39,9 @@ export type DesktopControlLifecycleReason =
   | "processRejected"
   | "rendererTimeout"
   | "capabilityUnavailable"
-  | "invalidTaskState"
+  | "taskSetRejected"
+  | "taskEntryRejected"
+  | "taskSelectionRejected"
   | "connectionFailed"
   | "cleanupFailed";
 
@@ -565,7 +567,7 @@ export function decodeDesktopTargets(
   value: unknown,
 ): readonly DesktopTaskTarget[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > 32) {
-    throw new Error("invalidTaskState");
+    throw new Error("taskSetRejected");
   }
   const ids = new Set<string>();
   let selectedCount = 0;
@@ -580,13 +582,13 @@ export function decodeDesktopTargets(
       ids.has(id) ||
       typeof selected !== "boolean"
     ) {
-      throw new Error("invalidTaskState");
+      throw new Error("taskEntryRejected");
     }
     ids.add(id);
     if (selected) selectedCount += 1;
     return { id, selected };
   });
-  if (selectedCount !== 1) throw new Error("invalidTaskState");
+  if (selectedCount !== 1) throw new Error("taskSelectionRejected");
   return targets;
 }
 
@@ -631,7 +633,7 @@ export function decodeDesktopPageDebuggerUrl(
 }
 
 export function taskListExpression(): string {
-  return `(() => Array.from(document.querySelectorAll(${JSON.stringify(TASK_ROW_SELECTOR)})).map((row) => ({ id: row.getAttribute("data-app-action-sidebar-thread-id"), selected: row.getAttribute("aria-current") === "page" })))()`;
+  return `(() => { const rows = Array.from(document.querySelectorAll(${JSON.stringify(TASK_ROW_SELECTOR)})); const selectedIndex = rows.findIndex((row) => row.getAttribute("aria-current") === "page"); const bounded = selectedIndex < 32 ? rows.slice(0, 32) : [...rows.slice(0, 31), rows[selectedIndex]]; return bounded.map((row) => ({ id: row.getAttribute("data-app-action-sidebar-thread-id"), selected: row.getAttribute("aria-current") === "page" })); })()`;
 }
 
 export function capabilityExpression(): string {
@@ -639,7 +641,7 @@ export function capabilityExpression(): string {
 }
 
 export function selectTaskExpression(targetId: string): string {
-  return `(async () => { const selector = ${JSON.stringify(TASK_ROW_SELECTOR)}; const rows = () => Array.from(document.querySelectorAll(selector)); const id = (row) => row?.getAttribute("data-app-action-sidebar-thread-id"); const selected = () => id(rows().find((row) => row.getAttribute("aria-current") === "page")); const target = rows().find((row) => id(row) === ${JSON.stringify(targetId)}); if (!target) return []; target.click(); const deadline = performance.now() + 5000; while (performance.now() < deadline) { if (selected() === ${JSON.stringify(targetId)}) return rows().map((row) => ({ id: id(row), selected: row.getAttribute("aria-current") === "page" })); await new Promise((resolve) => setTimeout(resolve, 50)); } return []; })()`;
+  return `(async () => { const selector = ${JSON.stringify(TASK_ROW_SELECTOR)}; const rows = () => Array.from(document.querySelectorAll(selector)); const id = (row) => row?.getAttribute("data-app-action-sidebar-thread-id"); const selected = () => id(rows().find((row) => row.getAttribute("aria-current") === "page")); const project = (values) => { const selectedIndex = values.findIndex((row) => row.getAttribute("aria-current") === "page"); const bounded = selectedIndex < 32 ? values.slice(0, 32) : [...values.slice(0, 31), values[selectedIndex]]; return bounded.map((row) => ({ id: id(row), selected: row.getAttribute("aria-current") === "page" })); }; const target = rows().find((row) => id(row) === ${JSON.stringify(targetId)}); if (!target) return []; target.click(); const deadline = performance.now() + 5000; while (performance.now() < deadline) { if (selected() === ${JSON.stringify(targetId)}) return project(rows()); await new Promise((resolve) => setTimeout(resolve, 50)); } return []; })()`;
 }
 
 async function waitForControlledProcess(port: number): Promise<number> {
@@ -782,7 +784,9 @@ function startupConnectionError(error: unknown): Error {
   return new Error(
     message === "rendererTimeout" ||
       message === "capabilityUnavailable" ||
-      message === "invalidTaskState"
+      message === "taskSetRejected" ||
+      message === "taskEntryRejected" ||
+      message === "taskSelectionRejected"
       ? message
       : "connectionFailed",
     { cause: error },

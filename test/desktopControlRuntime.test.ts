@@ -245,15 +245,28 @@ describe("desktop control runtime", () => {
   it("keeps renderer expressions bounded to list and exact selection", () => {
     expect(capabilityExpression()).toContain("typeof row.click");
     expect(taskListExpression()).toContain(TASK_ATTRIBUTE);
+    expect(taskListExpression()).toContain("rows.slice(0, 31)");
     const expression = selectTaskExpression('task-2";throw new Error()');
     expect(expression).toContain(JSON.stringify('task-2";throw new Error()'));
+    expect(expression).toContain("values.slice(0, 31)");
     expect(expression).not.toContain("innerHTML");
     expect(() =>
       decodeDesktopTargets([
         { id: "duplicate", selected: true },
         { id: "duplicate", selected: false },
       ]),
-    ).toThrow("invalidTaskState");
+    ).toThrow("taskEntryRejected");
+    expect(() =>
+      decodeDesktopTargets([{ id: "unselected", selected: false }]),
+    ).toThrow("taskSelectionRejected");
+    expect(() =>
+      decodeDesktopTargets(
+        Array.from({ length: 33 }, (_, index) => ({
+          id: `task-${index}`,
+          selected: index === 0,
+        })),
+      ),
+    ).toThrow("taskSetRejected");
   });
 
   it("deduplicates listener rows while retaining distinct process owners", () => {

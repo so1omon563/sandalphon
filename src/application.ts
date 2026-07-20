@@ -870,7 +870,9 @@ function desktopLifecycleReason(error: unknown): DesktopControlLifecycleReason {
     message === "processRejected" ||
     message === "rendererTimeout" ||
     message === "capabilityUnavailable" ||
-    message === "invalidTaskState" ||
+    message === "taskSetRejected" ||
+    message === "taskEntryRejected" ||
+    message === "taskSelectionRejected" ||
     message === "cleanupFailed"
     ? message
     : "connectionFailed";

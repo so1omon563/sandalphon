@@ -19,6 +19,9 @@ All notable changes to Sandalphon are recorded here.
 - Reserve the production renderer port directly and recover it from the exact
   controlled Codex process arguments instead of trusting the shared
   `DevToolsActivePort` file used by other Codex Chromium services.
+- Bound large desktop sidebars to 32 actionable tasks while always retaining
+  the selected task, with separate content-free diagnostics for rejected task
+  set size, entry shape, and selection state.
 - Align controlled startup with the accepted macOS `open -na … --args` proof
   route while still discovering and verifying the exact resulting process.
 - Verify the exact Codex `app://-` application origin while treating its
