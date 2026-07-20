@@ -56,7 +56,9 @@ After that walkthrough, the three key controls are validated on the Stream Deck
 Mk.2 and a bounded composable session-navigation control is added only if the
 physical workflow demonstrates the need.
 
-## Stream Deck + Result — partial pass 2026-07-19
+## Hardware Results — 2026-07-19
+
+### Stream Deck +
 
 - The three keys and Sessions dial were added to page 3 of an existing Default
   Profile. The user's two existing pages and ordinary controls remained intact.
@@ -77,5 +79,25 @@ physical workflow demonstrates the need.
 
 A live positive Attention case was not available during this pass, so physical
 target selection without decision remains pending. Deterministic coverage
-continues to prove stale-target rejection and selection-only authority. The
-Stream Deck Mk.2 composable walkthrough also remains pending.
+continues to prove stale-target rejection and selection-only authority.
+
+### Stream Deck Mk.2
+
+- Session Status, Resume, and Attention were placed together in three empty
+  keys on page 1 of the existing Default Profile. Existing page navigation,
+  Weather, timer, Music, Firefox, and Todoist controls remained in place.
+- Session Status showed the selected session with its dedicated glyph, Resume
+  was visually distinct, and unavailable Attention rendered true black beside
+  genuinely unused keys.
+- Pressing Resume consumed the current offer and removed only the Resume key.
+  Status, Attention, and unrelated controls did not change.
+- Fully quitting and reopening Stream Deck restored Default Profile page 1,
+  the three Sandalphon positions, and all ordinary controls without a managed
+  profile or Exit dependency. Resume correctly reappeared when the new plugin
+  connection received a fresh valid offer.
+
+The Mk.2 needed no session-navigation key pair: the validated minimum is the
+three composable keys, while session preview and selection remain a native dial
+interaction on Stream Deck +. Positive live Attention evidence remains for the
+organic dual-device daily-driver exercise; deterministic tests establish that
+the composable key selects a current target without deciding its request.
