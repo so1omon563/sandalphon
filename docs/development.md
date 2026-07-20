@@ -80,6 +80,11 @@ renderer timeout, unavailable exact capability, invalid bounded task state, or
 a generic connection failure. These categories contain no task IDs, titles,
 prompts, responses, or renderer payloads.
 
+Listener discovery may report multiple Chromium process owners. Sandalphon
+grants authority only when exactly one reported owner is the Codex main
+executable with the accepted remote-debugging arguments. Helper processes never
+receive authority, while zero or multiple matching main processes fail closed.
+
 This mode can list and select desktop tasks only. It cannot submit composer
 text, answer requests, approve, reject, interrupt, change reasoning, or execute
 general renderer actions.

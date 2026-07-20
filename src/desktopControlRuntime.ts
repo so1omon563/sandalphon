@@ -359,9 +359,9 @@ export class MacDesktopControlHost implements DesktopControlHost {
     } catch {
       throw new Error("endpointUnavailable");
     }
-    let processId: number;
+    let listenerOwners: readonly number[];
     try {
-      processId = await listenerProcessId(port);
+      listenerOwners = await listenerProcessIds(port);
     } catch {
       throw new Error("listenerRejected");
     }
@@ -389,11 +389,20 @@ export class MacDesktopControlHost implements DesktopControlHost {
     ) {
       throw new Error("endpointRejected");
     }
-    try {
-      await verifyControlledProcess(processId, port);
-    } catch {
+    const controlledProcessIds: number[] = [];
+    for (const processId of listenerOwners) {
+      try {
+        await verifyControlledProcess(processId, port);
+        controlledProcessIds.push(processId);
+      } catch {
+        // Chromium helpers may share the listener but cannot own authority.
+      }
+    }
+    if (controlledProcessIds.length !== 1) {
       throw new Error("processRejected");
     }
+    const [processId] = controlledProcessIds;
+    if (!processId) throw new Error("processRejected");
     return {
       port,
       processId,
@@ -427,7 +436,10 @@ export class MacDesktopControlHost implements DesktopControlHost {
     try {
       let listeningProcessId: number | undefined;
       try {
-        listeningProcessId = await listenerProcessId(port);
+        const processIds = await listenerProcessIds(port);
+        listeningProcessId = processIds.includes(processId)
+          ? processId
+          : undefined;
       } catch {
         await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
           timeout: 5000,
@@ -733,18 +745,24 @@ async function fetchJson(url: string): Promise<unknown> {
   return response.json();
 }
 
-async function listenerProcessId(port: number): Promise<number> {
+async function listenerProcessIds(port: number): Promise<readonly number[]> {
   const { stdout } = await execFileAsync(
     "/usr/sbin/lsof",
     ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-Fp"],
     { encoding: "utf8", timeout: 5000 },
   );
-  const pids = stdout
-    .split(/\r?\n/u)
-    .filter((line) => /^p\d+$/u.test(line))
-    .map((line) => Number.parseInt(line.slice(1), 10));
-  if (pids.length !== 1 || !pids[0]) throw new Error("connectionFailed");
-  return pids[0];
+  return decodeListenerProcessIds(stdout);
+}
+
+export function decodeListenerProcessIds(value: string): readonly number[] {
+  const processIds = new Set(
+    value
+      .split(/\r?\n/u)
+      .filter((line) => /^p\d+$/u.test(line))
+      .map((line) => Number.parseInt(line.slice(1), 10)),
+  );
+  if (processIds.size === 0) throw new Error("listenerRejected");
+  return [...processIds];
 }
 
 async function verifyControlledProcess(
@@ -784,7 +802,7 @@ async function waitForProcessExit(processId: number): Promise<void> {
 async function waitForListenerToClose(port: number): Promise<void> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
-      await listenerProcessId(port);
+      await listenerProcessIds(port);
     } catch {
       return;
     }

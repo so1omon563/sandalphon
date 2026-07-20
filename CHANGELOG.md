@@ -11,6 +11,8 @@ All notable changes to Sandalphon are recorded here.
 - Added bounded renderer-readiness retries and automatic opt-out after a clean
   failed startup so desktop control cannot induce repeated restart attempts,
   with content-free failure categories for bounded physical diagnosis.
+- Verify authority against exactly one matching Codex main process even when
+  Chromium helper processes also report the same debugging listener.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

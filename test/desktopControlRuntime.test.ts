@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   capabilityExpression,
   decodeDesktopTargets,
+  decodeListenerProcessIds,
   LocalDesktopControlRuntime,
   PROVEN_DESKTOP_CONTROL_VERSION,
   selectTaskExpression,
@@ -196,6 +197,13 @@ describe("desktop control runtime", () => {
         { id: "duplicate", selected: false },
       ]),
     ).toThrow("invalidTaskState");
+  });
+
+  it("deduplicates listener rows while retaining distinct process owners", () => {
+    expect(decodeListenerProcessIds("p42\nf10\np42\nf11\np84\nf12\n")).toEqual([
+      42, 84,
+    ]);
+    expect(() => decodeListenerProcessIds("f10\n")).toThrow("listenerRejected");
   });
 
   it("reports bounded renderer timeout without exposing renderer content", async () => {

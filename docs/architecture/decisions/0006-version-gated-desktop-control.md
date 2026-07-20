@@ -105,6 +105,9 @@ satisfy all of these constraints:
   remote-debugging arguments. Normal disablement or plugin shutdown revokes
   offers first, terminates that controlled process, verifies the random socket
   is no longer listening, and reopens Codex without debugging arguments.
+- Chromium helpers may share the reported listener. Authority requires exactly
+  one listener owner to match the verified Codex main executable and exact
+  remote-debugging arguments; helper owners are never authority principals.
 - Cleanup failure retains opt-in recovery state and requires a normal Codex
   restart; it never reports the bridge safely disabled without verification.
 - Initial renderer readiness may be retried only inside one bounded controlled
