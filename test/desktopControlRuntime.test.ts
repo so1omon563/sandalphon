@@ -13,20 +13,26 @@ import {
 
 class FakeProtocolSession implements DesktopProtocolSession {
   capable = true;
-  readonly evaluate = vi.fn((expression: string): Promise<unknown> => {
-    if (expression.includes("rows.every")) {
-      return Promise.resolve(this.capable);
+  rejectOverlap = false;
+  #evaluating = false;
+  readonly evaluate = vi.fn(async (expression: string): Promise<unknown> => {
+    if (this.rejectOverlap && this.#evaluating) {
+      throw new Error("overlappingEvaluation");
     }
+    this.#evaluating = true;
+    await Promise.resolve();
+    this.#evaluating = false;
+    if (expression.includes("rows.every")) return this.capable;
     if (expression.includes('"task-2"')) {
-      return Promise.resolve([
+      return [
         { id: "task-1", selected: false },
         { id: "task-2", selected: true },
-      ]);
+      ];
     }
-    return Promise.resolve([
+    return [
       { id: "task-1", selected: true },
       { id: "task-2", selected: false },
-    ]);
+    ];
   });
   readonly close = vi.fn();
   readonly #closeListeners = new Set<() => void>();
@@ -150,6 +156,17 @@ describe("desktop control runtime", () => {
     });
     await connection.close();
     expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
+  });
+
+  it("serializes capability and task probes on the renderer session", async () => {
+    const host = new FakeDesktopHost();
+    host.session.rejectOverlap = true;
+
+    const connection = await new LocalDesktopControlRuntime(host).connect();
+
+    expect(connection.initialObservation.targets).toHaveLength(2);
+    expect(host.session.evaluate).toHaveBeenCalledTimes(2);
+    await connection.close();
   });
 
   it("keeps renderer expressions bounded to list and exact selection", () => {

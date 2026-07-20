@@ -555,11 +555,9 @@ async function waitForEndpoint(
 async function readDesktopTargets(
   session: DesktopProtocolSession,
 ): Promise<readonly DesktopTaskTarget[]> {
-  const [capable, targets] = await Promise.all([
-    session.evaluate(capabilityExpression()),
-    session.evaluate(taskListExpression()),
-  ]);
+  const capable = await session.evaluate(capabilityExpression());
   if (capable !== true) throw new Error("connectionFailed");
+  const targets = await session.evaluate(taskListExpression());
   return decodeDesktopTargets(targets);
 }
 
