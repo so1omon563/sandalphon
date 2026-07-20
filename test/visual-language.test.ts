@@ -22,6 +22,8 @@ type VisualLanguage = {
   };
   stateOrder: string[];
   states: Record<string, VisualState>;
+  actionIconOrder: string[];
+  actionIcons: Record<string, VisualState>;
   typography: {
     key: { maxCharactersPerLine: number; maxLines: number };
     touch: { maxCharacters: number };
@@ -68,6 +70,19 @@ describe("visual language", () => {
     expect(
       new Set(Object.values(language.states).map(({ label }) => label)),
     ).toHaveLength(primaryStates.length);
+  });
+
+  it("defines bounded action iconography for at-a-glance controls", () => {
+    expect(language.actionIconOrder).toHaveLength(19);
+    expect(Object.keys(language.actionIcons)).toEqual(language.actionIconOrder);
+    expect(
+      new Set(Object.values(language.actionIcons).map(({ glyph }) => glyph)),
+    ).toHaveLength(19);
+    for (const { label } of Object.values(language.actionIcons)) {
+      expect(label.length).toBeLessThanOrEqual(
+        language.typography.key.maxCharactersPerLine,
+      );
+    }
   });
 
   it("meets conservative small-display contrast targets", () => {

@@ -65,7 +65,15 @@ provider-derived states.
 - Construct icons on a simple geometric grid with round caps and joins.
 - Prefer one recognizable contour and no more than two internal strokes.
 - Keep a 12 px safe inset at the 144 × 144 key source size.
-- Pair every semantic icon with an exact text label in status and review views.
+- Pair every semantic icon with an exact text label; text confirms meaning but
+  is never the only way ordinary controls differ at a glance.
+- Session tiles use the six state glyphs. Actions and navigation use distinct
+  repository-authored glyphs for Resume, Inspect, Details, Exit, Attention,
+  Review, Reasoning, Retry, Cancel, Back, Home, Previous, Next, Roster,
+  Actions, Apply, Approve, Reject, and Offline.
+- Positive decisions use the completed accent, destructive decisions use the
+  failed accent, attention uses the waiting accent, and ordinary actions use
+  focus violet. Shape remains the primary distinction.
 - Use the bridge mark for Sandalphon identity, not as a generic state icon.
 - Do not import an icon library merely for stylistic consistency. A new
   third-party source requires an explicit need and provenance review.
@@ -89,9 +97,9 @@ meaning. Their compositions differ deliberately:
 - A full-width Plus strip may coordinate all four quarters only when the
   managed-profile ownership contract is satisfied.
 
-The generated SVGs are design-contract references for later device layouts.
-They do not claim physical rendering, latency, SDK wiring, or user-title
-precedence has been validated on hardware.
+The generated state and action SVGs are design-contract references for device
+layouts. They do not claim physical rendering, latency, SDK wiring, or
+user-title precedence has been validated on hardware.
 
 ## Asset and Provenance Policy
 

@@ -18,6 +18,7 @@ import type {
   SandalphonSnapshot,
   SessionSnapshot,
 } from "./domain/model.js";
+import { actionIcon, type KeyIcon } from "./keyIcons.js";
 import { compactLabel } from "./plusMvp.js";
 
 export interface Classic15KeyView {
@@ -26,6 +27,7 @@ export interface Classic15KeyView {
   readonly lines?: readonly string[];
   readonly enabled: boolean;
   readonly state: PrimaryState;
+  readonly icon: KeyIcon;
 }
 
 export interface Classic15MvpFrame {
@@ -72,6 +74,7 @@ const ROSTER_MODES: readonly RosterMode[] = [
 ];
 
 const DETAIL_KEYS = [1, 2, 3, 4, 6, 8] as const;
+const ROSTER_PAGE_SIZE = 4;
 
 export class Classic15MvpSurface {
   readonly #application: SurfaceApplicationBoundary;
@@ -161,6 +164,11 @@ export class Classic15MvpSurface {
   keyDown(index: number, now: number): void {
     const frame = this.frame;
     if (!frame.keys[index]?.enabled) return;
+    if (index === CLASSIC15_ANCHORS.exit) {
+      this.#pressed = undefined;
+      for (const listener of this.#exitListeners) listener();
+      return;
+    }
     if (
       frame.view === "request" &&
       [5, 7, 9].includes(index) &&
@@ -206,10 +214,6 @@ export class Classic15MvpSurface {
   }
 
   async #activateKey(index: number, now: number): Promise<void> {
-    if (index === CLASSIC15_ANCHORS.exit) {
-      for (const listener of this.#exitListeners) listener();
-      return;
-    }
     if (index === CLASSIC15_ANCHORS.homeOrBack) {
       this.#view = this.#view === "home" ? "home" : "session";
       this.#review = undefined;
@@ -654,7 +658,10 @@ export class Classic15MvpSurface {
     const selectedId = this.#snapshot.selectedSessionId;
     return this.#rosterSessions()
       .filter(({ id }) => id !== selectedId)
-      .slice(this.#rosterPage * 8, this.#rosterPage * 8 + 8);
+      .slice(
+        this.#rosterPage * ROSTER_PAGE_SIZE,
+        this.#rosterPage * ROSTER_PAGE_SIZE + ROSTER_PAGE_SIZE,
+      );
   }
 
   #rosterPages(): number {
@@ -662,7 +669,7 @@ export class Classic15MvpSurface {
     const candidateCount = this.#rosterSessions().filter(
       ({ id }) => id !== selectedId,
     ).length;
-    return Math.max(1, Math.ceil(candidateCount / 8));
+    return Math.max(1, Math.ceil(candidateCount / ROSTER_PAGE_SIZE));
   }
 
   #boundPages(): void {
@@ -729,28 +736,43 @@ export class Classic15MvpSurface {
     }
     if (view === "home") {
       const items = this.#rosterPageItems();
+      const pageCount = this.#rosterPages();
+      const attentionCount = this.#attentionSessions().length;
       const labels = [
         compactLabel(selected.name, 24),
-        ...Array.from({ length: 8 }, (_, index) =>
+        ...Array.from({ length: ROSTER_PAGE_SIZE }, (_, index) =>
           items[index] ? compactLabel(items[index].name, 24) : "",
         ),
-        `${this.#attentionSessions().length} attention`,
-        "Home",
-        "Previous",
-        `${this.#attentionRoster ? "Attention" : this.#rosterMode} ${this.#rosterPage + 1}/${this.#rosterPages()}`,
-        "Next",
+        "",
+        "",
+        "",
+        "",
+        attentionCount > 0 ? `${attentionCount} attention` : "",
+        "",
+        this.#rosterPage > 0 ? "Previous" : "",
+        pageCount > 1
+          ? `${this.#attentionRoster ? "Attention" : this.#rosterMode} ${this.#rosterPage + 1}/${pageCount}`
+          : this.#attentionRoster
+            ? "Attention"
+            : this.#rosterMode,
+        this.#rosterPage + 1 < pageCount ? "Next" : "",
         "Exit",
       ];
-      const keys = views(labels, state, [
-        0,
-        ...items.map((_, index) => index + 1),
-        ...(this.#attentionSessions().length > 0 ? [9] : []),
-        10,
-        ...(this.#rosterPage > 0 ? [11] : []),
-        12,
-        ...(this.#rosterPage + 1 < this.#rosterPages() ? [13] : []),
-        14,
-      ]);
+      const sessionKeys = [0, ...items.map((_, index) => index + 1)];
+      const keys = views(
+        labels,
+        state,
+        [
+          ...sessionKeys,
+          ...(attentionCount > 0 ? [9] : []),
+          ...(this.#rosterPage > 0 ? [11] : []),
+          12,
+          ...(this.#rosterPage + 1 < pageCount ? [13] : []),
+          14,
+        ],
+        undefined,
+        sessionKeys,
+      );
       items.forEach((item, index) => {
         const key = keys[index + 1];
         if (key) keys[index + 1] = { ...key, state: item.primaryState };
@@ -758,24 +780,40 @@ export class Classic15MvpSurface {
       return keys;
     }
     if (view === "session") {
+      const position = this.#snapshot.sessions.findIndex(
+        ({ id }) => id === selected.id,
+      );
+      const inspectAvailable = offerAvailable(selected, "Inspect");
+      const pendingRequest = selected.pendingRequests.length > 0;
+      const attentionElsewhere = this.#attentionSessions().some(
+        ({ id }) => id !== selected.id,
+      );
       const labels = [
         compactLabel(selected.name, 24),
-        selected.pendingRequests.length > 0 ? "Inspect request" : "Inspect",
-        "Start Resume",
-        "Review",
-        "Reasoning",
-        "Fork",
-        "Actions",
-        "Retry",
-        "Cancel run",
-        selected.attention.length > 0 ? "Attention" : "No attention",
+        pendingRequest
+          ? "Inspect request"
+          : inspectAvailable
+            ? selected.resultLatch
+              ? "Inspect result"
+              : "Inspect"
+            : "",
+        offerAvailable(selected, "ResumeSession") ? "Resume" : "",
+        pendingRequest ? "Review request" : "",
+        offerAvailable(selected, "ChangeNextTurnOptions") ? "Reasoning" : "",
+        "",
+        "",
+        offerAvailable(selected, "RetryWork") ? "Retry" : "",
+        offerAvailable(selected, "CancelRun") ? "Cancel run" : "",
+        !pendingRequest && attentionElsewhere ? "Other attention" : "",
         "Back",
-        "Previous",
-        `${this.#snapshot.sessions.findIndex(({ id }) => id === selected.id) + 1}/${this.#snapshot.sessions.length}`,
-        "Next",
+        position > 0 ? "Previous" : "",
+        this.#snapshot.sessions.length > 1
+          ? `Thread ${position + 1}/${this.#snapshot.sessions.length}`
+          : "",
+        position + 1 < this.#snapshot.sessions.length ? "Next" : "",
         "Exit",
       ];
-      const enabled = [0, 6, 10, 12, 14];
+      const enabled = [0, 10, 14];
       for (const [index, kind] of [
         [1, selected.pendingRequests.length > 0 ? undefined : "Inspect"],
         [2, "ResumeSession"],
@@ -785,11 +823,10 @@ export class Classic15MvpSurface {
       ] as const) {
         if (!kind || offerAvailable(selected, kind)) enabled.push(index);
       }
-      if (selected.pendingRequests.length > 0) enabled.push(1, 3, 9);
-      const position = this.#snapshot.sessions.findIndex(
-        ({ id }) => id === selected.id,
-      );
+      if (pendingRequest) enabled.push(1, 3);
+      if (attentionElsewhere) enabled.push(9);
       if (position > 0) enabled.push(11);
+      if (this.#snapshot.sessions.length > 1) enabled.push(12);
       if (position + 1 < this.#snapshot.sessions.length) enabled.push(13);
       return views(labels, state, enabled);
     }
@@ -801,13 +838,15 @@ export class Classic15MvpSurface {
       const labels = [
         compactLabel(selected.name, 24),
         ...Array.from({ length: 8 }, (_, index) =>
-          kinds[index] ? actionLabel(kinds[index]) : "",
+          kinds[index] && offerAvailable(selected, kinds[index])
+            ? actionLabel(kinds[index])
+            : "",
         ),
-        selected.pendingRequests.length > 0 ? "Attention" : "No attention",
+        selected.pendingRequests.length > 0 ? "Review request" : "",
         "Back",
-        "Previous",
-        `${this.#actionPage + 1}/${Math.max(1, Math.ceil(ACTION_CATALOG.length / 8))}`,
-        "Next",
+        "",
+        "Actions",
+        "",
         "Exit",
       ];
       return views(labels, state, [
@@ -830,11 +869,11 @@ export class Classic15MvpSurface {
           (_, index) => this.#choice?.options[index] ?? "",
         ),
         "Apply",
-        selected.attention.length > 0 ? "Attention" : "No attention",
+        "",
         "Back",
-        "Lower",
+        this.#choicePreview > 0 ? "Lower" : "",
         this.#choice.options[this.#choicePreview] ?? "No choice",
-        "Higher",
+        this.#choicePreview + 1 < this.#choice.options.length ? "Higher" : "",
         "Exit",
       ];
       return views(labels, state, [
@@ -916,6 +955,7 @@ function views(
   state: PrimaryState,
   enabled: readonly number[],
   page?: Classic15DetailPage,
+  stateKeys: readonly number[] = [0],
 ): Classic15KeyView[] {
   return labels.map((label, index) => {
     const detailIndex = DETAIL_KEYS.indexOf(
@@ -929,6 +969,7 @@ function views(
       ...(lines ? { lines } : {}),
       enabled: enabled.includes(index),
       state,
+      icon: stateKeys.includes(index) ? "state" : actionIcon(label),
     };
   });
 }

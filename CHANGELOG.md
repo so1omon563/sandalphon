@@ -4,6 +4,17 @@ All notable changes to Sandalphon are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- Simplified managed Classic 15 and Stream Deck + frames with true blank
+  unused controls, contextual action visibility, a four-alternative Classic
+  roster page, and a single primary Plus session lane.
+- Added distinct repository-authored action and navigation glyphs so labels
+  confirm rather than solely communicate each control's meaning.
+- Made managed Exit dispatch immediately on key-down and documented the
+  Stream Deck restart case where the official prior-profile API cannot return
+  to a user-defined profile.
+
 ### Added
 
 - Independent Sandalphon repository and package identity.

@@ -18,8 +18,10 @@ export class StreamDeckClassic15Adapter {
     this.#surface = surface;
     surface.onFrame((frame) => this.#scheduleRender(frame));
     surface.onExit(() => {
-      for (const deviceId of this.#deviceIds()) {
-        void streamDeck.profiles.switchToProfile(deviceId);
+      for (const { action, index } of this.#keys.values()) {
+        if (index === 14) {
+          void streamDeck.profiles.switchToProfile(action.device.id);
+        }
       }
     });
   }
@@ -82,6 +84,7 @@ export class StreamDeckClassic15Adapter {
           label: "Loading",
           enabled: false,
           state: "unavailable" as const,
+          icon: "state" as const,
         };
     if (!view) return;
     try {
@@ -99,19 +102,10 @@ export class StreamDeckClassic15Adapter {
   }
 
   #isReady(deviceId: string): boolean {
-    return (
-      [...this.#keys.values()].filter(
-        ({ action }) => action.device.id === deviceId,
-      ).length === 15
+    const keys = [...this.#keys.values()].filter(
+      ({ action }) => action.device.id === deviceId,
     );
-  }
-
-  #deviceIds(): string[] {
-    return [
-      ...new Set(
-        [...this.#keys.values()].map(({ action }) => action.device.id),
-      ),
-    ];
+    return keys.length === 15;
   }
 }
 

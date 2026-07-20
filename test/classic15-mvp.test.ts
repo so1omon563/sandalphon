@@ -94,17 +94,60 @@ describe("Stream Deck Classic 15 MVP surface", () => {
       enabled: true,
     });
     expect(surface.frame.keys.slice(10, 15)).toMatchObject([
-      { label: "Home" },
-      { label: "Previous" },
-      { label: "Priority 1/1", enabled: true },
-      { label: "Next" },
+      { label: "" },
+      { label: "" },
+      { label: "Priority", enabled: true },
+      { label: "" },
       { label: "Exit", enabled: true },
     ]);
+    expect(
+      surface.frame.keys
+        .filter(({ label }) => label.length > 0)
+        .map(({ index }) => index),
+    ).toEqual([0, 1, 2, 12, 14]);
 
     await releaseKey(surface, 1);
     expect(application.selectSession).toHaveBeenCalledWith("thread-2");
     expect(surface.frame.keys[0]?.label).toBe("Second thread");
     surface.dispose();
+  });
+
+  it("limits the home roster to four alternatives and reveals paging only when needed", () => {
+    let state = reduceCore(createCoreState(), {
+      type: "connectionReady",
+      connectionEpoch: 1,
+    });
+    for (let index = 0; index < 7; index += 1) {
+      state = reduceCore(state, {
+        type: "observeSession",
+        connectionEpoch: 1,
+        session: createSession(`thread-${index}`, `Thread ${index}`),
+      });
+    }
+    state = reduceCore(state, {
+      type: "selectSession",
+      sessionId: "thread-0",
+    });
+    const surface = new Classic15MvpSurface(
+      new SurfaceApplication(toSnapshot(state)),
+    );
+
+    expect(surface.frame.keys.slice(1, 9).map(({ label }) => label)).toEqual([
+      "Thread 1",
+      "Thread 2",
+      "Thread 3",
+      "Thread 4",
+      "",
+      "",
+      "",
+      "",
+    ]);
+    expect(surface.frame.keys[11]?.label).toBe("");
+    expect(surface.frame.keys[12]?.label).toBe("Priority 1/2");
+    expect(surface.frame.keys[13]).toMatchObject({
+      label: "Next",
+      enabled: true,
+    });
   });
 
   it("opens the selected request without stealing selection", async () => {
@@ -182,7 +225,7 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     await releaseKey(surface, 9);
 
     expect(application.selectSession).not.toHaveBeenCalled();
-    expect(surface.frame.keys[12]?.label).toBe("Attention 1/1");
+    expect(surface.frame.keys[12]?.label).toBe("Attention");
     expect(surface.frame.keys[1]).toMatchObject({
       label: "Failed work",
       state: "failed",
@@ -318,7 +361,9 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     expect(frames[0]?.keys[1]?.label).toBe("unauthenticated");
     const exit = vi.fn();
     surface.onExit(exit);
-    await releaseKey(surface, 14);
+    surface.keyDown(14, 100);
+    expect(exit).toHaveBeenCalledOnce();
+    await surface.keyUp(14, 110);
     expect(exit).toHaveBeenCalledOnce();
   });
 });
