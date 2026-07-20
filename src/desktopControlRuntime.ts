@@ -1,7 +1,5 @@
 import { execFile } from "node:child_process";
-import { readFile, stat } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { createServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
@@ -21,13 +19,6 @@ const APPLICATION_BINARY = "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT";
 const APPLICATION_BUNDLE = "/Applications/ChatGPT.app";
 const APPLICATION_PLIST = "/Applications/ChatGPT.app/Contents/Info.plist";
 const APPLICATION_BUNDLE_ID = "com.openai.codex";
-const ACTIVE_PORT_FILE = join(
-  homedir(),
-  "Library",
-  "Application Support",
-  "Codex",
-  "DevToolsActivePort",
-);
 const TASK_ROW_SELECTOR =
   '[role="button"][data-app-action-sidebar-thread-row][data-app-action-sidebar-thread-id]';
 const execFileAsync = promisify(execFile);
@@ -73,13 +64,17 @@ interface DesktopEndpoint {
   readonly version: DesktopControlVersion;
 }
 
+interface DesktopControlledLaunch {
+  readonly processId: number;
+  readonly port: number;
+}
+
 export interface DesktopControlHost {
   installedApplicationVersion(): Promise<string>;
   applicationRunning(): Promise<boolean>;
-  launchControlled(): Promise<number>;
-  discover(requireFreshAfter?: number): Promise<DesktopEndpoint>;
+  launchControlled(): Promise<DesktopControlledLaunch>;
+  discover(expectedPort?: number): Promise<DesktopEndpoint>;
   openSession(debuggerUrl: string): Promise<DesktopProtocolSession>;
-  restoreLaunched(processId: number): Promise<void>;
   restoreNormal(processId: number, port: number): Promise<void>;
 }
 
@@ -134,12 +129,15 @@ export class LocalDesktopControlRuntime implements DesktopControlRuntime {
       if (await this.#host.applicationRunning()) {
         throw new Error("restartRequired", { cause: error });
       }
-      const launchedAt = Date.now();
-      const processId = await this.#host.launchControlled();
+      const launched = await this.#host.launchControlled();
       try {
-        endpoint = await waitForEndpoint(this.#host, launchedAt, this.#timing);
+        endpoint = await waitForEndpoint(
+          this.#host,
+          launched.port,
+          this.#timing,
+        );
       } catch (error) {
-        await this.#host.restoreLaunched(processId);
+        await this.#host.restoreNormal(launched.processId, launched.port);
         throw error;
       }
     }
@@ -318,39 +316,34 @@ export class MacDesktopControlHost implements DesktopControlHost {
     }
   }
 
-  async launchControlled(): Promise<number> {
+  async launchControlled(): Promise<DesktopControlledLaunch> {
     try {
-      await execFileAsync("/usr/bin/open", controlledLaunchArguments(), {
+      const port = await reserveDesktopControlPort();
+      await execFileAsync("/usr/bin/open", controlledLaunchArguments(port), {
         timeout: 5000,
       });
-      return await waitForControlledProcess();
+      return {
+        processId: await waitForControlledProcess(port),
+        port,
+      };
     } catch {
       throw new Error("launchFailed");
     }
   }
 
-  async discover(requireFreshAfter?: number): Promise<DesktopEndpoint> {
-    let portText: string;
-    let metadata: Awaited<ReturnType<typeof stat>>;
-    try {
-      [portText, metadata] = await Promise.all([
-        readFile(ACTIVE_PORT_FILE, "utf8"),
-        stat(ACTIVE_PORT_FILE),
-      ]);
-    } catch {
+  async discover(expectedPort?: number): Promise<DesktopEndpoint> {
+    const controlledProcesses = await controlledApplicationProcesses();
+    const matchingProcesses =
+      expectedPort === undefined
+        ? controlledProcesses
+        : controlledProcesses.filter(({ port }) => port === expectedPort);
+    if (matchingProcesses.length === 0) {
       throw new Error("endpointUnavailable");
     }
-    if (
-      requireFreshAfter !== undefined &&
-      metadata.mtimeMs < requireFreshAfter - 1000
-    ) {
-      throw new Error("endpointUnavailable");
-    }
-    const [portLine] = portText.split(/\r?\n/u);
-    const port = Number.parseInt(portLine ?? "", 10);
-    if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-      throw new Error("endpointRejected");
-    }
+    if (matchingProcesses.length !== 1) throw new Error("processRejected");
+    const controlledProcess = matchingProcesses[0];
+    if (!controlledProcess) throw new Error("processRejected");
+    const { port, processId } = controlledProcess;
     const origin = `http://127.0.0.1:${port}`;
     let versionValue: unknown;
     let targetsValue: unknown;
@@ -384,19 +377,20 @@ export class MacDesktopControlHost implements DesktopControlHost {
     }
     const debuggerUrl = decodeDesktopPageDebuggerUrl(targets[0], port);
     const controlledProcessIds: number[] = [];
-    for (const processId of listenerOwners) {
+    for (const ownerProcessId of listenerOwners) {
       try {
-        await verifyControlledProcess(processId, port);
-        controlledProcessIds.push(processId);
+        await verifyControlledProcess(ownerProcessId, port);
+        controlledProcessIds.push(ownerProcessId);
       } catch {
         // Chromium helpers may share the listener but cannot own authority.
       }
     }
-    if (controlledProcessIds.length !== 1) {
+    if (
+      controlledProcessIds.length !== 1 ||
+      controlledProcessIds[0] !== processId
+    ) {
       throw new Error("processRejected");
     }
-    const [processId] = controlledProcessIds;
-    if (!processId) throw new Error("processRejected");
     return {
       port,
       processId,
@@ -411,19 +405,6 @@ export class MacDesktopControlHost implements DesktopControlHost {
 
   async openSession(debuggerUrl: string): Promise<DesktopProtocolSession> {
     return WebSocketDesktopProtocolSession.connect(debuggerUrl);
-  }
-
-  async restoreLaunched(processId: number): Promise<void> {
-    try {
-      await verifyControlledProcess(processId, 0);
-      process.kill(processId, "SIGTERM");
-      await waitForProcessExit(processId);
-      await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
-        timeout: 5000,
-      });
-    } catch {
-      throw new Error("cleanupFailed");
-    }
   }
 
   async restoreNormal(processId: number, port: number): Promise<void> {
@@ -456,14 +437,29 @@ export class MacDesktopControlHost implements DesktopControlHost {
   }
 }
 
-export function controlledLaunchArguments(): readonly string[] {
+export function controlledLaunchArguments(port: number): readonly string[] {
   return [
     "-na",
     APPLICATION_BUNDLE,
     "--args",
     "--remote-debugging-address=127.0.0.1",
-    "--remote-debugging-port=0",
+    `--remote-debugging-port=${port}`,
   ];
+}
+
+export async function reserveDesktopControlPort(): Promise<number> {
+  const server = createServer();
+  server.unref();
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen({ host: "127.0.0.1", port: 0, exclusive: true }, resolve);
+  });
+  const address = server.address();
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+  if (!address || typeof address === "string") throw new Error("launchFailed");
+  return address.port;
 }
 
 class WebSocketDesktopProtocolSession implements DesktopProtocolSession {
@@ -646,13 +642,13 @@ export function selectTaskExpression(targetId: string): string {
   return `(async () => { const selector = ${JSON.stringify(TASK_ROW_SELECTOR)}; const rows = () => Array.from(document.querySelectorAll(selector)); const id = (row) => row?.getAttribute("data-app-action-sidebar-thread-id"); const selected = () => id(rows().find((row) => row.getAttribute("aria-current") === "page")); const target = rows().find((row) => id(row) === ${JSON.stringify(targetId)}); if (!target) return []; target.click(); const deadline = performance.now() + 5000; while (performance.now() < deadline) { if (selected() === ${JSON.stringify(targetId)}) return rows().map((row) => ({ id: id(row), selected: row.getAttribute("aria-current") === "page" })); await new Promise((resolve) => setTimeout(resolve, 50)); } return []; })()`;
 }
 
-async function waitForControlledProcess(): Promise<number> {
+async function waitForControlledProcess(port: number): Promise<number> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const processIds = await applicationProcessIds();
     const controlledProcessIds: number[] = [];
     for (const processId of processIds) {
       try {
-        await verifyControlledProcess(processId, 0);
+        await verifyControlledProcess(processId, port);
         controlledProcessIds.push(processId);
       } catch {
         // A normal Codex process is not an accepted controlled launch.
@@ -665,6 +661,28 @@ async function waitForControlledProcess(): Promise<number> {
     await delay(100);
   }
   throw new Error("launchFailed");
+}
+
+interface ControlledApplicationProcess {
+  readonly processId: number;
+  readonly port: number;
+}
+
+async function controlledApplicationProcesses(): Promise<
+  readonly ControlledApplicationProcess[]
+> {
+  const controlled: ControlledApplicationProcess[] = [];
+  for (const processId of await applicationProcessIds()) {
+    try {
+      const port = controlledPortFromApplicationCommand(
+        await applicationProcessCommand(processId),
+      );
+      if (port !== undefined) controlled.push({ processId, port });
+    } catch {
+      // A process that exits during inspection cannot grant authority.
+    }
+  }
+  return controlled;
 }
 
 async function applicationProcessIds(): Promise<readonly number[]> {
@@ -686,13 +704,13 @@ async function applicationProcessIds(): Promise<readonly number[]> {
 
 async function waitForEndpoint(
   host: DesktopControlHost,
-  launchedAt: number,
+  expectedPort: number,
   timing: DesktopControlTiming,
 ): Promise<DesktopEndpoint> {
   let lastError: unknown;
   for (let attempt = 0; attempt < timing.endpointAttempts; attempt += 1) {
     try {
-      return await host.discover(launchedAt);
+      return await host.discover(expectedPort);
     } catch (error) {
       lastError = error;
       if (attempt + 1 < timing.endpointAttempts) {
@@ -869,17 +887,38 @@ async function verifyControlledProcess(
   processId: number,
   port: number,
 ): Promise<void> {
-  const command = await applicationProcessCommand(processId);
   if (
-    !command.startsWith(APPLICATION_BINARY) ||
-    !command.includes("--remote-debugging-address=127.0.0.1") ||
-    !(
-      command.includes("--remote-debugging-port=0") ||
-      command.includes(`--remote-debugging-port=${port}`)
-    )
+    controlledPortFromApplicationCommand(
+      await applicationProcessCommand(processId),
+    ) !== port
   ) {
     throw new Error("connectionFailed");
   }
+}
+
+export function controlledPortFromApplicationCommand(
+  command: string,
+): number | undefined {
+  const arguments_ = command.trim().split(/ +/u);
+  if (arguments_[0] !== APPLICATION_BINARY) return undefined;
+  const addressArguments = arguments_.filter((argument) =>
+    argument.startsWith("--remote-debugging-address="),
+  );
+  if (
+    addressArguments.length !== 1 ||
+    addressArguments[0] !== "--remote-debugging-address=127.0.0.1"
+  )
+    return undefined;
+  const portArguments = arguments_.filter((argument) =>
+    argument.startsWith("--remote-debugging-port="),
+  );
+  if (portArguments.length !== 1) return undefined;
+  const portText = portArguments[0]?.split("=")[1] ?? "";
+  if (!/^\d+$/u.test(portText)) return undefined;
+  const port = Number.parseInt(portText, 10);
+  return Number.isInteger(port) && port >= 1 && port <= 65_535
+    ? port
+    : undefined;
 }
 
 async function applicationProcessCommand(processId: number): Promise<string> {

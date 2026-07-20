@@ -89,9 +89,10 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   capability gate for the desktop-control feasibility boundary. It grants only
   revision-bound task-selection authority and contains no live renderer
   attachment.
-- src/desktopControlRuntime.ts owns the opt-in Codex desktop process, random
-  loopback listener discovery, exact process and version checks, bounded CDP
-  task operations, polling, and verified normal-restart cleanup.
+- src/desktopControlRuntime.ts owns the opt-in Codex desktop process, a
+  plugin-reserved random loopback port recoverable from exact process
+  arguments, exact process and version checks, bounded CDP task operations,
+  polling, and verified normal-restart cleanup.
 - dev.so1omon.sandalphon.sdPlugin/property-inspector owns the explicit
   same-user-risk warning and desktop-control opt-in/retry controls. It proposes
   changes to the plugin and never writes global settings directly.

@@ -111,6 +111,10 @@ satisfy all of these constraints:
 - Controlled startup uses the accepted macOS `open -na … --args` proof route,
   but the launcher result itself grants no authority; Sandalphon separately
   discovers and verifies exactly one controlled Codex main process.
+- Production reserves a random loopback port before launch, passes it as an
+  exact process argument, and recovers it from that verified argument after a
+  plugin restart. It does not trust the profile-wide `DevToolsActivePort` file,
+  which unrelated Codex Chromium services may overwrite with their endpoint.
 - Renderer attachment accepts only a page at the exact Codex `app://-`
   application origin. Its path, query, and fragment are navigation state and
   grant no authority; a credentialed, port-bearing, foreign-origin, non-page,

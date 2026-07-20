@@ -16,6 +16,9 @@ All notable changes to Sandalphon are recorded here.
 - Reconcile cleanup against the complete safe terminal state after command or
   timeout errors: the exact listener is closed and exactly one normal Codex
   main process remains without debugging arguments.
+- Reserve the production renderer port directly and recover it from the exact
+  controlled Codex process arguments instead of trusting the shared
+  `DevToolsActivePort` file used by other Codex Chromium services.
 - Align controlled startup with the accepted macOS `open -na … --args` proof
   route while still discovering and verifying the exact resulting process.
 - Verify the exact Codex `app://-` application origin while treating its

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   capabilityExpression,
   controlledLaunchArguments,
+  controlledPortFromApplicationCommand,
   decodeDesktopPageDebuggerUrl,
   decodeDesktopTargets,
   decodeListenerProcessIds,
@@ -59,10 +60,9 @@ class FakeDesktopHost implements DesktopControlHost {
   readonly session = new FakeProtocolSession();
   readonly launchControlled = vi.fn(() => {
     this.discoveryAvailable = true;
-    return Promise.resolve(42);
+    return Promise.resolve({ processId: 42, port: 49152 });
   });
   readonly restoreNormal = vi.fn().mockResolvedValue(undefined);
-  readonly restoreLaunched = vi.fn().mockResolvedValue(undefined);
 
   installedApplicationVersion(): Promise<string> {
     return Promise.resolve(this.version);
@@ -98,13 +98,41 @@ class FakeDesktopHost implements DesktopControlHost {
 
 describe("desktop control runtime", () => {
   it("uses the accepted macOS proof launcher with random loopback arguments", () => {
-    expect(controlledLaunchArguments()).toEqual([
+    expect(controlledLaunchArguments(49152)).toEqual([
       "-na",
       "/Applications/ChatGPT.app",
       "--args",
       "--remote-debugging-address=127.0.0.1",
-      "--remote-debugging-port=0",
+      "--remote-debugging-port=49152",
     ]);
+  });
+
+  it("recovers only an exact explicit controlled port from process arguments", () => {
+    expect(
+      controlledPortFromApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-address=127.0.0.1 --remote-debugging-port=49152",
+      ),
+    ).toBe(49152);
+    expect(
+      controlledPortFromApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-port=49152",
+      ),
+    ).toBeUndefined();
+    expect(
+      controlledPortFromApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-address=127.0.0.1 --remote-debugging-port=0",
+      ),
+    ).toBeUndefined();
+    expect(
+      controlledPortFromApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-address=127.0.0.1 --remote-debugging-address=0.0.0.0 --remote-debugging-port=49152",
+      ),
+    ).toBeUndefined();
+    expect(
+      controlledPortFromApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-address=127.0.0.1 --remote-debugging-port=49152x",
+      ),
+    ).toBeUndefined();
   });
 
   it("recognizes only a normal Codex main-process command", () => {
@@ -303,7 +331,7 @@ describe("desktop control runtime", () => {
         initialEvaluationTimeoutMs: 1,
       }).connect(),
     ).rejects.toThrow("processRejected");
-    expect(host.restoreLaunched).toHaveBeenCalledWith(42);
+    expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
   });
 });
 

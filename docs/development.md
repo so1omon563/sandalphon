@@ -63,6 +63,10 @@ Sandalphon then launches the exact application executable with a random
 `127.0.0.1` debugging port, verifies the application, Chromium engine, CDP
 protocol, page endpoint, process arguments, and live task capabilities, and
 shows only opaque task-selection state to the shared application boundary.
+The plugin reserves that port before launch, passes it explicitly, and recovers
+it from the verified main-process arguments after plugin restarts. Production
+does not trust the shared `DevToolsActivePort` file because unrelated Codex
+Chromium services may update it with their own endpoint.
 The page endpoint must use the exact Codex `app://-` application origin.
 In-app paths, query parameters, and fragments are renderer navigation state,
 not authority; non-page, credentialed, port-bearing, and foreign-origin
@@ -77,8 +81,7 @@ and reopens Codex normally. A cleanup command or timeout error is reconciled
 against the complete terminal state: the exact listener must be closed and
 exactly one Codex main process must remain without debugging arguments. If that
 state cannot be proven, opt-in remains set and the inspector instructs the user
-to restart Codex normally. Never treat the stale `DevToolsActivePort` file
-alone as evidence that a listener is active.
+to restart Codex normally.
 Initial renderer readiness is retried only within one bounded launch attempt.
 If that attempt fails after verified cleanup, Sandalphon clears opt-in instead
 of permitting an automatic restart cycle; enabling it again requires fresh
