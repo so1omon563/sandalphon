@@ -117,6 +117,45 @@ describe("desktop control contract", () => {
     }
   });
 
+  it("rejects malformed observation containers without throwing", () => {
+    for (const malformed of [
+      null,
+      { ...observation, capabilities: null },
+      { ...observation, targets: null },
+      { ...observation, version: null },
+      { ...observation, revision: -1 },
+    ]) {
+      expect(
+        evaluateDesktopControl(
+          policy,
+          malformed as unknown as DesktopControlObservation,
+        ),
+      ).toMatchObject({
+        availability: "unavailable",
+        reason: "invalidState",
+        targets: [],
+      });
+    }
+  });
+
+  it("retains only opaque target identity and selection fields", () => {
+    const state = evaluateDesktopControl(policy, {
+      ...observation,
+      targets: [
+        { id: "task-1", selected: true, extra: "not-retained" },
+        { id: "task-2", selected: false, extra: "not-retained" },
+      ] as unknown as DesktopControlObservation["targets"],
+    });
+    expect(state).toMatchObject({
+      availability: "ready",
+      targets: [
+        { id: "task-1", selected: true },
+        { id: "task-2", selected: false },
+      ],
+    });
+    expect(state.targets.every((target) => !("extra" in target))).toBe(true);
+  });
+
   it("issues only revision-bound offers for unselected tasks", () => {
     const state = evaluateDesktopControl(policy, observation);
     expect(state).toMatchObject({

@@ -75,6 +75,9 @@ export function evaluateDesktopControl(
   policy: DesktopControlPolicy,
   observation: DesktopControlObservation,
 ): DesktopControlState {
+  if (!hasValidObservationContainer(observation)) {
+    return invalidObservationState(observation);
+  }
   if (!policy.enabled) return unavailable(observation, "disabled");
   if (!observation.connected) return unavailable(observation, "disconnected");
   if (observation.endpointHost !== "127.0.0.1") {
@@ -101,7 +104,7 @@ export function evaluateDesktopControl(
     availability: "ready",
     epoch: observation.epoch,
     revision: observation.revision,
-    targets: observation.targets.map((target) => ({ ...target })),
+    targets: observation.targets.map(({ id, selected }) => ({ id, selected })),
     selectedTargetId: selectedTarget.id,
   };
 }
@@ -156,6 +159,47 @@ function unavailable(
     revision: observation.revision,
     targets: [],
   };
+}
+
+function hasValidObservationContainer(
+  observation: DesktopControlObservation,
+): boolean {
+  const value: unknown = observation;
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  const version = record.version;
+  return (
+    typeof record.connected === "boolean" &&
+    typeof record.endpointHost === "string" &&
+    isCounter(record.epoch) &&
+    isCounter(record.revision) &&
+    !!version &&
+    typeof version === "object" &&
+    typeof (version as Record<string, unknown>).application === "string" &&
+    typeof (version as Record<string, unknown>).engine === "string" &&
+    typeof (version as Record<string, unknown>).protocol === "string" &&
+    Array.isArray(record.capabilities) &&
+    record.capabilities.every((capability) => typeof capability === "string") &&
+    Array.isArray(record.targets)
+  );
+}
+
+function invalidObservationState(observation: unknown): DesktopControlState {
+  const record =
+    observation && typeof observation === "object"
+      ? (observation as Record<string, unknown>)
+      : {};
+  return {
+    availability: "unavailable",
+    reason: "invalidState",
+    epoch: isCounter(record.epoch) ? record.epoch : 0,
+    revision: isCounter(record.revision) ? record.revision : 0,
+    targets: [],
+  };
+}
+
+function isCounter(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
 function isAllowedVersion(
