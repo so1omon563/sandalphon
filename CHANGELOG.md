@@ -20,6 +20,8 @@ All notable changes to Sandalphon are recorded here.
   faintly active beside genuinely unused keys.
 - Made composable Attention cycle through every attention session in roster
   order instead of alternating between only the first two.
+- Removed the unreachable Classic Actions catalog; every implemented action
+  remains contextual on Session, with result acknowledgement after inspection.
 - Made managed Exit dispatch immediately on key-down and documented the
   Stream Deck restart case where the official prior-profile API cannot return
   to a user-defined profile.

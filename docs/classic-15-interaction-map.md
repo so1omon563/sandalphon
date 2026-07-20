@@ -104,19 +104,16 @@ page exists; Home is omitted because the frame is already Home.
 
 ## Session
 
-| `K0` Selected | `K1` Inspect           | `K2` Start / Resume    | `K3` Review        | `K4` Reasoning       |
+| `K0` Selected | `K1` Inspect           | `K2` Resume            | `K3` Review        | `K4` Reasoning       |
 | ------------- | ---------------------- | ---------------------- | ------------------ | -------------------- |
 | `K5` Empty    | `K6` Empty             | `K7` Retry             | `K8` Cancel run    | `K9` Other attention |
 | `K10` Back    | `K11` Previous session | `K12` Session position | `K13` Next session | `K14` Exit           |
 
 - Inspect opens current activity, exact request, or exact result detail.
-  Displaying every page for an exact terminal result acknowledges that result.
-  The Actions catalog may instead offer explicit Acknowledge for the same
-  current result.
-- `K2` says Start only with explicit structured input or an eligible preset;
-  it says Resume only for a known safely resumable historical session. These
-  mutually exclusive labels never imply that arbitrary historical sessions
-  are controllable.
+  An exact terminal result exposes a separate Acknowledge key only after its
+  detail has been inspected completely.
+- `K2` says Resume only for a known safely resumable historical session. It
+  never implies that arbitrary historical sessions are controllable.
 - Review appears only for a selected pending request. Other attention appears
   only when another thread genuinely needs attention; it never duplicates the
   selected request's Review control.
@@ -128,44 +125,21 @@ page exists; Home is omitted because the frame is already Home.
   Missing actions leave a blank cell rather than a disabled control. They
   never fall back to commands or keystrokes.
 
-## Actions
-
-| `K0` Selected | `K1` Action 1       | `K2` Action 2        | `K3` Action 3   | `K4` Action 4  |
-| ------------- | ------------------- | -------------------- | --------------- | -------------- |
-| `K5` Action 5 | `K6` Action 6       | `K7` Action 7        | `K8` Action 8   | `K9` Attention |
-| `K10` Back    | `K11` Previous page | `K12` Actions / page | `K13` Next page | `K14` Exit     |
-
-The first page keeps the primary order: Inspect/Acknowledge, Start/Resume,
-Review, Reasoning, Fork, Presets, Retry, and Cancel Run. Presets opens later
-pages containing configured Redirect and Skill presets in validated
-configuration order. Retry and Cancel remain available at `K7` and `K8` on
-Session even when the catalog grows.
-
-A catalog cell invokes only its current typed offer. Unsupported Start, Fork,
-Review, Redirect, or Skill behavior is displayed as unavailable until the
-integration advertises a complete corresponding offer. There is no generic
-command, prompt, JSON-RPC, macro, terminal, browser, commit, or pull-request
-fallback.
-
 ## Intent Trace
 
 | Sandalphon intent or operation         | Default entry                                              | Final activation                                                                |
 | -------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Select Session                         | Home `K1`–`K4`, or Session `K11`/`K13`                     | Same current key release; selection alone acknowledges nothing                  |
-| Start Work                             | Session `K2`, Custom empty slot, or validated preset       | Current Start offer after complete configured input                             |
 | Resume Session                         | Session `K2`                                               | Current safely resumable offer; reconciliation precedes live actions            |
-| Fork Session                           | Session `K5`                                               | Current supported safe-boundary offer                                           |
-| Inspect                                | Session `K1` or Actions                                    | Current detail target; exact result inspection follows the acknowledgement rule |
-| Acknowledge Result                     | Actions                                                    | Current exact result offer only                                                 |
-| Review                                 | Session `K3` or Actions                                    | Current turn-boundary review offer                                              |
+| Inspect                                | Session `K1`                                               | Current detail target; exact result inspection follows the acknowledgement rule |
+| Acknowledge Result                     | Result review `K9`                                         | Current exact result offer after complete inspection                            |
+| Review                                 | Session `K3`                                               | Current turn-boundary review offer                                              |
 | Approve Request                        | Home/Session `K9` to Request                               | New 800 ms hold at Request `K9` after complete inspection                       |
 | Reject Request                         | Request `K7`                                               | New press at Request `K7` after target inspection                               |
 | Cancel Request                         | Request `K5`                                               | New 800 ms hold at Request `K5`; success waits for interrupted run evidence     |
-| Redirect Run                           | Actions configured preset                                  | New press at Request `K9` after complete input inspection                       |
 | Cancel Run                             | Session `K8` or Request `K5` when no request cancel exists | New 800 ms hold at Request `K5`; success waits for interrupted run evidence     |
-| Retry Work                             | Session `K7` or Actions                                    | New press at Request `K9` after complete new-run-plan inspection                |
+| Retry Work                             | Session `K7`                                               | New press at Request `K9` after complete new-run-plan inspection                |
 | Change Next-Turn Options               | Session `K4`                                               | Choice `K8` Apply after a separate preview                                      |
-| Invoke Skill                           | Actions configured preset                                  | Current complete skill offer; any consequential result follows its safety plan  |
 | Recover Integration                    | Unavailable `K9`                                           | Current recovery offer; never replays a prior intent                            |
 | Roster view, page, preview, Back, Exit | Bottom navigation row                                      | Local presentation change only                                                  |
 

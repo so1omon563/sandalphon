@@ -32,8 +32,7 @@ export interface Classic15KeyView {
 
 export interface Classic15MvpFrame {
   readonly revision: number;
-  readonly view:
-    "home" | "session" | "actions" | "choice" | "request" | "unavailable";
+  readonly view: "home" | "session" | "choice" | "request" | "unavailable";
   readonly keys: readonly Classic15KeyView[];
 }
 
@@ -58,14 +57,6 @@ interface ReviewContext {
   readonly localAction: boolean;
 }
 
-const ACTION_CATALOG: readonly ActionKind[] = [
-  "Inspect",
-  "ResumeSession",
-  "ChangeNextTurnOptions",
-  "RetryWork",
-  "CancelRun",
-];
-
 const ROSTER_MODES: readonly RosterMode[] = [
   "Priority",
   "Recent",
@@ -87,7 +78,6 @@ export class Classic15MvpSurface {
   #rosterMode: RosterMode = "Priority";
   #attentionRoster = false;
   #rosterPage = 0;
-  #actionPage = 0;
   #choice: ChoiceContext | undefined;
   #choicePreview = 0;
   #detailPage = 0;
@@ -227,8 +217,6 @@ export class Classic15MvpSurface {
     if (this.frame.view === "home") await this.#activateHome(index, now);
     else if (this.frame.view === "session")
       await this.#activateSession(index, selected, now);
-    else if (this.frame.view === "actions")
-      await this.#activateActions(index, selected, now);
     else if (this.frame.view === "choice") await this.#activateChoice(index);
     else if (this.frame.view === "request")
       await this.#activateRequest(index, now);
@@ -288,11 +276,6 @@ export class Classic15MvpSurface {
       this.#openReasoningChoice(selected);
       return;
     }
-    if (index === 6) {
-      this.#view = "actions";
-      this.#advanceFrame();
-      return;
-    }
     if (index === 7) {
       await this.#activateKind(selected, "RetryWork", now);
       return;
@@ -316,34 +299,6 @@ export class Classic15MvpSurface {
       );
       if (sessions[next])
         await this.#application.selectSession(sessions[next].id);
-    }
-  }
-
-  async #activateActions(
-    index: number,
-    selected: SessionSnapshot,
-    now: number,
-  ): Promise<void> {
-    if (index >= 1 && index <= 8) {
-      const kind = ACTION_CATALOG[this.#actionPage * 8 + index - 1];
-      if (kind === "Inspect" && selected.resultLatch)
-        this.#openResultReview(selected);
-      else if (kind === "ChangeNextTurnOptions")
-        this.#openReasoningChoice(selected);
-      else if (kind) await this.#activateKind(selected, kind, now);
-      return;
-    }
-    if (index === 9 && selected.pendingRequests.length > 0) {
-      this.#openProviderReview(now);
-      return;
-    }
-    if (index === 11 || index === 13) {
-      this.#actionPage = this.#movePage(
-        this.#actionPage,
-        index === 11 ? -1 : 1,
-        Math.max(1, Math.ceil(ACTION_CATALOG.length / 8)),
-      );
-      this.#advanceFrame();
     }
   }
 
@@ -831,38 +786,6 @@ export class Classic15MvpSurface {
       if (this.#snapshot.sessions.length > 1) enabled.push(12);
       if (position + 1 < this.#snapshot.sessions.length) enabled.push(13);
       return withSessionIdentity(views(labels, state, enabled));
-    }
-    if (view === "actions") {
-      const kinds = ACTION_CATALOG.slice(
-        this.#actionPage * 8,
-        this.#actionPage * 8 + 8,
-      );
-      const labels = [
-        compactLabel(selected.name, 24),
-        ...Array.from({ length: 8 }, (_, index) =>
-          kinds[index] && offerAvailable(selected, kinds[index])
-            ? actionLabel(kinds[index])
-            : "",
-        ),
-        selected.pendingRequests.length > 0 ? "Review request" : "",
-        "Back",
-        "",
-        "Actions",
-        "",
-        "Exit",
-      ];
-      return withSessionIdentity(
-        views(labels, state, [
-          0,
-          ...kinds.flatMap((kind, index) =>
-            offerAvailable(selected, kind) ? [index + 1] : [],
-          ),
-          ...(selected.pendingRequests.length > 0 ? [9] : []),
-          10,
-          12,
-          14,
-        ]),
-      );
     }
     if (view === "choice" && this.#choice) {
       const labels = [

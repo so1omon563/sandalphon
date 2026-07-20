@@ -287,6 +287,12 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     const surface = new Classic15MvpSurface(application);
     await releaseKey(surface, 0);
 
+    expect(surface.frame.keys[6]).toMatchObject({ label: "", enabled: false });
+    expect(surface.frame.keys[1]).toMatchObject({
+      label: "Inspect result",
+      enabled: true,
+    });
+
     await releaseKey(surface, 1, 200);
     expect(application.invoke).not.toHaveBeenCalled();
     expect(surface.frame.view).toBe("request");
