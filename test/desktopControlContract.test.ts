@@ -98,6 +98,25 @@ describe("desktop control contract", () => {
     }
   });
 
+  it("rejects malformed runtime target shapes without truthiness coercion", () => {
+    for (const targets of [
+      [null],
+      [{ id: "task-1", selected: "false" }],
+      [{ id: 1, selected: true }],
+    ]) {
+      expect(
+        evaluateDesktopControl(policy, {
+          ...observation,
+          targets: targets as unknown as DesktopControlObservation["targets"],
+        }),
+      ).toMatchObject({
+        availability: "unavailable",
+        reason: "invalidState",
+        targets: [],
+      });
+    }
+  });
+
   it("issues only revision-bound offers for unselected tasks", () => {
     const state = evaluateDesktopControl(policy, observation);
     expect(state).toMatchObject({

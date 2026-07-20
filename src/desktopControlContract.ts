@@ -176,6 +176,10 @@ function hasValidTargets(targets: readonly DesktopTaskTarget[]): boolean {
   let selectedCount = 0;
   for (const target of targets) {
     if (
+      !target ||
+      typeof target !== "object" ||
+      typeof target.id !== "string" ||
+      typeof target.selected !== "boolean" ||
       target.id.length === 0 ||
       target.id.length > 256 ||
       ids.has(target.id)
