@@ -654,10 +654,21 @@ export class SandalphonApplication {
       connection.onClose(() => this.#desktopDisconnected());
       this.#applyDesktopObservation(connection.initialObservation);
     } catch (error) {
+      const reason = desktopLifecycleReason(error);
       this.#revokeDesktopState();
+      if (
+        reason !== "restartRequired" &&
+        reason !== "cleanupFailed" &&
+        this.#settings.desktopControl?.enabled
+      ) {
+        await this.#persist({
+          ...this.#settings,
+          desktopControl: { enabled: false },
+        });
+      }
       this.#setDesktopStatus({
         phase: "unavailable",
-        reason: desktopLifecycleReason(error),
+        reason,
       });
     }
   }

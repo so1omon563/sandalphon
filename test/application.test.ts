@@ -340,6 +340,31 @@ describe("Sandalphon application", () => {
     });
   });
 
+  it("clears opt-in after a failed controlled startup is cleaned up", async () => {
+    const desktop = new FakeDesktopRuntime();
+    desktop.connect.mockRejectedValueOnce(new Error("connectionFailed"));
+    const settings = new MemorySettings({
+      schemaVersion: 2,
+      desktopControl: { enabled: true },
+    });
+    const application = new SandalphonApplication(
+      settings,
+      new FakeRuntime(),
+      desktop,
+    );
+
+    await application.start();
+
+    expect(settings.value).toMatchObject({
+      desktopControl: { enabled: false },
+    });
+    expect(application.desktopControlEnabled).toBe(false);
+    expect(application.desktopControlStatus).toEqual({
+      phase: "unavailable",
+      reason: "connectionFailed",
+    });
+  });
+
   it("resumes a thread explicitly before exposing owned live actions", async () => {
     const { application, connection } = await startedApplication();
     connection.results.set("thread/resume", { thread: THREADS.data[0] });

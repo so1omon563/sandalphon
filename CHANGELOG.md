@@ -8,8 +8,8 @@ All notable changes to Sandalphon are recorded here.
 
 - Routed property-inspector consent through its registered Stream Deck context
   so checkbox and retry requests reach the plugin.
-- Serialized initial desktop capability and task probes so controlled Codex
-  startup cannot strand one concurrent renderer evaluation and time out.
+- Added bounded renderer-readiness retries and automatic opt-out after a clean
+  failed startup so desktop control cannot induce repeated restart attempts.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

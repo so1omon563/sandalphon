@@ -13,26 +13,25 @@ import {
 
 class FakeProtocolSession implements DesktopProtocolSession {
   capable = true;
-  rejectOverlap = false;
-  #evaluating = false;
-  readonly evaluate = vi.fn(async (expression: string): Promise<unknown> => {
-    if (this.rejectOverlap && this.#evaluating) {
-      throw new Error("overlappingEvaluation");
+  timeoutsRemaining = 0;
+  readonly evaluate = vi.fn((expression: string): Promise<unknown> => {
+    if (this.timeoutsRemaining > 0) {
+      this.timeoutsRemaining -= 1;
+      return Promise.reject(new Error("evaluationTimeout"));
     }
-    this.#evaluating = true;
-    await Promise.resolve();
-    this.#evaluating = false;
-    if (expression.includes("rows.every")) return this.capable;
+    if (expression.includes("rows.every")) {
+      return Promise.resolve(this.capable);
+    }
     if (expression.includes('"task-2"')) {
-      return [
+      return Promise.resolve([
         { id: "task-1", selected: false },
         { id: "task-2", selected: true },
-      ];
+      ]);
     }
-    return [
+    return Promise.resolve([
       { id: "task-1", selected: true },
       { id: "task-2", selected: false },
-    ];
+    ]);
   });
   readonly close = vi.fn();
   readonly #closeListeners = new Set<() => void>();
@@ -125,7 +124,11 @@ describe("desktop control runtime", () => {
     const host = new FakeDesktopHost();
     host.session.capable = false;
     await expect(
-      new LocalDesktopControlRuntime(host).connect(),
+      new LocalDesktopControlRuntime(host, {
+        initialAttempts: 2,
+        initialDelayMs: 0,
+        initialEvaluationTimeoutMs: 1,
+      }).connect(),
     ).rejects.toThrow("connectionFailed");
     expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
   });
@@ -158,14 +161,18 @@ describe("desktop control runtime", () => {
     expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
   });
 
-  it("serializes capability and task probes on the renderer session", async () => {
+  it("waits for a newly launched renderer to answer capability probes", async () => {
     const host = new FakeDesktopHost();
-    host.session.rejectOverlap = true;
+    host.session.timeoutsRemaining = 2;
 
-    const connection = await new LocalDesktopControlRuntime(host).connect();
+    const connection = await new LocalDesktopControlRuntime(host, {
+      initialAttempts: 3,
+      initialDelayMs: 0,
+      initialEvaluationTimeoutMs: 1,
+    }).connect();
 
     expect(connection.initialObservation.targets).toHaveLength(2);
-    expect(host.session.evaluate).toHaveBeenCalledTimes(2);
+    expect(host.session.evaluate).toHaveBeenCalledTimes(4);
     await connection.close();
   });
 

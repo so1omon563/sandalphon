@@ -70,17 +70,34 @@ export interface DesktopControlHost {
 }
 
 export interface DesktopProtocolSession {
-  evaluate(expression: string): Promise<unknown>;
+  evaluate(expression: string, timeoutMs?: number): Promise<unknown>;
   onClose(listener: () => void): () => void;
   close(): void;
 }
 
+export interface DesktopControlTiming {
+  readonly initialAttempts: number;
+  readonly initialDelayMs: number;
+  readonly initialEvaluationTimeoutMs: number;
+}
+
+const DEFAULT_DESKTOP_CONTROL_TIMING: DesktopControlTiming = {
+  initialAttempts: 10,
+  initialDelayMs: 250,
+  initialEvaluationTimeoutMs: 2000,
+};
+
 export class LocalDesktopControlRuntime implements DesktopControlRuntime {
   readonly #host: DesktopControlHost;
+  readonly #timing: DesktopControlTiming;
   #epoch = 0;
 
-  constructor(host: DesktopControlHost = new MacDesktopControlHost()) {
+  constructor(
+    host: DesktopControlHost = new MacDesktopControlHost(),
+    timing: DesktopControlTiming = DEFAULT_DESKTOP_CONTROL_TIMING,
+  ) {
     this.#host = host;
+    this.#timing = timing;
   }
 
   async connect(): Promise<DesktopControlConnection> {
@@ -121,6 +138,7 @@ export class LocalDesktopControlRuntime implements DesktopControlRuntime {
         endpoint,
         session,
         this.#epoch,
+        this.#timing,
       );
     } catch {
       await cleanupEndpoint(this.#host, endpoint);
@@ -168,12 +186,13 @@ class LiveDesktopControlConnection implements DesktopControlConnection {
     endpoint: DesktopEndpoint,
     session: DesktopProtocolSession,
     epoch: number,
+    timing: DesktopControlTiming,
   ): Promise<LiveDesktopControlConnection> {
     const initial = observationFor(
       endpoint,
       epoch,
       1,
-      await readDesktopTargets(session),
+      await waitForInitialDesktopTargets(session, timing),
     );
     return new LiveDesktopControlConnection(host, endpoint, session, initial);
   }
@@ -429,14 +448,14 @@ class WebSocketDesktopProtocolSession implements DesktopProtocolSession {
     return new WebSocketDesktopProtocolSession(socket);
   }
 
-  evaluate(expression: string): Promise<unknown> {
+  evaluate(expression: string, timeoutMs = 12_000): Promise<unknown> {
     const id = this.#nextId;
     this.#nextId += 1;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.#pending.delete(id);
-        reject(new Error("connectionFailed"));
-      }, 12_000);
+        reject(new Error("evaluationTimeout"));
+      }, timeoutMs);
       timer.unref();
       this.#pending.set(id, {
         resolve: (value) => {
@@ -554,11 +573,38 @@ async function waitForEndpoint(
 
 async function readDesktopTargets(
   session: DesktopProtocolSession,
+  timeoutMs?: number,
 ): Promise<readonly DesktopTaskTarget[]> {
-  const capable = await session.evaluate(capabilityExpression());
-  if (capable !== true) throw new Error("connectionFailed");
-  const targets = await session.evaluate(taskListExpression());
+  const capable = await session.evaluate(capabilityExpression(), timeoutMs);
+  if (capable !== true) throw new Error("capabilityPending");
+  const targets = await session.evaluate(taskListExpression(), timeoutMs);
+  if (Array.isArray(targets) && targets.length === 0) {
+    throw new Error("capabilityPending");
+  }
   return decodeDesktopTargets(targets);
+}
+
+async function waitForInitialDesktopTargets(
+  session: DesktopProtocolSession,
+  timing: DesktopControlTiming,
+): Promise<readonly DesktopTaskTarget[]> {
+  for (let attempt = 0; attempt < timing.initialAttempts; attempt += 1) {
+    try {
+      return await readDesktopTargets(
+        session,
+        timing.initialEvaluationTimeoutMs,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message !== "evaluationTimeout" && message !== "capabilityPending") {
+        throw error;
+      }
+      if (attempt + 1 < timing.initialAttempts) {
+        await delay(timing.initialDelayMs);
+      }
+    }
+  }
+  throw new Error("connectionFailed");
 }
 
 async function cleanupEndpoint(

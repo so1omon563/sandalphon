@@ -107,6 +107,9 @@ satisfy all of these constraints:
   is no longer listening, and reopens Codex without debugging arguments.
 - Cleanup failure retains opt-in recovery state and requires a normal Codex
   restart; it never reports the bridge safely disabled without verification.
+- Initial renderer readiness may be retried only inside one bounded controlled
+  launch. A clean failed launch clears persisted opt-in so plugin or application
+  restarts cannot automatically repeat the Codex lifecycle.
 
 ### Authority routing
 

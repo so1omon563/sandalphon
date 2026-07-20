@@ -69,6 +69,10 @@ verified controlled Codex process, confirms that the random listener is gone,
 and reopens Codex normally. If cleanup cannot be proven, opt-in remains set and
 the inspector instructs the user to restart Codex normally. Never treat the
 stale `DevToolsActivePort` file alone as evidence that a listener is active.
+Initial renderer readiness is retried only within one bounded launch attempt.
+If that attempt fails after verified cleanup, Sandalphon clears opt-in instead
+of permitting an automatic restart cycle; enabling it again requires fresh
+explicit consent.
 
 This mode can list and select desktop tasks only. It cannot submit composer
 text, answer requests, approve, reject, interrupt, change reasoning, or execute
