@@ -1,9 +1,8 @@
 /* global WebSocket, document, window */
 
 let socket;
-let pluginUUID;
+let propertyInspectorUUID;
 let actionUUID;
-let actionContext;
 
 const enabled = document.querySelector("#enabled");
 const status = document.querySelector("#status");
@@ -16,13 +15,14 @@ window.connectElgatoStreamDeckSocket = (
   _info,
   actionInfo,
 ) => {
-  pluginUUID = uuid;
+  propertyInspectorUUID = uuid;
   const action = JSON.parse(actionInfo);
   actionUUID = action.action;
-  actionContext = action.context;
   socket = new WebSocket(`ws://127.0.0.1:${port}`);
   socket.addEventListener("open", () => {
-    socket.send(JSON.stringify({ event: registerEvent, uuid: pluginUUID }));
+    socket.send(
+      JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }),
+    );
   });
   socket.addEventListener("message", ({ data }) => {
     let message;
@@ -49,7 +49,7 @@ function send(payload) {
     JSON.stringify({
       action: actionUUID,
       event: "sendToPlugin",
-      context: actionContext,
+      context: propertyInspectorUUID,
       payload,
     }),
   );

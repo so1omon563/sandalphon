@@ -94,6 +94,8 @@ describe("Stream Deck manifest", () => {
     );
     expect(propertyInspectorScript).toContain("desktopControl.setEnabled");
     expect(propertyInspectorScript).toContain("ws://127.0.0.1:");
+    expect(propertyInspectorScript).toContain("context: propertyInspectorUUID");
+    expect(propertyInspectorScript).not.toContain("context: actionContext");
     expect(propertyInspectorScript).not.toMatch(/https?:\/\//u);
   });
 

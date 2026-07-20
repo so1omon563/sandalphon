@@ -6,6 +6,8 @@ All notable changes to Sandalphon are recorded here.
 
 ### Changed
 
+- Routed property-inspector consent through its registered Stream Deck context
+  so checkbox and retry requests reach the plugin.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.
