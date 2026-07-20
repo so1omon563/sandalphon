@@ -13,6 +13,8 @@ All notable changes to Sandalphon are recorded here.
   with content-free failure categories for bounded physical diagnosis.
 - Verify authority against exactly one matching Codex main process even when
   Chromium helper processes also report the same debugging listener.
+- Align controlled startup with the accepted macOS `open -na … --args` proof
+  route while still discovering and verifying the exact resulting process.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

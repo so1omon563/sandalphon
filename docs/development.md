@@ -63,6 +63,9 @@ Sandalphon then launches the exact application executable with a random
 `127.0.0.1` debugging port, verifies the application, Chromium engine, CDP
 protocol, page endpoint, process arguments, and live task capabilities, and
 shows only opaque task-selection state to the shared application boundary.
+The production launcher uses the same macOS `open -na … --args` route accepted
+by the feasibility proof, then independently discovers and verifies exactly one
+resulting controlled Codex main process before endpoint authority exists.
 
 Disabling the checkbox revokes offers before cleanup, terminates only the
 verified controlled Codex process, confirms that the random listener is gone,

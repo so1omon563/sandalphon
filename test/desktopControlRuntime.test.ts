@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   capabilityExpression,
+  controlledLaunchArguments,
   decodeDesktopTargets,
   decodeListenerProcessIds,
   LocalDesktopControlRuntime,
@@ -94,6 +95,16 @@ class FakeDesktopHost implements DesktopControlHost {
 }
 
 describe("desktop control runtime", () => {
+  it("uses the accepted macOS proof launcher with random loopback arguments", () => {
+    expect(controlledLaunchArguments()).toEqual([
+      "-na",
+      "/Applications/ChatGPT.app",
+      "--args",
+      "--remote-debugging-address=127.0.0.1",
+      "--remote-debugging-port=0",
+    ]);
+  });
+
   it("fails before discovery on an unsupported installed application", async () => {
     const host = new FakeDesktopHost();
     host.version = "26.715.52144";

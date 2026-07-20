@@ -860,6 +860,10 @@ function desktopLifecycleReason(error: unknown): DesktopControlLifecycleReason {
     message === "launchFailed" ||
     message === "endpointUnavailable" ||
     message === "endpointRejected" ||
+    message === "versionRejected" ||
+    message === "targetSetRejected" ||
+    message === "targetRejected" ||
+    message === "debuggerUrlRejected" ||
     message === "listenerRejected" ||
     message === "processRejected" ||
     message === "rendererTimeout" ||

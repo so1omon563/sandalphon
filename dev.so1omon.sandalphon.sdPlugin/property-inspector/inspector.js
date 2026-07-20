@@ -73,6 +73,14 @@ function render(payload) {
       "Codex opened, but its debugging endpoint did not become reachable.",
     endpointRejected:
       "Codex opened, but its debugging endpoint did not match the accepted contract.",
+    versionRejected:
+      "Codex opened, but its debugging version tuple did not match the accepted contract.",
+    targetSetRejected:
+      "Codex opened, but its debugging target set did not match the accepted contract.",
+    targetRejected:
+      "Codex opened, but its application page did not match the accepted contract.",
+    debuggerUrlRejected:
+      "Codex opened, but its page debugger URL was not the expected loopback endpoint.",
     listenerRejected:
       "Codex opened, but listener ownership could not be verified.",
     processRejected:

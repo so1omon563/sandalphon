@@ -1,4 +1,4 @@
-import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { execFile } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +18,7 @@ export const PROVEN_DESKTOP_CONTROL_VERSION: DesktopControlVersion = {
 };
 
 const APPLICATION_BINARY = "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT";
+const APPLICATION_BUNDLE = "/Applications/ChatGPT.app";
 const APPLICATION_PLIST = "/Applications/ChatGPT.app/Contents/Info.plist";
 const APPLICATION_BUNDLE_ID = "com.openai.codex";
 const ACTIVE_PORT_FILE = join(
@@ -37,6 +38,10 @@ export type DesktopControlLifecycleReason =
   | "launchFailed"
   | "endpointUnavailable"
   | "endpointRejected"
+  | "versionRejected"
+  | "targetSetRejected"
+  | "targetRejected"
+  | "debuggerUrlRejected"
   | "listenerRejected"
   | "processRejected"
   | "rendererTimeout"
@@ -312,18 +317,14 @@ export class MacDesktopControlHost implements DesktopControlHost {
   }
 
   async launchControlled(): Promise<number> {
-    const child: ChildProcess = spawn(
-      APPLICATION_BINARY,
-      ["--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0"],
-      { detached: false, stdio: "ignore" },
-    );
-    await new Promise<void>((resolve, reject) => {
-      child.once("spawn", resolve);
-      child.once("error", () => reject(new Error("launchFailed")));
-    });
-    if (!child.pid) throw new Error("launchFailed");
-    child.unref();
-    return child.pid;
+    try {
+      await execFileAsync("/usr/bin/open", controlledLaunchArguments(), {
+        timeout: 5000,
+      });
+      return await waitForControlledProcess();
+    } catch {
+      throw new Error("launchFailed");
+    }
   }
 
   async discover(requireFreshAfter?: number): Promise<DesktopEndpoint> {
@@ -366,28 +367,35 @@ export class MacDesktopControlHost implements DesktopControlHost {
       throw new Error("listenerRejected");
     }
     const versionRecord = asRecord(versionValue);
-    const targets = Array.isArray(targetsValue) ? targetsValue : [];
+    if (!Array.isArray(targetsValue) || targetsValue.length !== 1) {
+      throw new Error("targetSetRejected");
+    }
+    const targets = targetsValue;
     const browser = versionRecord?.Browser;
     const protocol = versionRecord?.["Protocol-Version"];
     if (
       typeof browser !== "string" ||
       !browser.startsWith("Chrome/") ||
-      typeof protocol !== "string" ||
-      targets.length !== 1
+      typeof protocol !== "string"
     ) {
-      throw new Error("endpointRejected");
+      throw new Error("versionRejected");
     }
     const target = asRecord(targets[0]);
     if (target?.type !== "page" || target.url !== "app://-") {
-      throw new Error("endpointRejected");
+      throw new Error("targetRejected");
     }
-    const debuggerUrl = new URL(String(target.webSocketDebuggerUrl));
+    let debuggerUrl: URL;
+    try {
+      debuggerUrl = new URL(String(target.webSocketDebuggerUrl));
+    } catch {
+      throw new Error("debuggerUrlRejected");
+    }
     if (
       debuggerUrl.protocol !== "ws:" ||
       debuggerUrl.hostname !== "127.0.0.1" ||
       debuggerUrl.port !== String(port)
     ) {
-      throw new Error("endpointRejected");
+      throw new Error("debuggerUrlRejected");
     }
     const controlledProcessIds: number[] = [];
     for (const processId of listenerOwners) {
@@ -459,6 +467,16 @@ export class MacDesktopControlHost implements DesktopControlHost {
       throw new Error("cleanupFailed");
     }
   }
+}
+
+export function controlledLaunchArguments(): readonly string[] {
+  return [
+    "-na",
+    APPLICATION_BUNDLE,
+    "--args",
+    "--remote-debugging-address=127.0.0.1",
+    "--remote-debugging-port=0",
+  ];
 }
 
 class WebSocketDesktopProtocolSession implements DesktopProtocolSession {
@@ -601,6 +619,44 @@ export function selectTaskExpression(targetId: string): string {
   return `(async () => { const selector = ${JSON.stringify(TASK_ROW_SELECTOR)}; const rows = () => Array.from(document.querySelectorAll(selector)); const id = (row) => row?.getAttribute("data-app-action-sidebar-thread-id"); const selected = () => id(rows().find((row) => row.getAttribute("aria-current") === "page")); const target = rows().find((row) => id(row) === ${JSON.stringify(targetId)}); if (!target) return []; target.click(); const deadline = performance.now() + 5000; while (performance.now() < deadline) { if (selected() === ${JSON.stringify(targetId)}) return rows().map((row) => ({ id: id(row), selected: row.getAttribute("aria-current") === "page" })); await new Promise((resolve) => setTimeout(resolve, 50)); } return []; })()`;
 }
 
+async function waitForControlledProcess(): Promise<number> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const processIds = await applicationProcessIds();
+    const controlledProcessIds: number[] = [];
+    for (const processId of processIds) {
+      try {
+        await verifyControlledProcess(processId, 0);
+        controlledProcessIds.push(processId);
+      } catch {
+        // A normal Codex process is not an accepted controlled launch.
+      }
+    }
+    if (controlledProcessIds.length === 1 && controlledProcessIds[0]) {
+      return controlledProcessIds[0];
+    }
+    if (controlledProcessIds.length > 1) throw new Error("launchFailed");
+    await delay(100);
+  }
+  throw new Error("launchFailed");
+}
+
+async function applicationProcessIds(): Promise<readonly number[]> {
+  try {
+    const { stdout } = await execFileAsync(
+      "/usr/bin/pgrep",
+      ["-f", `^${APPLICATION_BINARY}( |$)`],
+      { encoding: "utf8", timeout: 5000 },
+    );
+    return stdout
+      .split(/\r?\n/u)
+      .filter((line) => /^\d+$/u.test(line))
+      .map((line) => Number.parseInt(line, 10));
+  } catch (error) {
+    if (asExitCode(error) === 1) return [];
+    throw new Error("launchFailed", { cause: error });
+  }
+}
+
 async function waitForEndpoint(
   host: DesktopControlHost,
   launchedAt: number,
@@ -621,6 +677,10 @@ async function waitForEndpoint(
   throw new Error(
     message === "endpointUnavailable" ||
       message === "endpointRejected" ||
+      message === "versionRejected" ||
+      message === "targetSetRejected" ||
+      message === "targetRejected" ||
+      message === "debuggerUrlRejected" ||
       message === "listenerRejected" ||
       message === "processRejected"
       ? message

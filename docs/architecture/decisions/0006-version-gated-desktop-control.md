@@ -108,6 +108,9 @@ satisfy all of these constraints:
 - Chromium helpers may share the reported listener. Authority requires exactly
   one listener owner to match the verified Codex main executable and exact
   remote-debugging arguments; helper owners are never authority principals.
+- Controlled startup uses the accepted macOS `open -na … --args` proof route,
+  but the launcher result itself grants no authority; Sandalphon separately
+  discovers and verifies exactly one controlled Codex main process.
 - Cleanup failure retains opt-in recovery state and requires a normal Codex
   restart; it never reports the bridge safely disabled without verification.
 - Initial renderer readiness may be retried only inside one bounded controlled
