@@ -77,5 +77,9 @@ Record the observed result for each device after installing the current build.
   plugin API can only request the previously active profile and cannot name a
   user-defined profile; after application restart there was no usable prior
   profile context. This is a release blocker, not an accepted limitation.
+- Follow-up validation replaced the selected-session unavailable glyph with a
+  dedicated session glyph whose accent retains the actual state. After another
+  full Stream Deck restart, the new upper-left glyph rendered on the physical
+  device and was confirmed as no longer implying an unreachable-session error.
 
 Stream Deck Mk.2 validation remains pending.
