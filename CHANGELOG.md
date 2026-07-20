@@ -28,6 +28,11 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- A disabled-by-default desktop-control feasibility contract with exact version
+  and capability gating, revision-bound task-selection offers, stale-target
+  rejection, and fail-closed cleanup semantics.
+- ADR 0006 documenting the security and compatibility boundary for evaluating
+  direct control of the active Codex desktop workspace.
 - Composable Session Status, Resume Session, Attention, and Stream Deck +
   Sessions dial actions for use alongside ordinary controls in user profiles.
 - Independent Sandalphon repository and package identity.

@@ -39,13 +39,19 @@ permanent product definition.
 
 ## Architectural Direction
 
-The first system has four recognizable responsibilities:
+The first system has four production responsibilities:
 
 1. a Codex integration that owns an official app-server lifecycle;
 2. a Sandalphon domain core that reduces supported provider facts into stable
    agent state and validates user intent;
 3. Stream Deck presentation for the two reference device profiles;
 4. validated user configuration with useful defaults.
+
+An opt-in feasibility boundary may additionally test direct task selection in
+the active Codex desktop workspace. It is not production authority: exact
+desktop, engine, and protocol versions plus live task-list and task-selection
+capabilities must match before it can issue a revision-bound selection offer.
+See [ADR 0006](docs/architecture/decisions/0006-version-gated-desktop-control.md).
 
 Raw provider parsing and command construction do not live in individual key or
 dial handlers. Presentation consumes Sandalphon state and invokes typed offers.

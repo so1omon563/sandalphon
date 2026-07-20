@@ -49,6 +49,11 @@ consequential-review environments. Normal daily use is being validated through
 the composable controls so Sandalphon can coexist with the user's ordinary
 Stream Deck actions without a profile Exit dependency.
 
+Daily-driver validation is currently paused while SO1-179 evaluates a narrowly
+version-gated path for direct task selection in the active Codex desktop app.
+The feasibility contract is disabled by default and is not wired to the live
+plugin or included as a supported control path.
+
 ## Requirements
 
 - macOS 13 or newer

@@ -85,6 +85,10 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
 - src/composableControls.ts owns self-contained status, Resume, attention, and
   Plus session-dial behavior for ordinary user profiles. These controls never
   inherit managed-surface confirmation authority.
+- src/desktopControlContract.ts owns the disabled-by-default, exact-version and
+  capability gate for the desktop-control feasibility boundary. It grants only
+  revision-bound task-selection authority and contains no live renderer
+  attachment.
 - test contains Vitest unit and manifest-contract coverage.
 - docs/architecture/decisions contains numbered ADRs.
 - artwork/source contains editable original asset sources.
