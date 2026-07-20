@@ -13,6 +13,9 @@ All notable changes to Sandalphon are recorded here.
   with content-free failure categories for bounded physical diagnosis.
 - Verify authority against exactly one matching Codex main process even when
   Chromium helper processes also report the same debugging listener.
+- Reconcile cleanup against the complete safe terminal state after command or
+  timeout errors: the exact listener is closed and exactly one normal Codex
+  main process remains without debugging arguments.
 - Align controlled startup with the accepted macOS `open -na … --args` proof
   route while still discovering and verifying the exact resulting process.
 - Verify the exact Codex `app://-` application origin while treating its

@@ -117,6 +117,9 @@ satisfy all of these constraints:
   or mismatched debugger endpoint fails closed.
 - Cleanup failure retains opt-in recovery state and requires a normal Codex
   restart; it never reports the bridge safely disabled without verification.
+- Cleanup command and timeout failures may be reconciled only by proving the
+  complete safe terminal state: no listener on the exact random port and
+  exactly one Codex main process with no debugging arguments.
 - Initial renderer readiness may be retried only inside one bounded controlled
   launch. A clean failed launch clears persisted opt-in so plugin or application
   restarts cannot automatically repeat the Codex lifecycle.

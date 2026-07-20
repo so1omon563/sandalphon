@@ -6,6 +6,7 @@ import {
   decodeDesktopPageDebuggerUrl,
   decodeDesktopTargets,
   decodeListenerProcessIds,
+  isNormalApplicationCommand,
   LocalDesktopControlRuntime,
   PROVEN_DESKTOP_CONTROL_VERSION,
   selectTaskExpression,
@@ -104,6 +105,22 @@ describe("desktop control runtime", () => {
       "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=0",
     ]);
+  });
+
+  it("recognizes only a normal Codex main-process command", () => {
+    expect(
+      isNormalApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      ),
+    ).toBe(true);
+    expect(
+      isNormalApplicationCommand(
+        "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT --remote-debugging-port=0",
+      ),
+    ).toBe(false);
+    expect(isNormalApplicationCommand("/Applications/Other.app/Other")).toBe(
+      false,
+    );
   });
 
   it("fails before discovery on an unsupported installed application", async () => {

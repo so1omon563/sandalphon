@@ -428,28 +428,29 @@ export class MacDesktopControlHost implements DesktopControlHost {
 
   async restoreNormal(processId: number, port: number): Promise<void> {
     try {
-      let listeningProcessId: number | undefined;
-      try {
-        const processIds = await listenerProcessIds(port);
-        listeningProcessId = processIds.includes(processId)
-          ? processId
-          : undefined;
-      } catch {
+      const processIds = await listenerProcessIdsOrEmpty(port);
+      if (processIds.length === 0) {
         await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
           timeout: 5000,
         });
-        await waitForListenerToClose(port);
+        await waitForNormalApplicationState(port);
         return;
       }
-      if (listeningProcessId !== processId) throw new Error("cleanupFailed");
+      if (!processIds.includes(processId)) throw new Error("cleanupFailed");
       await verifyControlledProcess(processId, port);
       process.kill(processId, "SIGTERM");
       await waitForProcessExit(processId);
       await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
         timeout: 5000,
       });
-      await waitForListenerToClose(port);
+      await waitForNormalApplicationState(port);
     } catch {
+      try {
+        await waitForNormalApplicationState(port);
+        return;
+      } catch {
+        // Retain recovery state unless the complete safe terminal state exists.
+      }
       throw new Error("cleanupFailed");
     }
   }
@@ -842,6 +843,17 @@ async function listenerProcessIds(port: number): Promise<readonly number[]> {
   return decodeListenerProcessIds(stdout);
 }
 
+async function listenerProcessIdsOrEmpty(
+  port: number,
+): Promise<readonly number[]> {
+  try {
+    return await listenerProcessIds(port);
+  } catch (error) {
+    if (asExitCode(error) === 1) return [];
+    throw error;
+  }
+}
+
 export function decodeListenerProcessIds(value: string): readonly number[] {
   const processIds = new Set(
     value
@@ -857,12 +869,7 @@ async function verifyControlledProcess(
   processId: number,
   port: number,
 ): Promise<void> {
-  const { stdout } = await execFileAsync(
-    "/bin/ps",
-    ["-p", String(processId), "-o", "command="],
-    { encoding: "utf8", timeout: 5000 },
-  );
-  const command = stdout.trim();
+  const command = await applicationProcessCommand(processId);
   if (
     !command.startsWith(APPLICATION_BINARY) ||
     !command.includes("--remote-debugging-address=127.0.0.1") ||
@@ -873,6 +880,19 @@ async function verifyControlledProcess(
   ) {
     throw new Error("connectionFailed");
   }
+}
+
+async function applicationProcessCommand(processId: number): Promise<string> {
+  const { stdout } = await execFileAsync(
+    "/bin/ps",
+    ["-p", String(processId), "-o", "command="],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  return stdout.trim();
+}
+
+export function isNormalApplicationCommand(command: string): boolean {
+  return command.trim() === APPLICATION_BINARY;
 }
 
 async function waitForProcessExit(processId: number): Promise<void> {
@@ -887,12 +907,23 @@ async function waitForProcessExit(processId: number): Promise<void> {
   throw new Error("cleanupFailed");
 }
 
-async function waitForListenerToClose(port: number): Promise<void> {
+async function waitForNormalApplicationState(port: number): Promise<void> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
-      await listenerProcessIds(port);
+      if ((await listenerProcessIdsOrEmpty(port)).length === 0) {
+        const processIds = await applicationProcessIds();
+        if (
+          processIds.length === 1 &&
+          processIds[0] !== undefined &&
+          isNormalApplicationCommand(
+            await applicationProcessCommand(processIds[0]),
+          )
+        ) {
+          return;
+        }
+      }
     } catch {
-      return;
+      // Retry the complete state rather than accepting an ambiguous check.
     }
     await delay(50);
   }
