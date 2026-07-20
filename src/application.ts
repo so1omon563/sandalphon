@@ -858,6 +858,9 @@ function desktopLifecycleReason(error: unknown): DesktopControlLifecycleReason {
   return message === "restartRequired" ||
     message === "unsupportedVersion" ||
     message === "launchFailed" ||
+    message === "rendererTimeout" ||
+    message === "capabilityUnavailable" ||
+    message === "invalidTaskState" ||
     message === "cleanupFailed"
     ? message
     : "connectionFailed";

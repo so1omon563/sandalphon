@@ -9,7 +9,8 @@ All notable changes to Sandalphon are recorded here.
 - Routed property-inspector consent through its registered Stream Deck context
   so checkbox and retry requests reach the plugin.
 - Added bounded renderer-readiness retries and automatic opt-out after a clean
-  failed startup so desktop control cannot induce repeated restart attempts.
+  failed startup so desktop control cannot induce repeated restart attempts,
+  with content-free failure categories for bounded physical diagnosis.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

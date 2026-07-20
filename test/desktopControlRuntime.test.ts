@@ -129,7 +129,7 @@ describe("desktop control runtime", () => {
         initialDelayMs: 0,
         initialEvaluationTimeoutMs: 1,
       }).connect(),
-    ).rejects.toThrow("connectionFailed");
+    ).rejects.toThrow("capabilityUnavailable");
     expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
   });
 
@@ -187,7 +187,21 @@ describe("desktop control runtime", () => {
         { id: "duplicate", selected: true },
         { id: "duplicate", selected: false },
       ]),
-    ).toThrow("connectionFailed");
+    ).toThrow("invalidTaskState");
+  });
+
+  it("reports bounded renderer timeout without exposing renderer content", async () => {
+    const host = new FakeDesktopHost();
+    host.session.timeoutsRemaining = 2;
+
+    await expect(
+      new LocalDesktopControlRuntime(host, {
+        initialAttempts: 2,
+        initialDelayMs: 0,
+        initialEvaluationTimeoutMs: 1,
+      }).connect(),
+    ).rejects.toThrow("rendererTimeout");
+    expect(host.restoreNormal).toHaveBeenCalledWith(42, 49152);
   });
 });
 

@@ -69,6 +69,12 @@ function render(payload) {
     restartRequired: "Quit Codex, then retry to start controlled mode.",
     unsupportedVersion: "This Codex desktop version is not supported.",
     launchFailed: "Codex could not be started in controlled mode.",
+    rendererTimeout:
+      "Codex opened, but its renderer did not answer the bounded readiness probe.",
+    capabilityUnavailable:
+      "Codex opened, but the exact task controls never became available.",
+    invalidTaskState:
+      "Codex returned task state outside Sandalphon's bounded contract.",
     connectionFailed: "The exact desktop capability check failed closed.",
     cleanupFailed: "Restart Codex normally to remove the debugging listener.",
   };

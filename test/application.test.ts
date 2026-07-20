@@ -340,30 +340,38 @@ describe("Sandalphon application", () => {
     });
   });
 
-  it("clears opt-in after a failed controlled startup is cleaned up", async () => {
-    const desktop = new FakeDesktopRuntime();
-    desktop.connect.mockRejectedValueOnce(new Error("connectionFailed"));
-    const settings = new MemorySettings({
-      schemaVersion: 2,
-      desktopControl: { enabled: true },
-    });
-    const application = new SandalphonApplication(
-      settings,
-      new FakeRuntime(),
-      desktop,
-    );
+  it.each([
+    "connectionFailed",
+    "rendererTimeout",
+    "capabilityUnavailable",
+    "invalidTaskState",
+  ] as const)(
+    "clears opt-in after cleaned-up desktop startup failure %s",
+    async (reason) => {
+      const desktop = new FakeDesktopRuntime();
+      desktop.connect.mockRejectedValueOnce(new Error(reason));
+      const settings = new MemorySettings({
+        schemaVersion: 2,
+        desktopControl: { enabled: true },
+      });
+      const application = new SandalphonApplication(
+        settings,
+        new FakeRuntime(),
+        desktop,
+      );
 
-    await application.start();
+      await application.start();
 
-    expect(settings.value).toMatchObject({
-      desktopControl: { enabled: false },
-    });
-    expect(application.desktopControlEnabled).toBe(false);
-    expect(application.desktopControlStatus).toEqual({
-      phase: "unavailable",
-      reason: "connectionFailed",
-    });
-  });
+      expect(settings.value).toMatchObject({
+        desktopControl: { enabled: false },
+      });
+      expect(application.desktopControlEnabled).toBe(false);
+      expect(application.desktopControlStatus).toEqual({
+        phase: "unavailable",
+        reason,
+      });
+    },
+  );
 
   it("resumes a thread explicitly before exposing owned live actions", async () => {
     const { application, connection } = await startedApplication();

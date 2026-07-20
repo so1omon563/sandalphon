@@ -35,6 +35,9 @@ export type DesktopControlLifecycleReason =
   | "restartRequired"
   | "unsupportedVersion"
   | "launchFailed"
+  | "rendererTimeout"
+  | "capabilityUnavailable"
+  | "invalidTaskState"
   | "connectionFailed"
   | "cleanupFailed";
 
@@ -140,9 +143,9 @@ export class LocalDesktopControlRuntime implements DesktopControlRuntime {
         this.#epoch,
         this.#timing,
       );
-    } catch {
+    } catch (error) {
       await cleanupEndpoint(this.#host, endpoint);
-      throw new Error("connectionFailed");
+      throw startupConnectionError(error);
     }
   }
 }
@@ -520,7 +523,7 @@ export function decodeDesktopTargets(
   value: unknown,
 ): readonly DesktopTaskTarget[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > 32) {
-    throw new Error("connectionFailed");
+    throw new Error("invalidTaskState");
   }
   const ids = new Set<string>();
   let selectedCount = 0;
@@ -535,13 +538,13 @@ export function decodeDesktopTargets(
       ids.has(id) ||
       typeof selected !== "boolean"
     ) {
-      throw new Error("connectionFailed");
+      throw new Error("invalidTaskState");
     }
     ids.add(id);
     if (selected) selectedCount += 1;
     return { id, selected };
   });
-  if (selectedCount !== 1) throw new Error("connectionFailed");
+  if (selectedCount !== 1) throw new Error("invalidTaskState");
   return targets;
 }
 
@@ -588,6 +591,7 @@ async function waitForInitialDesktopTargets(
   session: DesktopProtocolSession,
   timing: DesktopControlTiming,
 ): Promise<readonly DesktopTaskTarget[]> {
+  let lastPendingReason = "capabilityUnavailable";
   for (let attempt = 0; attempt < timing.initialAttempts; attempt += 1) {
     try {
       return await readDesktopTargets(
@@ -599,12 +603,28 @@ async function waitForInitialDesktopTargets(
       if (message !== "evaluationTimeout" && message !== "capabilityPending") {
         throw error;
       }
+      lastPendingReason =
+        message === "evaluationTimeout"
+          ? "rendererTimeout"
+          : "capabilityUnavailable";
       if (attempt + 1 < timing.initialAttempts) {
         await delay(timing.initialDelayMs);
       }
     }
   }
-  throw new Error("connectionFailed");
+  throw new Error(lastPendingReason);
+}
+
+function startupConnectionError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : "";
+  return new Error(
+    message === "rendererTimeout" ||
+      message === "capabilityUnavailable" ||
+      message === "invalidTaskState"
+      ? message
+      : "connectionFailed",
+    { cause: error },
+  );
 }
 
 async function cleanupEndpoint(

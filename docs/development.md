@@ -74,6 +74,11 @@ If that attempt fails after verified cleanup, Sandalphon clears opt-in instead
 of permitting an automatic restart cycle; enabling it again requires fresh
 explicit consent.
 
+If the bounded attempt fails, the property inspector reports only its startup
+category: renderer timeout, unavailable exact capability, invalid bounded task
+state, or a generic connection failure. These categories contain no task IDs,
+titles, prompts, responses, or renderer payloads.
+
 This mode can list and select desktop tasks only. It cannot submit composer
 text, answer requests, approve, reject, interrupt, change reasoning, or execute
 general renderer actions.
