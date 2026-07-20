@@ -83,12 +83,16 @@ Disabling the checkbox revokes offers before cleanup, terminates only the
 verified controlled Codex process, confirms that the random listener is gone,
 and reopens Codex normally. A cleanup command or timeout error is reconciled
 against the complete terminal state: the exact listener must be closed and
-exactly one Codex main process must remain without debugging arguments. If that
-state cannot be proven, opt-in remains set and the inspector instructs the user
-to restart Codex normally. If the listener closes first, cleanup still verifies
-and terminates the exact controlled process before reopening Codex. Process
-exit and normal-restart convergence each have a bounded 15-second window.
+at least one Codex main process must exist with every matching command free of
+debugging arguments. This permits normal macOS transient multi-process startup
+without permitting any controlled process to remain. If that state cannot be
+proven, opt-in remains set and the inspector instructs the user to restart
+Codex normally. If the listener closes first, cleanup still verifies and
+terminates the exact controlled process before reopening Codex. Process exit
+and normal-restart convergence each have a bounded 15-second window.
 Initial renderer readiness is retried only within one bounded launch attempt.
+The renderer WebSocket must open within five seconds; timeout or a pre-open
+close enters the same verified cleanup path instead of leaving startup pending.
 If that attempt fails after verified cleanup, Sandalphon clears opt-in instead
 of permitting an automatic restart cycle; enabling it again requires fresh
 explicit consent.

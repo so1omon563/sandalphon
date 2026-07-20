@@ -127,13 +127,17 @@ satisfy all of these constraints:
   restart; it never reports the bridge safely disabled without verification.
 - Cleanup command and timeout failures may be reconciled only by proving the
   complete safe terminal state: no listener on the exact random port and
-  exactly one Codex main process with no debugging arguments.
+  at least one Codex main process with every matching process command free of
+  debugging arguments. Transient normal-process multiplicity grants no desktop
+  authority but does not by itself make cleanup unsafe.
 - A controlled process whose listener closes before cleanup remains an exact
   cleanup target after its process arguments are reverified. Process exit and
   normal restart convergence remain bounded to 15 seconds each.
 - Initial renderer readiness may be retried only inside one bounded controlled
   launch. A clean failed launch clears persisted opt-in so plugin or application
   restarts cannot automatically repeat the Codex lifecycle.
+- The renderer WebSocket handshake has a five-second deadline and treats
+  pre-open closure as failure; startup never waits indefinitely for attachment.
 
 ### Authority routing
 

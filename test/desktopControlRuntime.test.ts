@@ -8,11 +8,13 @@ import {
   decodeDesktopTargets,
   decodeListenerProcessIds,
   desktopCleanupDisposition,
+  hasSafeNormalApplicationCommands,
   isNormalApplicationCommand,
   LocalDesktopControlRuntime,
   PROVEN_DESKTOP_CONTROL_VERSION,
   selectTaskExpression,
   taskListExpression,
+  waitForDesktopSocketOpen,
   type DesktopControlHost,
   type DesktopProtocolSession,
 } from "../src/desktopControlRuntime.js";
@@ -98,6 +100,23 @@ class FakeDesktopHost implements DesktopControlHost {
 }
 
 describe("desktop control runtime", () => {
+  it("bounds renderer socket opening and rejects a pre-open close", async () => {
+    class FakeSocket extends EventTarget {
+      readonly close = vi.fn();
+    }
+
+    const closed = new FakeSocket();
+    const closedResult = waitForDesktopSocketOpen(closed, 1000);
+    closed.dispatchEvent(new Event("close"));
+    await expect(closedResult).rejects.toThrow("connectionFailed");
+
+    const timedOut = new FakeSocket();
+    await expect(waitForDesktopSocketOpen(timedOut, 1)).rejects.toThrow(
+      "connectionFailed",
+    );
+    expect(timedOut.close).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the accepted macOS proof launcher with random loopback arguments", () => {
     expect(controlledLaunchArguments(49152)).toEqual([
       "-na",
@@ -150,6 +169,16 @@ describe("desktop control runtime", () => {
     expect(isNormalApplicationCommand("/Applications/Other.app/Other")).toBe(
       false,
     );
+    const normal = "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT";
+    expect(hasSafeNormalApplicationCommands([normal])).toBe(true);
+    expect(hasSafeNormalApplicationCommands([normal, normal])).toBe(true);
+    expect(hasSafeNormalApplicationCommands([])).toBe(false);
+    expect(
+      hasSafeNormalApplicationCommands([
+        normal,
+        `${normal} --remote-debugging-port=49152`,
+      ]),
+    ).toBe(false);
   });
 
   it("retains controlled-process cleanup after its listener closes", () => {

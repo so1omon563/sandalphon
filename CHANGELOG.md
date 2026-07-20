@@ -11,14 +11,19 @@ All notable changes to Sandalphon are recorded here.
 - Added bounded renderer-readiness retries and automatic opt-out after a clean
   failed startup so desktop control cannot induce repeated restart attempts,
   with content-free failure categories for bounded physical diagnosis.
+- Bound the renderer WebSocket handshake to five seconds and treat pre-open
+  socket closure as failure so startup cannot remain indefinitely in Starting.
 - Verify authority against exactly one matching Codex main process even when
   Chromium helper processes also report the same debugging listener.
 - Reconcile cleanup against the complete safe terminal state after command or
-  timeout errors: the exact listener is closed and exactly one normal Codex
-  main process remains without debugging arguments.
+  timeout errors: the exact listener is closed and every matching Codex main
+  process is free of debugging arguments.
 - Terminate the verified controlled process even when its listener closes
   before cleanup begins, and allow a bounded 15 seconds for normal Codex
   restart convergence before retaining recovery state.
+- Accept normal-restart convergence when at least one Codex main process exists
+  and every matching command is argument-free, rather than rejecting safe
+  transient multi-process startup solely because its PID count is not one.
 - Reserve the production renderer port directly and recover it from the exact
   controlled Codex process arguments instead of trusting the shared
   `DevToolsActivePort` file used by other Codex Chromium services.

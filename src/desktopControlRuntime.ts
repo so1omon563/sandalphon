@@ -505,14 +505,7 @@ class WebSocketDesktopProtocolSession implements DesktopProtocolSession {
 
   static async connect(url: string): Promise<WebSocketDesktopProtocolSession> {
     const socket = new WebSocket(url);
-    await new Promise<void>((resolve, reject) => {
-      socket.addEventListener("open", () => resolve(), { once: true });
-      socket.addEventListener(
-        "error",
-        () => reject(new Error("connectionFailed")),
-        { once: true },
-      );
-    });
+    await waitForDesktopSocketOpen(socket, 5000);
     return new WebSocketDesktopProtocolSession(socket);
   }
 
@@ -582,6 +575,46 @@ class WebSocketDesktopProtocolSession implements DesktopProtocolSession {
     }
     this.#pending.clear();
   }
+}
+
+type DesktopSocketHandshake = Pick<
+  WebSocket,
+  "addEventListener" | "removeEventListener" | "close"
+>;
+
+export function waitForDesktopSocketOpen(
+  socket: DesktopSocketHandshake,
+  timeoutMs: number,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = (): void => {
+      clearTimeout(timer);
+      socket.removeEventListener("open", opened);
+      socket.removeEventListener("error", failed);
+      socket.removeEventListener("close", failed);
+    };
+    const opened = (): void => {
+      cleanup();
+      resolve();
+    };
+    const failed = (): void => {
+      cleanup();
+      reject(new Error("connectionFailed"));
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      try {
+        socket.close();
+      } catch {
+        // The bounded rejection remains authoritative if close races state.
+      }
+      reject(new Error("connectionFailed"));
+    }, timeoutMs);
+    timer.unref();
+    socket.addEventListener("open", opened, { once: true });
+    socket.addEventListener("error", failed, { once: true });
+    socket.addEventListener("close", failed, { once: true });
+  });
 }
 
 export function decodeDesktopTargets(
@@ -959,6 +992,12 @@ export function isNormalApplicationCommand(command: string): boolean {
   return command.trim() === APPLICATION_BINARY;
 }
 
+export function hasSafeNormalApplicationCommands(
+  commands: readonly string[],
+): boolean {
+  return commands.length > 0 && commands.every(isNormalApplicationCommand);
+}
+
 async function waitForProcessExit(processId: number): Promise<void> {
   for (let attempt = 0; attempt < CLEANUP_ATTEMPTS; attempt += 1) {
     try {
@@ -976,13 +1015,10 @@ async function waitForNormalApplicationState(port: number): Promise<void> {
     try {
       if ((await listenerProcessIdsOrEmpty(port)).length === 0) {
         const processIds = await applicationProcessIds();
-        if (
-          processIds.length === 1 &&
-          processIds[0] !== undefined &&
-          isNormalApplicationCommand(
-            await applicationProcessCommand(processIds[0]),
-          )
-        ) {
+        const commands = await Promise.all(
+          processIds.map(applicationProcessCommand),
+        );
+        if (hasSafeNormalApplicationCommands(commands)) {
           return;
         }
       }
