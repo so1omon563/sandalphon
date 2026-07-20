@@ -34,6 +34,9 @@ All notable changes to Sandalphon are recorded here.
 - A disabled-by-default desktop-control feasibility contract with exact version
   and capability gating, revision-bound task-selection offers, stale-target
   rejection, and fail-closed cleanup semantics.
+- A source-clean, content-free desktop feasibility probe that proved task
+  listing, reversible task selection, exact version gating, and listener
+  cleanup without enabling renderer access in the packaged plugin.
 - ADR 0006 defining a hybrid authority model: official typed app-server
   operations for Sandalphon-owned work plus a narrowly version-gated desktop
   co-presence feasibility boundary.

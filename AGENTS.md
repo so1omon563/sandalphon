@@ -44,8 +44,8 @@ There are no child AGENTS.md files yet. This root owns the contracts for:
 - docs: development guidance, architecture decisions, and the accepted Classic
   15 and Stream Deck + interaction maps.
 - artwork: editable sources for original Sandalphon visual assets.
-- scripts: deterministic repository tooling, including visual-asset export and
-  stale-output checks.
+- scripts: deterministic repository tooling, including visual-asset export,
+  stale-output checks, and the bounded desktop-control feasibility probe.
 - Root project files: public introduction, design, contribution, security,
   licensing, changelog, build, formatting, and package configuration.
 
@@ -89,6 +89,9 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   capability gate for the desktop-control feasibility boundary. It grants only
   revision-bound task-selection authority and contains no live renderer
   attachment.
+- scripts/probe-desktop-control.mjs is the explicit-opt-in, exact-version,
+  loopback-only live feasibility tool. It lists opaque desktop task identifiers
+  and can switch once and restore; it is not production plugin wiring.
 - test contains Vitest unit and manifest-contract coverage.
 - docs/architecture/decisions contains numbered ADRs.
 - artwork/source contains editable original asset sources.

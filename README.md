@@ -22,6 +22,9 @@ behavioral core, and verified live integrations for Stream Deck + and the
   and packaging gates;
 - immutable agent/session/run state reduction with latched terminal results;
 - revision- and connection-bound action offers with fail-closed validation;
+- a source-clean, exact-version desktop co-presence feasibility proof for
+  opaque task listing and reversible selection, kept outside production plugin
+  wiring;
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - an owned Codex app-server lifecycle with validated local configuration,
   bounded JSON-RPC framing, live session discovery, resume, official change

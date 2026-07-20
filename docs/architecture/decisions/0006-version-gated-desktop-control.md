@@ -1,6 +1,6 @@
 # ADR 0006: Use Official Codex Control with a Version-Gated Desktop Bridge
 
-- Status: Accepted for feasibility; production adoption pending live proof
+- Status: Accepted; production integration deferred to SO1-180
 - Date: 2026-07-20
 - Decision: SO1-179
 
@@ -34,10 +34,13 @@ Chrome explicitly treats remote debugging against a real user profile as a
 credential-extraction risk and requires additional isolation for Chrome 136
 and newer. Private renderer capabilities can also change in any desktop build.
 
-A bounded local probe against Codex desktop `26.715.52143`, Chromium
+An initial compatibility probe against Codex desktop `26.715.52143`, Chromium
 `150.0.7871.124`, and CDP `1.3` confirmed this compatibility risk: task status
-remained observable while the previously available task-selection behavior no
-longer completed.
+remained observable while a previously available private selection route no
+longer completed. The independent SO1-179 proof then used the current visible
+sidebar task controls through public CDP primitives. It listed 16 opaque tasks,
+switched to another visible task, and restored the original selection. A normal
+restart removed the loopback listener.
 
 ## Decision
 
@@ -123,8 +126,15 @@ session, share one start-work effect lock, dispatch `review/start` or
 terminal state.
 
 The pure contract in `src/desktopControlContract.ts` encodes the feasibility
-gate without attaching to the desktop app. A later source-clean adapter may
-implement the live proof from this contract and public official interfaces.
+gate without attaching to the desktop app.
+`scripts/probe-desktop-control.mjs` is the corresponding source-clean live
+proof tool. It is explicit opt-in, exact-version and loopback gated, emits only
+content-free summary evidence, and permits only task listing or one switch and
+restore cycle. It is not imported by the plugin bundle.
+
+SO1-180 owns production integration, lifecycle consent, authority routing, and
+physical-device validation. Until that work is accepted, the packaged plugin
+does not launch, attach to, or control the desktop renderer.
 
 An official shared desktop-control or peer-co-presence API supersedes this
 feasibility boundary. Sandalphon should prefer that API and retire private
@@ -132,8 +142,9 @@ renderer access rather than preserve compatibility with both.
 
 ## Consequences
 
-- SO1-175 remains paused until task switching works end to end or the project
-  explicitly chooses to wait for an official API.
+- SO1-175 remains paused behind SO1-180 until the proven task-selection route
+  is integrated through the shared application boundary and physically
+  validated on both device classes.
 - The bridge cannot silently degrade into reporting-only behavior. Missing
   control capability makes the entire desktop-control surface unavailable.
 - Exact version allowlisting creates deliberate maintenance work for every
@@ -155,3 +166,4 @@ renderer access rather than preserve compatibility with both.
 - https://openai.com/supply/co-lab/work-louder/
 - https://www.electronjs.org/docs/latest/api/command-line-switches
 - https://developer.chrome.com/blog/remote-debugging-port
+- [SO1-179 desktop-control feasibility proof](../../so1-179-desktop-control-proof.md)

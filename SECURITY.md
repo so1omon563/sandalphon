@@ -43,6 +43,12 @@ content-free diagnostics, and verified cleanup. It is not a supported release
 surface. A loopback Chrome DevTools listener still exposes renderer authority
 to other processes running as the same macOS user.
 
+`scripts/probe-desktop-control.mjs` implements only that bounded proof. It
+rejects non-loopback discovery, version drift, multiple or malformed page
+targets, malformed task state, and failed restoration. It never emits task
+identifiers or content. Running it does not authorize production use; normal
+Codex restart and listener verification are mandatory after every proof.
+
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.
 

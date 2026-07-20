@@ -50,6 +50,38 @@ Before a pull request:
 The check target validates formatting, lint, strict types, deterministic
 coverage, bundle output, manifest structure, and a package dry run.
 
+## Desktop-Control Feasibility Proof
+
+The desktop proof is privileged, explicit-opt-in development tooling. It is
+not part of the plugin bundle and must not be used as a normal launch path.
+Read [SO1-179 Desktop-Control Feasibility Proof](so1-179-desktop-control-proof.md)
+and the security warning before running it.
+
+Launch Codex desktop with a random loopback-only debugging endpoint only for a
+bounded proof:
+
+    open -na /Applications/ChatGPT.app --args \
+      --remote-debugging-address=127.0.0.1 \
+      --remote-debugging-port=0
+
+After reading the generated port, run the content-free list proof. The tool
+independently re-verifies the installed application version:
+
+    node scripts/probe-desktop-control.mjs \
+      --port <port> \
+      --application-version 26.715.52143
+
+Add `--switch-and-restore` only when one reversible selection proof is
+explicitly authorized. The tool rejects version drift, unsafe debugger URLs,
+malformed task state, and failed restoration. It prints counts, capabilities,
+and boolean outcomes only—never task IDs, titles, prompts, responses, or other
+renderer content.
+
+End every proof by fully quitting Codex, reopening it normally without debug
+arguments, and verifying the former port has no listener. A stale
+`DevToolsActivePort` file is not evidence of an active listener; verify the
+socket itself.
+
 ## Packaging
 
     make package
