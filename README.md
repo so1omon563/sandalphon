@@ -22,10 +22,13 @@ behavioral core, and verified live integrations for Stream Deck + and the
   and packaging gates;
 - immutable agent/session/run state reduction with latched terminal results;
 - revision- and connection-bound action offers with fail-closed validation;
+- a source-clean, exact-version desktop co-presence feasibility proof for
+  opaque task listing and reversible selection, kept outside production plugin
+  wiring;
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - an owned Codex app-server lifecycle with validated local configuration,
-  bounded JSON-RPC framing, live session discovery, resume, and next-turn
-  settings;
+  bounded JSON-RPC framing, live session discovery, resume, official change
+  review and context compaction, and next-turn settings;
 - explicit Classic 15 and Stream Deck + capability frames plus deterministic
   simulated boundaries;
 - an exact Classic 15 managed interaction map with stable anchors, key-native
@@ -48,6 +51,14 @@ The bundled managed profiles remain optional full-surface reference and
 consequential-review environments. Normal daily use is being validated through
 the composable controls so Sandalphon can coexist with the user's ordinary
 Stream Deck actions without a profile Exit dependency.
+
+Daily-driver validation is currently paused while SO1-179 establishes a hybrid
+control model. Sandalphon-owned sessions use official typed app-server
+operations for Codex workflows such as turns, interruption, compaction,
+review, and model selection. A separately version-gated feasibility path is
+being evaluated only for task selection in the active Codex desktop app. That
+desktop contract is disabled by default and is not wired to the live plugin or
+included as a supported control path.
 
 ## Requirements
 

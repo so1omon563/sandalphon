@@ -36,6 +36,19 @@ Security-sensitive areas include:
 - Stream Deck package integrity and release automation;
 - dependency and supply-chain changes.
 
+SO1-179 also contains a disabled-by-default feasibility contract for privileged
+desktop control. Any live proof must use a random loopback-only endpoint, exact
+application, engine, and protocol allowlisting, explicit user opt-in,
+content-free diagnostics, and verified cleanup. It is not a supported release
+surface. A loopback Chrome DevTools listener still exposes renderer authority
+to other processes running as the same macOS user.
+
+`scripts/probe-desktop-control.mjs` implements only that bounded proof. It
+rejects non-loopback discovery, version drift, multiple or malformed page
+targets, malformed task state, and failed restoration. It never emits task
+identifiers or content. Running it does not authorize production use; normal
+Codex restart and listener verification are mandatory after every proof.
+
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.
 

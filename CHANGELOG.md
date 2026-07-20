@@ -28,6 +28,18 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- Official `review/start` and `thread/compact/start` controls for idle owned
+  sessions, with terminal-turn tracking and mutually exclusive work startup on
+  both managed device layouts.
+- A disabled-by-default desktop-control feasibility contract with exact version
+  and capability gating, revision-bound task-selection offers, stale-target
+  rejection, and fail-closed cleanup semantics.
+- A source-clean, content-free desktop feasibility probe that proved task
+  listing, reversible task selection, exact version gating, and listener
+  cleanup without enabling renderer access in the packaged plugin.
+- ADR 0006 defining a hybrid authority model: official typed app-server
+  operations for Sandalphon-owned work plus a narrowly version-gated desktop
+  co-presence feasibility boundary.
 - Composable Session Status, Resume Session, Attention, and Stream Deck +
   Sessions dial actions for use alongside ordinary controls in user profiles.
 - Independent Sandalphon repository and package identity.

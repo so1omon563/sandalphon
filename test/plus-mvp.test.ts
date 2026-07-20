@@ -155,10 +155,10 @@ describe("Stream Deck + MVP surface", () => {
     await releaseKey(surface, 6);
     expect(surface.frame.view).toBe("session");
     expect(surface.frame.encoders[1]).toMatchObject({
-      title: "",
-      detail: "",
-      rotate: "",
-      press: "",
+      title: "Actions",
+      detail: "Review changes",
+      rotate: "Preview",
+      press: "Activate",
     });
     surface.rotateEncoder(2, 1, false, 200);
     expect(surface.frame.encoders[2]).toMatchObject({
@@ -168,6 +168,32 @@ describe("Stream Deck + MVP surface", () => {
     await surface.pressEncoder(2, 220);
     expect(application.invoke).toHaveBeenCalledWith(
       expect.objectContaining({ optionId: "high" }),
+    );
+  });
+
+  it("invokes official review and compaction from the action dial", async () => {
+    const snapshot = toSnapshot(readyState());
+    const application = new SurfaceApplication(snapshot);
+    const surface = new PlusMvpSurface(application);
+    await releaseKey(surface, 6);
+
+    const reviewToken = snapshot.sessions[0]?.actionOffers.find(
+      ({ kind }) => kind === "ReviewChanges",
+    )?.offerToken;
+    const compactToken = snapshot.sessions[0]?.actionOffers.find(
+      ({ kind }) => kind === "CompactThread",
+    )?.offerToken;
+    await surface.pressEncoder(1, 200);
+    surface.rotateEncoder(1, 1, false, 250);
+    expect(surface.frame.encoders[1]?.detail).toBe("Compact");
+    await surface.pressEncoder(1, 300);
+    expect(application.invoke).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ offerToken: reviewToken }),
+    );
+    expect(application.invoke).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ offerToken: compactToken }),
     );
   });
 
@@ -263,7 +289,10 @@ describe("Stream Deck + MVP surface", () => {
     });
     await releaseKey(ready, 6);
     expect(ready.frame.view).toBe("session");
-    expect(ready.frame.encoders[1]).toMatchObject({ title: "", detail: "" });
+    expect(ready.frame.encoders[1]).toMatchObject({
+      title: "Actions",
+      detail: "Review changes",
+    });
     expect(ready.frame.encoders[2]?.title).toBe("Reasoning");
   });
 

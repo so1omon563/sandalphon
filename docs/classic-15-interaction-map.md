@@ -106,7 +106,7 @@ page exists; Home is omitted because the frame is already Home.
 
 | `K0` Selected | `K1` Inspect           | `K2` Resume            | `K3` Review        | `K4` Reasoning       |
 | ------------- | ---------------------- | ---------------------- | ------------------ | -------------------- |
-| `K5` Empty    | `K6` Empty             | `K7` Retry             | `K8` Cancel run    | `K9` Other attention |
+| `K5` Empty    | `K6` Compact           | `K7` Retry             | `K8` Cancel run    | `K9` Other attention |
 | `K10` Back    | `K11` Previous session | `K12` Session position | `K13` Next session | `K14` Exit           |
 
 - Inspect opens current activity, exact request, or exact result detail.
@@ -114,9 +114,13 @@ page exists; Home is omitted because the frame is already Home.
   detail has been inspected completely.
 - `K2` says Resume only for a known safely resumable historical session. It
   never implies that arbitrary historical sessions are controllable.
-- Review appears only for a selected pending request. Other attention appears
-  only when another thread genuinely needs attention; it never duplicates the
+- `K3` says Review request for a selected pending request; otherwise it says
+  Review changes at an idle owned turn boundary. Other attention appears only
+  when another thread genuinely needs attention; it never duplicates the
   selected request's Review control.
+- Compact starts official context compaction only at an idle owned turn
+  boundary. Review changes and Compact share one start-work lock, so neither
+  can race the other.
 - Reasoning opens the ordered Choice view for currently advertised next-turn
   effort. It cannot change an active run.
 - Retry and Cancel Run have separate permanent positions. Each opens its own
@@ -133,7 +137,8 @@ page exists; Home is omitted because the frame is already Home.
 | Resume Session                         | Session `K2`                                               | Current safely resumable offer; reconciliation precedes live actions            |
 | Inspect                                | Session `K1`                                               | Current detail target; exact result inspection follows the acknowledgement rule |
 | Acknowledge Result                     | Result review `K9`                                         | Current exact result offer after complete inspection                            |
-| Review                                 | Session `K3`                                               | Current turn-boundary review offer                                              |
+| Review Changes                         | Session `K3`                                               | Current official turn-boundary review offer                                     |
+| Compact Thread                         | Session `K6`                                               | Current official turn-boundary compaction offer                                 |
 | Approve Request                        | Home/Session `K9` to Request                               | New 800 ms hold at Request `K9` after complete inspection                       |
 | Reject Request                         | Request `K7`                                               | New press at Request `K7` after target inspection                               |
 | Cancel Request                         | Request `K5`                                               | New 800 ms hold at Request `K5`; success waits for interrupted run evidence     |

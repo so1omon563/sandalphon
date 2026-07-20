@@ -102,6 +102,9 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
 
 - `E1` press invokes only a current release-level offer or enters the current
   safety review. It never performs the final reviewPress or reviewHold step.
+- Review changes and Compact are release-level official actions in this lane
+  for an idle app-server-owned session. They share one start-work lock and
+  disappear while work is active.
 - The dedicated `E2` reasoning choice is not duplicated in the `E1` action
   catalog.
 - `E2` is enabled only for an advertised turn-boundary choice. Rotation does
@@ -118,9 +121,10 @@ held key, dial press, or touch cannot cross a frame revision into a new role.
 the displayed token. Release-level actions may dispatch once; consequential
 actions only enter their dedicated review frame.
 
-The first catalog order is Inspect/Acknowledge, Start/Resume, Review,
-Reasoning, Fork, configured Presets, Retry, and Cancel Run. Unsupported
-operations remain absent. There is no command, prompt,
+The implemented catalog order is Resume, Inspect/Acknowledge, Review changes,
+Compact, Retry, and Cancel Run; the current primary key action is omitted from
+the dial. Reasoning remains on its dedicated lane. Unsupported operations
+remain absent. There is no command, prompt,
 keystroke, terminal, browser, commit, or pull-request fallback.
 
 ## Ordered Choice

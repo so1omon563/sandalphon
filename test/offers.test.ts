@@ -85,6 +85,37 @@ describe("action offers", () => {
     expect(offer(state, "ResumeSession")).toMatchObject({ state: "available" });
   });
 
+  it("offers official work only for the selected owned idle thread", () => {
+    const ready = readyState();
+    expect(offer(ready, "ReviewChanges")).toMatchObject({
+      state: "available",
+      safety: { confirmation: "release", inspection: "target" },
+    });
+    expect(offer(ready, "CompactThread")).toMatchObject({
+      state: "available",
+      safety: { confirmation: "release", inspection: "target" },
+    });
+    expect(offer(activeState(), "ReviewChanges")).toMatchObject({
+      state: "disabled",
+      reason: "busy",
+    });
+    expect(offer(activeState(), "CompactThread")).toMatchObject({
+      state: "disabled",
+      reason: "busy",
+    });
+
+    const first = dispatchOffer(ready, createInvocationLedger(), {
+      invocationId: "review-1",
+      offerToken: offer(ready, "ReviewChanges")?.offerToken ?? "",
+    });
+    expect(
+      toSnapshot(
+        ready,
+        first.ledger.claimedEffects,
+      ).sessions[0]?.actionOffers.find(({ kind }) => kind === "CompactThread"),
+    ).toMatchObject({ state: "disabled", reason: "alreadyResolving" });
+  });
+
   it("keeps request decisions distinct and applies inspection and advertised-decision rules", () => {
     const state = waitingState();
     expect(offer(state, "ApproveRequest")).toMatchObject({

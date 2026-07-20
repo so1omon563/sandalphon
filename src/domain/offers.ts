@@ -241,6 +241,20 @@ function candidatesFor(
       request || result ? undefined : "unsupported",
     ),
     candidate(
+      "ReviewChanges",
+      session.id,
+      `${state.connectionEpoch}:${session.id}:start-work`,
+      { confirmation: "release", inspection: "target" },
+      baseReason ?? (session.run.phase === "idle" ? undefined : "busy"),
+    ),
+    candidate(
+      "CompactThread",
+      session.id,
+      `${state.connectionEpoch}:${session.id}:start-work`,
+      { confirmation: "release", inspection: "target" },
+      baseReason ?? (session.run.phase === "idle" ? undefined : "busy"),
+    ),
+    candidate(
       "AcknowledgeResult",
       resultId,
       `${resultId}:acknowledge`,

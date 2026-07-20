@@ -790,6 +790,8 @@ function actionLabel(kind: ActionKind): string {
   const labels: Record<ActionKind, string> = {
     ResumeSession: "Resume",
     Inspect: "Inspect",
+    ReviewChanges: "Review changes",
+    CompactThread: "Compact",
     AcknowledgeResult: "Acknowledge",
     ApproveRequest: "Approve",
     RejectRequest: "Reject",
