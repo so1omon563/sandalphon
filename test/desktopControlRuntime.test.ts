@@ -7,6 +7,7 @@ import {
   decodeDesktopPageDebuggerUrl,
   decodeDesktopTargets,
   decodeListenerProcessIds,
+  desktopCleanupDisposition,
   isNormalApplicationCommand,
   LocalDesktopControlRuntime,
   PROVEN_DESKTOP_CONTROL_VERSION,
@@ -149,6 +150,15 @@ describe("desktop control runtime", () => {
     expect(isNormalApplicationCommand("/Applications/Other.app/Other")).toBe(
       false,
     );
+  });
+
+  it("retains controlled-process cleanup after its listener closes", () => {
+    expect(desktopCleanupDisposition([42, 84], [], 42)).toBe(
+      "terminateControlled",
+    );
+    expect(desktopCleanupDisposition([84], [], 42)).toBe("rejectOwner");
+    expect(desktopCleanupDisposition([], [42], 42)).toBe("terminateControlled");
+    expect(desktopCleanupDisposition([], [84], 42)).toBe("alreadyExited");
   });
 
   it("fails before discovery on an unsupported installed application", async () => {

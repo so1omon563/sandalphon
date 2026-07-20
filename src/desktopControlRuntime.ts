@@ -21,6 +21,7 @@ const APPLICATION_PLIST = "/Applications/ChatGPT.app/Contents/Info.plist";
 const APPLICATION_BUNDLE_ID = "com.openai.codex";
 const TASK_ROW_SELECTOR =
   '[role="button"][data-app-action-sidebar-thread-row][data-app-action-sidebar-thread-id]';
+const CLEANUP_ATTEMPTS = 300;
 const execFileAsync = promisify(execFile);
 
 export type DesktopControlLifecycleReason =
@@ -70,6 +71,9 @@ interface DesktopControlledLaunch {
   readonly processId: number;
   readonly port: number;
 }
+
+export type DesktopCleanupDisposition =
+  "terminateControlled" | "alreadyExited" | "rejectOwner";
 
 export interface DesktopControlHost {
   installedApplicationVersion(): Promise<string>;
@@ -411,18 +415,20 @@ export class MacDesktopControlHost implements DesktopControlHost {
 
   async restoreNormal(processId: number, port: number): Promise<void> {
     try {
-      const processIds = await listenerProcessIdsOrEmpty(port);
-      if (processIds.length === 0) {
-        await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
-          timeout: 5000,
-        });
-        await waitForNormalApplicationState(port);
-        return;
+      const listenerOwners = await listenerProcessIdsOrEmpty(port);
+      const applicationProcesses =
+        listenerOwners.length === 0 ? await applicationProcessIds() : [];
+      const disposition = desktopCleanupDisposition(
+        listenerOwners,
+        applicationProcesses,
+        processId,
+      );
+      if (disposition === "rejectOwner") throw new Error("cleanupFailed");
+      if (disposition === "terminateControlled") {
+        await verifyControlledProcess(processId, port);
+        process.kill(processId, "SIGTERM");
+        await waitForProcessExit(processId);
       }
-      if (!processIds.includes(processId)) throw new Error("cleanupFailed");
-      await verifyControlledProcess(processId, port);
-      process.kill(processId, "SIGTERM");
-      await waitForProcessExit(processId);
       await execFileAsync("/usr/bin/open", ["-b", APPLICATION_BUNDLE_ID], {
         timeout: 5000,
       });
@@ -437,6 +443,21 @@ export class MacDesktopControlHost implements DesktopControlHost {
       throw new Error("cleanupFailed");
     }
   }
+}
+
+export function desktopCleanupDisposition(
+  listenerOwners: readonly number[],
+  applicationProcesses: readonly number[],
+  controlledProcessId: number,
+): DesktopCleanupDisposition {
+  if (listenerOwners.length > 0) {
+    return listenerOwners.includes(controlledProcessId)
+      ? "terminateControlled"
+      : "rejectOwner";
+  }
+  return applicationProcesses.includes(controlledProcessId)
+    ? "terminateControlled"
+    : "alreadyExited";
 }
 
 export function controlledLaunchArguments(port: number): readonly string[] {
@@ -939,7 +960,7 @@ export function isNormalApplicationCommand(command: string): boolean {
 }
 
 async function waitForProcessExit(processId: number): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < CLEANUP_ATTEMPTS; attempt += 1) {
     try {
       process.kill(processId, 0);
     } catch {
@@ -951,7 +972,7 @@ async function waitForProcessExit(processId: number): Promise<void> {
 }
 
 async function waitForNormalApplicationState(port: number): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < CLEANUP_ATTEMPTS; attempt += 1) {
     try {
       if ((await listenerProcessIdsOrEmpty(port)).length === 0) {
         const processIds = await applicationProcessIds();

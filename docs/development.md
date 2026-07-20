@@ -85,7 +85,9 @@ and reopens Codex normally. A cleanup command or timeout error is reconciled
 against the complete terminal state: the exact listener must be closed and
 exactly one Codex main process must remain without debugging arguments. If that
 state cannot be proven, opt-in remains set and the inspector instructs the user
-to restart Codex normally.
+to restart Codex normally. If the listener closes first, cleanup still verifies
+and terminates the exact controlled process before reopening Codex. Process
+exit and normal-restart convergence each have a bounded 15-second window.
 Initial renderer readiness is retried only within one bounded launch attempt.
 If that attempt fails after verified cleanup, Sandalphon clears opt-in instead
 of permitting an automatic restart cycle; enabling it again requires fresh

@@ -128,6 +128,9 @@ satisfy all of these constraints:
 - Cleanup command and timeout failures may be reconciled only by proving the
   complete safe terminal state: no listener on the exact random port and
   exactly one Codex main process with no debugging arguments.
+- A controlled process whose listener closes before cleanup remains an exact
+  cleanup target after its process arguments are reverified. Process exit and
+  normal restart convergence remain bounded to 15 seconds each.
 - Initial renderer readiness may be retried only inside one bounded controlled
   launch. A clean failed launch clears persisted opt-in so plugin or application
   restarts cannot automatically repeat the Codex lifecycle.
