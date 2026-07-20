@@ -14,6 +14,8 @@ All notable changes to Sandalphon are recorded here.
   roster page, and a single primary Plus session lane.
 - Added distinct repository-authored action and navigation glyphs so labels
   confirm rather than solely communicate each control's meaning.
+- Replaced the selected-session unavailable glyph with a dedicated session
+  identity glyph whose accent still reflects the session's actual state.
 - Made managed Exit dispatch immediately on key-down and documented the
   Stream Deck restart case where the official prior-profile API cannot return
   to a user-defined profile.

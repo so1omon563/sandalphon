@@ -253,7 +253,7 @@ function statusView(snapshot: SandalphonSnapshot): ComposableKeyView {
     label: compactLabel(selected.name, 24),
     enabled: false,
     state: selected.primaryState,
-    icon: "state",
+    icon: "session",
   };
 }
 

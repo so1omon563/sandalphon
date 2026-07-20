@@ -51,6 +51,7 @@
     }
   },
   "actionIconOrder": [
+    "session",
     "resume",
     "inspect",
     "details",
@@ -72,6 +73,7 @@
     "offline"
   ],
   "actionIcons": {
+    "session": { "glyph": "session", "label": "Session", "accent": "#9A87FF" },
     "resume": { "glyph": "resume", "label": "Resume", "accent": "#9A87FF" },
     "inspect": { "glyph": "inspect", "label": "Inspect", "accent": "#9A87FF" },
     "details": { "glyph": "details", "label": "Details", "accent": "#9A87FF" },

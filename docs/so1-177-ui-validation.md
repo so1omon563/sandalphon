@@ -20,8 +20,9 @@ touch-strip lanes even when most lanes had no current job.
   available actions, required local navigation, and Exit.
 - An unused key is the dark canvas only: no card, glyph, label, or input.
 - An unused Plus lane has no heading, detail, rail, or trigger description.
-- Session tiles keep semantic state glyphs. Actions and navigation use distinct
-  semantic glyphs, with labels as confirmation rather than their sole identity.
+- Selected-session tiles use a dedicated session glyph with a semantic state
+  accent. Offline surfaces, actions, and navigation remain visually distinct,
+  with labels as confirmation rather than their sole identity.
 - Classic Home shows the selected thread and at most four alternatives.
 - Plus Home uses `E2` for session preview and `E3` only when attention exists.
 - Plus Details exists only when it adds secondary context and never repeats the

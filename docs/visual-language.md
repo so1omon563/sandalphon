@@ -67,10 +67,11 @@ provider-derived states.
 - Keep a 12 px safe inset at the 144 × 144 key source size.
 - Pair every semantic icon with an exact text label; text confirms meaning but
   is never the only way ordinary controls differ at a glance.
-- Session tiles use the six state glyphs. Actions and navigation use distinct
-  repository-authored glyphs for Resume, Inspect, Details, Exit, Attention,
-  Review, Reasoning, Retry, Cancel, Back, Home, Previous, Next, Roster,
-  Actions, Apply, Approve, Reject, and Offline.
+- Selected-session tiles use a dedicated Session glyph whose accent follows
+  the six-state palette. Offline surfaces use the unavailable state glyph.
+  Actions and navigation use distinct repository-authored glyphs for Resume,
+  Inspect, Details, Exit, Attention, Review, Reasoning, Retry, Cancel, Back,
+  Home, Previous, Next, Roster, Actions, Apply, Approve, Reject, and Offline.
 - Positive decisions use the completed accent, destructive decisions use the
   failed accent, attention uses the waiting accent, and ordinary actions use
   focus violet. Shape remains the primary distinction.

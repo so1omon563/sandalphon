@@ -73,11 +73,11 @@ describe("visual language", () => {
   });
 
   it("defines bounded action iconography for at-a-glance controls", () => {
-    expect(language.actionIconOrder).toHaveLength(19);
+    expect(language.actionIconOrder).toHaveLength(20);
     expect(Object.keys(language.actionIcons)).toEqual(language.actionIconOrder);
     expect(
       new Set(Object.values(language.actionIcons).map(({ glyph }) => glyph)),
-    ).toHaveLength(19);
+    ).toHaveLength(20);
     for (const { label } of Object.values(language.actionIcons)) {
       expect(label.length).toBeLessThanOrEqual(
         language.typography.key.maxCharactersPerLine,

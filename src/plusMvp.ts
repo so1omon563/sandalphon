@@ -604,7 +604,7 @@ export class PlusMvpSurface {
       ] as const) {
         if (review?.offers[kind]?.state === "available") enabled.push(index);
       }
-      return keyLabels(labels, state, enabled);
+      return withSessionIdentity(keyLabels(labels, state, enabled));
     }
     const primary = this.#primaryOffer(selected);
     const hasDetails = this.#hasDetails(selected);
@@ -618,13 +618,15 @@ export class PlusMvpSurface {
       view === "home" && hasDetails ? "Details" : "",
       "Exit",
     ];
-    return keyLabels(common, state, [
-      ...(primary ? [2] : []),
-      ...(selected.pendingRequests.length > 0 ? [3] : []),
-      ...(view === "session" ? [4] : []),
-      ...(view === "home" && hasDetails ? [6] : []),
-      7,
-    ]);
+    return withSessionIdentity(
+      keyLabels(common, state, [
+        ...(primary ? [2] : []),
+        ...(selected.pendingRequests.length > 0 ? [3] : []),
+        ...(view === "session" ? [4] : []),
+        ...(view === "home" && hasDetails ? [6] : []),
+        7,
+      ]),
+    );
   }
 
   #encoderViews(
@@ -760,6 +762,12 @@ function keyLabels(
     state,
     icon: stateKeys.includes(index) ? "state" : actionIcon(label),
   }));
+}
+
+function withSessionIdentity(keys: PlusKeyView[]): PlusKeyView[] {
+  const selected = keys[0];
+  if (selected) keys[0] = { ...selected, icon: "session" };
+  return keys;
 }
 
 function encoder(

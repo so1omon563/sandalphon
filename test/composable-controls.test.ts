@@ -26,7 +26,8 @@ describe("ComposableControls", () => {
 
     await vi.waitFor(() => expect(status.setImage).toHaveBeenCalled());
     expect(lastSvg(status.setImage)).toContain("Alpha");
-    expect(lastSvg(status.setImage)).toContain("session");
+    expect(lastSvg(status.setImage)).toContain('width="46" height="42"');
+    expect(lastSvg(status.setImage)).not.toContain("M57 68l30-30");
     expect(lastSvg(resume.setImage)).toContain("Resume");
     expect(lastSvg(attention.setImage)).toContain("Attention");
     expect(dial.setFeedbackLayout).toHaveBeenCalledWith(

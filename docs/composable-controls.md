@@ -16,7 +16,7 @@ Sandalphon Exit control.
 
 | Control            | Idle presentation                                                                      | Input                              | Authority                                       |
 | ------------------ | -------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
-| Session Status key | Selected session name plus primary-state glyph and accent                              | None                               | Read-only                                       |
+| Session Status key | Selected session name plus a session glyph and primary-state accent                    | None                               | Read-only                                       |
 | Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank | Press and release                  | Revalidates and dispatches only `ResumeSession` |
 | Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank        | Press and release                  | Selects an attention session only               |
 | Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter             | Rotate to preview; press to select | Session selection only                          |
