@@ -41,6 +41,12 @@ Complete request inspection and final high-consequence confirmation remain on
 the optional managed surface with the accepted review, separate-confirmation,
 and 800 ms hold contracts.
 
+When the separately consented desktop-control plane is ready, Session Status,
+Attention, and the Sessions dial may render desktop-controlled tasks reconciled
+with app-server history. Selection requires the current desktop offer token;
+stale tokens, version drift, disconnect, and cleanup remove the target rather
+than falling back to local selection or app-server dispatch.
+
 ## Validation
 
 SO1-178 validates the Stream Deck + set first in an ordinary existing profile:

@@ -8,6 +8,11 @@ import type {
 } from "../src/codex/appServer.js";
 import type { BinarySelection } from "../src/codex/configuration.js";
 import type { RequestId } from "../src/codex/jsonRpc.js";
+import type { DesktopControlObservation } from "../src/desktopControlContract.js";
+import type {
+  DesktopControlConnection,
+  DesktopControlRuntime,
+} from "../src/desktopControlRuntime.js";
 
 const THREADS = {
   data: [
@@ -106,6 +111,64 @@ class FakeRuntime implements CodexRuntime {
   }
 }
 
+const DESKTOP_OBSERVATION: DesktopControlObservation = {
+  connected: true,
+  endpointHost: "127.0.0.1",
+  epoch: 4,
+  revision: 9,
+  version: {
+    application: "26.715.52143",
+    engine: "150.0.7871.124",
+    protocol: "1.3",
+  },
+  capabilities: ["task.list", "task.select"],
+  targets: [
+    { id: "thread-1", selected: true },
+    { id: "thread-2", selected: false },
+    { id: "desktop-only", selected: false },
+  ],
+};
+
+class FakeDesktopConnection implements DesktopControlConnection {
+  readonly initialObservation = DESKTOP_OBSERVATION;
+  readonly close = vi.fn().mockResolvedValue(undefined);
+  readonly selectTask = vi.fn((targetId: string) =>
+    Promise.resolve({
+      ...DESKTOP_OBSERVATION,
+      revision: DESKTOP_OBSERVATION.revision + 1,
+      targets: DESKTOP_OBSERVATION.targets.map((target) => ({
+        ...target,
+        selected: target.id === targetId,
+      })),
+    }),
+  );
+  readonly #observationListeners = new Set<
+    (observation: DesktopControlObservation) => void
+  >();
+  readonly #closeListeners = new Set<() => void>();
+
+  onObservation(
+    listener: (observation: DesktopControlObservation) => void,
+  ): () => void {
+    this.#observationListeners.add(listener);
+    return () => this.#observationListeners.delete(listener);
+  }
+
+  onClose(listener: () => void): () => void {
+    this.#closeListeners.add(listener);
+    return () => this.#closeListeners.delete(listener);
+  }
+
+  disconnect(): void {
+    for (const listener of this.#closeListeners) listener();
+  }
+}
+
+class FakeDesktopRuntime implements DesktopControlRuntime {
+  readonly connection = new FakeDesktopConnection();
+  readonly connect = vi.fn(() => Promise.resolve(this.connection));
+}
+
 function availableOffer(
   application: SandalphonApplication,
   kind: string,
@@ -152,7 +215,7 @@ describe("Sandalphon application", () => {
       },
     ]);
     expect(settings.write).toHaveBeenCalledWith({
-      schemaVersion: 1,
+      schemaVersion: 2,
       codexBinaryPath: "/opt/homebrew/bin/codex",
     });
 
@@ -161,6 +224,120 @@ describe("Sandalphon application", () => {
     expect(settings.value).toMatchObject({ selectedThreadId: "thread-2" });
     await application.selectSession("missing");
     expect(application.snapshot.selectedSessionId).toBe("thread-2");
+  });
+
+  it("merges desktop authority and rejects stale task selection", async () => {
+    const desktop = new FakeDesktopRuntime();
+    const settings = new MemorySettings({
+      schemaVersion: 2,
+      desktopControl: { enabled: true },
+    });
+    const application = new SandalphonApplication(
+      settings,
+      new FakeRuntime(),
+      desktop,
+    );
+    await application.start();
+
+    expect(application.desktopControlStatus).toEqual({
+      phase: "ready",
+      taskCount: 3,
+    });
+    expect(application.snapshot.selectedSessionId).toBe("thread-1");
+    expect(application.snapshot.sessions).toMatchObject([
+      { id: "thread-1", access: "external", primaryState: "idle" },
+      { id: "thread-2", access: "external", primaryState: "idle" },
+      {
+        id: "desktop-only",
+        name: "Desktop task 3",
+        access: "external",
+        primaryState: "idle",
+      },
+    ]);
+    expect(application.snapshot.sessions[0]?.actionOffers).toEqual([]);
+
+    await application.selectSession("thread-2", "desktop:4:8:thread-2");
+    expect(desktop.connection.selectTask).not.toHaveBeenCalled();
+    const token = application.snapshot.sessions.find(
+      ({ id }) => id === "thread-2",
+    )?.selectionToken;
+    await application.selectSession("thread-2", token);
+    expect(desktop.connection.selectTask).toHaveBeenCalledWith("thread-2");
+    expect(application.snapshot.selectedSessionId).toBe("thread-2");
+  });
+
+  it("revokes desktop-only identities and restores historical state on loss", async () => {
+    const desktop = new FakeDesktopRuntime();
+    const application = new SandalphonApplication(
+      new MemorySettings({
+        schemaVersion: 2,
+        desktopControl: { enabled: true },
+      }),
+      new FakeRuntime(),
+      desktop,
+    );
+    await application.start();
+    desktop.connection.disconnect();
+    expect(application.desktopControlStatus).toEqual({
+      phase: "unavailable",
+      reason: "connectionFailed",
+    });
+    expect(
+      application.snapshot.sessions.some(({ id }) => id === "desktop-only"),
+    ).toBe(false);
+    expect(application.snapshot.sessions[0]).toMatchObject({
+      id: "thread-1",
+      access: "resumable",
+      freshness: "historical",
+    });
+    expect(desktop.connection.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists explicit disablement only after restoring normal Codex", async () => {
+    const desktop = new FakeDesktopRuntime();
+    const settings = new MemorySettings({
+      schemaVersion: 2,
+      desktopControl: { enabled: true },
+    });
+    const application = new SandalphonApplication(
+      settings,
+      new FakeRuntime(),
+      desktop,
+    );
+    await application.start();
+    desktop.connection.close.mockImplementationOnce(() => {
+      expect(settings.value).toMatchObject({
+        desktopControl: { enabled: true },
+      });
+      return Promise.resolve();
+    });
+    await application.setDesktopControlEnabled(false);
+    expect(settings.value).toMatchObject({
+      desktopControl: { enabled: false },
+    });
+    expect(desktop.connection.close).toHaveBeenCalledTimes(1);
+    expect(application.desktopControlStatus).toEqual({ phase: "disabled" });
+  });
+
+  it("retains opt-in recovery state when listener cleanup fails", async () => {
+    const desktop = new FakeDesktopRuntime();
+    desktop.connection.close.mockRejectedValueOnce(new Error("cleanupFailed"));
+    const settings = new MemorySettings({
+      schemaVersion: 2,
+      desktopControl: { enabled: true },
+    });
+    const application = new SandalphonApplication(
+      settings,
+      new FakeRuntime(),
+      desktop,
+    );
+    await application.start();
+    await application.setDesktopControlEnabled(false);
+    expect(settings.value).toMatchObject({ desktopControl: { enabled: true } });
+    expect(application.desktopControlStatus).toEqual({
+      phase: "unavailable",
+      reason: "cleanupFailed",
+    });
   });
 
   it("resumes a thread explicitly before exposing owned live actions", async () => {
@@ -392,7 +569,7 @@ describe("Sandalphon application", () => {
 
   it("fails closed for settings, binary, auth, protocol, and disconnect errors", async () => {
     const futureRuntime = new FakeRuntime();
-    const futureSettings = new MemorySettings({ schemaVersion: 2 });
+    const futureSettings = new MemorySettings({ schemaVersion: 3 });
     const future = new SandalphonApplication(futureSettings, futureRuntime);
     await future.start();
     expect(future.snapshot.integration).toEqual({

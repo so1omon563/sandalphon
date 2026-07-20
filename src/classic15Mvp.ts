@@ -231,7 +231,16 @@ export class Classic15MvpSurface {
     }
     if (index >= 1 && index <= 8) {
       const target = this.#rosterPageItems()[index - 1];
-      if (target) await this.#application.selectSession(target.id);
+      if (target) {
+        if (target.selectionToken) {
+          await this.#application.selectSession(
+            target.id,
+            target.selectionToken,
+          );
+        } else {
+          await this.#application.selectSession(target.id);
+        }
+      }
       return;
     }
     if (index === 9) {
@@ -302,8 +311,17 @@ export class Classic15MvpSurface {
         index === 11 ? -1 : 1,
         sessions.length,
       );
-      if (sessions[next])
-        await this.#application.selectSession(sessions[next].id);
+      const target = sessions[next];
+      if (target) {
+        if (target.selectionToken) {
+          await this.#application.selectSession(
+            target.id,
+            target.selectionToken,
+          );
+        } else {
+          await this.#application.selectSession(target.id);
+        }
+      }
     }
   }
 

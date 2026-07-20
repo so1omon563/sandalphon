@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sandalphon desktop control</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Codex desktop control</h1>
+      <p class="warning">
+        This optional mode starts or attaches to Codex with a privileged local
+        debugging listener. Other processes running as you could access it.
+      </p>
+      <label class="toggle">
+        <input id="enabled" type="checkbox" />
+        <span>I understand and want desktop task selection</span>
+      </label>
+      <p id="status" role="status">Loading status…</p>
+      <button id="retry" type="button" hidden>
+        Retry after quitting Codex
+      </button>
+      <p class="detail">
+        If Codex is already open normally, quit it and retry. Disabling this
+        mode restarts Codex normally and removes the listener.
+      </p>
+    </main>
+    <script src="inspector.js"></script>
+  </body>
+</html>

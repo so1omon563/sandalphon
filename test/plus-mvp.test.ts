@@ -52,14 +52,17 @@ class SurfaceApplication implements PlusApplicationBoundary {
       kind: "Inspect" as const,
     });
   });
-  readonly selectSession = vi.fn((sessionId: string) => {
-    this.emit({
-      ...this.snapshot,
-      revision: this.snapshot.revision + 1,
-      selectedSessionId: sessionId,
-    });
-    return Promise.resolve();
-  });
+  readonly selectSession = vi.fn(
+    (sessionId: string, _selectionToken?: string) => {
+      void _selectionToken;
+      this.emit({
+        ...this.snapshot,
+        revision: this.snapshot.revision + 1,
+        selectedSessionId: sessionId,
+      });
+      return Promise.resolve();
+    },
+  );
   reviewDetail:
     { requestId: string; text: string; inspection: "complete" } | undefined;
 
@@ -130,6 +133,26 @@ describe("Stream Deck + MVP surface", () => {
     expect(surface.frame.view).toBe("home");
     surface.touchEncoder(2, false);
     expect(surface.frame.view).toBe("home");
+  });
+
+  it("passes the desktop offer token through Plus dial selection", async () => {
+    const snapshot = historicalSnapshot();
+    const application = new SurfaceApplication({
+      ...snapshot,
+      sessions: snapshot.sessions.map((session) =>
+        session.id === "thread-2"
+          ? { ...session, selectionToken: "desktop:4:9:thread-2" }
+          : session,
+      ),
+    });
+    const surface = new PlusMvpSurface(application);
+    surface.rotateEncoder(2, 1, false, 100);
+    await surface.pressEncoder(2, 120);
+    expect(application.selectSession).toHaveBeenCalledWith(
+      "thread-2",
+      "desktop:4:9:thread-2",
+    );
+    surface.dispose();
   });
 
   it("invokes a release-level primary action only on a matching key release", async () => {

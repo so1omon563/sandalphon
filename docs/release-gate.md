@@ -14,24 +14,25 @@ artifact tied to its final version, source commit, and checksum.
 
 The first public release supports only this matrix:
 
-| Boundary                | Supported                                         | Evidence authority                                      |
-| ----------------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| Operating system        | macOS 13 or newer                                 | Stream Deck manifest and CI on macOS 15                 |
-| Stream Deck application | 7.1 or newer                                      | Stream Deck manifest; physical checks use 7.5.0 (22885) |
-| Plugin runtime          | Stream Deck-provided Node.js 24                   | Stream Deck manifest                                    |
-| Codex CLI               | Exactly `codex-cli 0.144.1`                       | Fail-closed runtime allowlist and configuration tests   |
-| 15-key hardware         | Stream Deck Mk.2 using the 5-by-3 managed profile | Recorded physical-device evidence                       |
-| Encoder hardware        | Standard Stream Deck +                            | Recorded physical-device evidence                       |
+| Boundary                | Supported                                                    | Evidence authority                                                      |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Operating system        | macOS 13 or newer                                            | Stream Deck manifest and CI on macOS 15                                 |
+| Stream Deck application | 7.1 or newer                                                 | Stream Deck manifest; physical checks use 7.5.0 (22885)                 |
+| Plugin runtime          | Stream Deck-provided Node.js 24                              | Stream Deck manifest                                                    |
+| Codex CLI               | Exactly `codex-cli 0.144.1`                                  | Fail-closed runtime allowlist and configuration tests                   |
+| Codex desktop opt-in    | Exactly `26.715.52143`; Chromium `150.0.7871.124`; CDP `1.3` | Property-inspector consent, runtime gate, and physical cleanup evidence |
+| 15-key hardware         | Stream Deck Mk.2 using the 5-by-3 managed profile            | Recorded physical-device evidence                                       |
+| Encoder hardware        | Standard Stream Deck +                                       | Recorded physical-device evidence                                       |
 
 Other Codex CLI versions, operating systems, agents, Stream Deck models, and
 control surfaces are unverified and unsupported. The 5-by-3 Classic interaction
 contract may fit related hardware, but the first release makes no compatibility
 claim beyond the physically verified Mk.2.
 
-Sandalphon owns a private Codex app-server child. It does not provide ambient
-control of arbitrary work already active in the Codex desktop app, originate a
-new turn, submit composer input, attach files, control scheduled tasks, or
-provide exact Fast or Plan modes.
+Sandalphon owns a private Codex app-server child. Its separate opt-in desktop
+plane may list and select tasks already active in the exact supported desktop
+build. It cannot originate a new turn, submit composer input, attach files,
+control scheduled tasks, answer requests, or provide exact Fast or Plan modes.
 
 ## Release Decision
 
@@ -69,6 +70,9 @@ or an unresolved critical failure.
       restart without depending on managed-profile Exit.
 - [ ] Session discovery, selection, Resume, next-turn reasoning preview and
       commit, Back, and Exit produce the expected authoritative state.
+- [ ] With explicit desktop-control consent, both reference devices select a
+      different active desktop task and restore the original through the same
+      revision-bound application intent.
 - [ ] A naturally reachable request is reviewed on hardware. Approve requires a
       separate 800 ms hold; reject uses its separate confirmation step.
 - [ ] Stale frames, disconnect, Codex restart, Stream Deck restart, plugin
@@ -127,8 +131,14 @@ fallback, not the normal removal result.
 
 - [ ] Sandalphon launches only an ordinary allowlisted Codex CLI and reuses its
       existing authentication; the package contains no credential material.
-- [ ] Codex communication remains one plugin-owned private stdio JSONL
-      connection with no TCP or Unix listener.
+- [ ] App-server communication remains one plugin-owned private stdio JSONL
+      connection. Desktop control creates no listener while disabled and uses
+      only a random verified `127.0.0.1` listener while explicitly enabled.
+- [ ] The property inspector presents the same-user renderer-authority warning;
+      settings persist only opt-in, never endpoint authority or task IDs.
+- [ ] Disablement, plugin shutdown, disconnect, and cleanup failure revoke all
+      desktop targets. Normal cleanup restarts Codex without debugging and
+      verifies the former socket is no longer listening.
 - [ ] Malformed, invalid UTF-8, or over-16-MiB JSON-RPC lines close the transport
       and invalidate live offers.
 - [ ] Logs remain content-free by default and global settings contain no
@@ -166,8 +176,8 @@ fallback, not the normal removal result.
        make release-candidate
 
 4. Review the official pack inventory. It must contain only the manifest,
-   compiled plugin, two managed profiles, the Plus layout, and declared runtime
-   images.
+   compiled plugin, property inspector, two managed profiles, the Plus layout,
+   and declared runtime images.
 5. Attach the exact `.streamDeckPlugin` and `release-evidence.json` produced by
    that run to the GitHub Release. Do not rebuild between approval and upload.
 6. Verify that the evidence commit equals the annotated tag target, the package
@@ -198,6 +208,11 @@ candidate that must be reviewed again.
   is not live ownership.
 - **Controls become unavailable after restart:** wait for reconciliation and
   explicitly select or Resume the session. Do not repeat an ambiguous action.
+- **Desktop control says Quit Codex:** quit Codex yourself, then use the
+  property-inspector retry button. Sandalphon never kills an unconsented normal
+  Codex session to enable the privileged mode.
+- **Desktop cleanup cannot be verified:** quit and reopen Codex normally, then
+  verify the former random port has no listener before clearing opt-in.
 - **Plugin cannot be removed in the app:** quit Stream Deck before using
   Elgato's documented manual plugin-directory fallback.
 

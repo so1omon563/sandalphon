@@ -204,6 +204,7 @@
       "Readonly": true
     }
   ],
+  "PropertyInspectorPath": "property-inspector/index.html",
   "SDKVersion": 3,
   "Software": {
     "MinimumVersion": "7.1"

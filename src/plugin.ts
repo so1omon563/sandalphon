@@ -27,6 +27,47 @@ const classic15Adapter = new StreamDeckClassic15Adapter(classic15Surface);
 const plusSurface = new PlusMvpSurface(application);
 const plusAdapter = new StreamDeckPlusAdapter(plusSurface);
 const composableControls = new ComposableControls(application);
+let desktopControlUpdate = Promise.resolve();
+
+const sendDesktopControlStatus = (): Promise<void> =>
+  streamDeck.ui
+    .sendToPropertyInspector({
+      type: "desktopControl.status",
+      enabled: application.desktopControlEnabled,
+      status: application.desktopControlStatus,
+    })
+    .catch(() => undefined);
+
+streamDeck.ui.onDidAppear(() => void sendDesktopControlStatus());
+streamDeck.ui.onSendToPlugin((event) => {
+  const payload = event.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return;
+  const record = payload as Record<string, unknown>;
+  desktopControlUpdate = desktopControlUpdate
+    .then(async () => {
+      if (
+        record.type === "desktopControl.setEnabled" &&
+        typeof record.enabled === "boolean"
+      ) {
+        await application.setDesktopControlEnabled(record.enabled);
+      } else if (record.type === "desktopControl.retry") {
+        await application.retryDesktopControl();
+      }
+    })
+    .then(sendDesktopControlStatus)
+    .catch(() => undefined);
+});
+application.onDesktopControlStatus(() => void sendDesktopControlStatus());
+
+let shuttingDown = false;
+const shutdown = async (): Promise<void> => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await application.close();
+  process.exit(0);
+};
+process.once("SIGINT", () => void shutdown());
+process.once("SIGTERM", () => void shutdown());
 
 streamDeck.actions.registerAction(
   new ComposableStatusAction(composableControls),

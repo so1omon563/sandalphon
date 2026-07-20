@@ -146,6 +146,7 @@ export type PrimaryState =
 export interface SessionSnapshot extends SessionState {
   readonly primaryState: PrimaryState;
   readonly actionOffers: readonly ActionOffer[];
+  readonly selectionToken?: string;
 }
 
 export interface SandalphonSnapshot {

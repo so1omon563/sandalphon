@@ -22,9 +22,8 @@ behavioral core, and verified live integrations for Stream Deck + and the
   and packaging gates;
 - immutable agent/session/run state reduction with latched terminal results;
 - revision- and connection-bound action offers with fail-closed validation;
-- a source-clean, exact-version desktop co-presence feasibility proof for
-  opaque task listing and reversible selection, kept outside production plugin
-  wiring;
+- an explicit opt-in, exact-version desktop co-presence path for opaque task
+  listing and task selection, with a source-clean reversible proof;
 - deterministic confirmation, invocation locking, and duplicate suppression;
 - an owned Codex app-server lifecycle with validated local configuration,
   bounded JSON-RPC framing, live session discovery, resume, official change
@@ -52,13 +51,20 @@ consequential-review environments. Normal daily use is being validated through
 the composable controls so Sandalphon can coexist with the user's ordinary
 Stream Deck actions without a profile Exit dependency.
 
-Daily-driver validation is currently paused while SO1-179 establishes a hybrid
-control model. Sandalphon-owned sessions use official typed app-server
-operations for Codex workflows such as turns, interruption, compaction,
-review, and model selection. A separately version-gated feasibility path is
-being evaluated only for task selection in the active Codex desktop app. That
-desktop contract is disabled by default and is not wired to the live plugin or
-included as a supported control path.
+Sandalphon uses a hybrid control model. Sandalphon-owned sessions use official
+typed app-server operations for Codex workflows such as turns, interruption,
+compaction, review, and model selection. An optional second plane can select a
+task already open in the exact supported Codex desktop build. It is disabled
+by default and requires an explicit property-inspector consent because its
+random loopback Chrome DevTools listener grants privileged renderer access to
+other processes running as the same macOS user. Missing capabilities, version
+drift, stale targets, disconnect, or cleanup remove every desktop offer.
+
+Desktop control is limited to opaque task listing and selection. It cannot
+submit composer text, answer requests, approve, reject, interrupt, change
+reasoning, or invoke generalized desktop automation. See
+[Development](docs/development.md) and [Security](SECURITY.md) before enabling
+it.
 
 ## Requirements
 

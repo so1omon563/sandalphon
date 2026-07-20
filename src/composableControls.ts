@@ -154,7 +154,14 @@ export class ComposableControls {
     ) {
       return;
     }
-    await this.#application.selectSession(pressed.sessionId);
+    if (current.selectionToken) {
+      await this.#application.selectSession(
+        pressed.sessionId,
+        current.selectionToken,
+      );
+    } else {
+      await this.#application.selectSession(pressed.sessionId);
+    }
   }
 
   rotateSessionDial(action: DialAction, ticks: number, pressed: boolean): void {
@@ -182,7 +189,11 @@ export class ComposableControls {
       ({ id }) => id === registered.previewSessionId,
     );
     if (!target) return;
-    await this.#application.selectSession(target.id);
+    if (target.selectionToken) {
+      await this.#application.selectSession(target.id, target.selectionToken);
+    } else {
+      await this.#application.selectSession(target.id);
+    }
   }
 
   #scheduleRender(snapshot: SandalphonSnapshot): void {

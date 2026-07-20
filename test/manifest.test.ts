@@ -40,6 +40,7 @@ type Manifest = {
     Name: string;
     Readonly: boolean;
   }>;
+  PropertyInspectorPath?: string;
   SDKVersion: number;
   Software: {
     MinimumVersion: string;
@@ -55,6 +56,14 @@ const manifest = JSON.parse(
     "utf8",
   ),
 ) as Manifest;
+const propertyInspectorHtml = readFileSync(
+  `${repositoryRoot}/dev.so1omon.sandalphon.sdPlugin/property-inspector/index.html`,
+  "utf8",
+);
+const propertyInspectorScript = readFileSync(
+  `${repositoryRoot}/dev.so1omon.sandalphon.sdPlugin/property-inspector/inspector.js`,
+  "utf8",
+);
 
 describe("Stream Deck manifest", () => {
   it("uses Sandalphon's independent package identity", () => {
@@ -73,6 +82,19 @@ describe("Stream Deck manifest", () => {
         MinimumVersion: "13",
       },
     ]);
+    expect(manifest.PropertyInspectorPath).toBe(
+      "property-inspector/index.html",
+    );
+  });
+
+  it("ships an explicit local desktop-control consent surface", () => {
+    expect(propertyInspectorHtml).toContain("privileged local");
+    expect(propertyInspectorHtml).toContain(
+      "I understand and want desktop task selection",
+    );
+    expect(propertyInspectorScript).toContain("desktopControl.setEnabled");
+    expect(propertyInspectorScript).toContain("ws://127.0.0.1:");
+    expect(propertyInspectorScript).not.toMatch(/https?:\/\//u);
   });
 
   it("keeps the foundation action out of automation containers", () => {

@@ -284,9 +284,11 @@ Managed geometry and safety do not leak into user profiles:
 - Open Managed Surface explicitly enters the optional bundled reference and
   consequential-review profile.
 
-The first composable slice uses the same three key actions on Classic and Plus.
-The Plus-only Sessions dial has no invented Classic equivalent; bounded
-composable Classic session navigation remains a later SO1-178 validation step.
+The composable key slice uses the same three actions on Classic and Plus. The
+Plus-only Sessions dial has no invented Classic equivalent; Classic uses its
+managed roster keys for bounded task selection. With desktop control explicitly
+enabled, those same keys carry the current revision-bound desktop token through
+the shared application boundary rather than adding device-specific transport.
 
 Foreign actions are never inspected, relabeled, moved, or controlled. User
 title or image overrides may reduce composable live-state fidelity, so no
@@ -295,13 +297,14 @@ composable action is the sole high-consequence surface.
 ## Explicit Unavailable Defaults
 
 Exact Fast mode, exact Plan mode, voice input, hands-free recording, private
-composer submission, desktop task focus, attachments, scheduled tasks,
-generic browser or terminal actions, arbitrary commands or prompts, commit,
-pull request, persistent approval, permission grants, policy changes, model
-selection, and mid-turn reasoning changes do not appear as functioning v0
-controls. A configured control that lacks a later accepted action offer is
-disabled with a reason; it never imitates the behavior through host input or a
-private interface.
+composer submission, generalized desktop control, attachments, scheduled
+tasks, generic browser or terminal actions, arbitrary commands or prompts,
+commit, pull request, persistent approval, permission grants, policy changes,
+model selection, and mid-turn reasoning changes do not appear as functioning
+v0 controls. Optional desktop co-presence is limited to exact-gated opaque task
+listing and selection. A configured control that lacks a later accepted action
+offer is disabled with a reason; it never imitates the behavior through host
+input or an unapproved private interface.
 
 ## Acceptance Walkthrough
 

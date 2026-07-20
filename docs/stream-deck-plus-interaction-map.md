@@ -243,7 +243,9 @@ ordinary-profile set is deliberately small:
 - Attention renders only when attention exists; pressing it selects an
   attention session but never decides its request.
 - Sessions owns one dial and one strip quarter. Rotation previews locally and
-  press selects; it never coordinates foreign quarters.
+  press selects; it never coordinates foreign quarters. With desktop control
+  explicitly enabled, the same press carries the current revision-bound
+  desktop token through the shared application boundary.
 
 Open Managed Surface remains an explicit optional route to complete review and
 consequential confirmation. It is not the normal daily-driver entry point.

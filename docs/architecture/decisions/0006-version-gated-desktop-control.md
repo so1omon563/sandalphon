@@ -1,6 +1,6 @@
 # ADR 0006: Use Official Codex Control with a Version-Gated Desktop Bridge
 
-- Status: Accepted; production integration deferred to SO1-180
+- Status: Accepted; production integration in progress in SO1-180
 - Date: 2026-07-20
 - Decision: SO1-179
 
@@ -71,8 +71,8 @@ surface because it runs unsandboxed with full access.
 
 ### Desktop co-presence plane
 
-Admit a second desktop-control boundary solely for the SO1-179 feasibility
-proof. It fills the one capability the official owned connection lacks:
+Admit a second opt-in desktop-control boundary for the narrow capability proved
+by SO1-179. It fills the one capability the official owned connection lacks:
 co-presence with a task already controlled by the Codex desktop app. It must
 satisfy all of these constraints:
 
@@ -97,9 +97,16 @@ satisfy all of these constraints:
 - The live proof must own and remove its temporary launcher state. Ending the
   proof includes closing the listener or explicitly restarting the desktop app
   normally and verifying that no listener remains.
-- No production package or public release may enable the bridge until a later
-  decision accepts its security, lifecycle, maintenance, and user-consent
-  costs based on the live proof.
+- Production wiring must present the same-user listener risk in the Stream Deck
+  property inspector before it persists opt-in. If Codex is already running
+  normally, Sandalphon requires the user to quit it before retrying rather than
+  killing an unconsented desktop session.
+- The runtime may attach only after verifying the exact Codex executable and
+  remote-debugging arguments. Normal disablement or plugin shutdown revokes
+  offers first, terminates that controlled process, verifies the random socket
+  is no longer listening, and reopens Codex without debugging arguments.
+- Cleanup failure retains opt-in recovery state and requires a normal Codex
+  restart; it never reports the bridge safely disabled without verification.
 
 ### Authority routing
 
@@ -125,16 +132,19 @@ session, share one start-work effect lock, dispatch `review/start` or
 `thread/compact/start`, and remain pending until the correlated turn reaches a
 terminal state.
 
-The pure contract in `src/desktopControlContract.ts` encodes the feasibility
-gate without attaching to the desktop app.
+The pure contract in `src/desktopControlContract.ts` encodes the authority gate.
+`src/desktopControlRuntime.ts` owns the opt-in launch or verified attachment,
+bounded CDP session, one-second task polling, exact selection, and normal-restart
+cleanup. `src/application.ts` merges desktop targets with app-server history,
+projects no renderer content, and requires the current desktop offer token
+before dispatch. Classic keys, Plus dials, and composable controls pass the same
+token through the shared surface boundary and contain no CDP logic.
 `scripts/probe-desktop-control.mjs` is the corresponding source-clean live
 proof tool. It is explicit opt-in, exact-version and loopback gated, emits only
 content-free summary evidence, and permits only task listing or one switch and
-restore cycle. It is not imported by the plugin bundle.
-
-SO1-180 owns production integration, lifecycle consent, authority routing, and
-physical-device validation. Until that work is accepted, the packaged plugin
-does not launch, attach to, or control the desktop renderer.
+restore cycle. It is not imported by the plugin bundle. SO1-180 still requires
+physical task switching and restoration on both reference devices plus final
+listener-cleanup evidence before this production path is accepted.
 
 An official shared desktop-control or peer-co-presence API supersedes this
 feasibility boundary. Sandalphon should prefer that API and retire private
@@ -151,8 +161,8 @@ renderer access rather than preserve compatibility with both.
   Codex desktop update.
 - Loopback CDP still enlarges the same-user attack surface. Users must receive
   an explicit warning and must be able to verify cleanup.
-- The feasibility proof can fail without weakening the existing app-server
-  integration or device presentation.
+- Desktop launch, attachment, selection, or cleanup can fail without weakening
+  the existing app-server integration or device presentation.
 - Most useful Codex controls can progress independently through the official
   plane even if desktop co-presence remains unavailable.
 - Sandalphon owns semantic intent instead of mirroring the CLI's slash-command

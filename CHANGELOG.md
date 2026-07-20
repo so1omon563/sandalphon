@@ -28,6 +28,13 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- Explicit property-inspector consent and exact-version lifecycle ownership for
+  optional Codex desktop task selection, including random loopback launch,
+  controlled-process verification, fail-closed cleanup, and normal Codex
+  relaunch.
+- Shared revision-bound desktop task selection across Classic 15 keys, Stream
+  Deck + dials, and composable controls without device-specific transport
+  logic or fallback to the app-server plane.
 - Official `review/start` and `thread/compact/start` controls for idle owned
   sessions, with terminal-turn tracking and mutually exclusive work startup on
   both managed device layouts.

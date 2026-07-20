@@ -15,6 +15,20 @@ import {
 } from "./codex/configuration.js";
 import type { RequestId } from "./codex/jsonRpc.js";
 import {
+  evaluateDesktopControl,
+  issueDesktopTaskSelectionOffers,
+  revokeDesktopControl,
+  validateDesktopTaskSelection,
+  type DesktopControlState,
+} from "./desktopControlContract.js";
+import {
+  LocalDesktopControlRuntime,
+  PROVEN_DESKTOP_CONTROL_VERSION,
+  type DesktopControlConnection,
+  type DesktopControlLifecycleReason,
+  type DesktopControlRuntime,
+} from "./desktopControlRuntime.js";
+import {
   advanceInvocation,
   createInvocationLedger,
   dispatchOffer,
@@ -34,6 +48,7 @@ import type {
   CoreState,
   InspectionLevel,
   SandalphonSnapshot,
+  SessionSnapshot,
 } from "./domain/model.js";
 import { paginateStreamDeckPlusDetail } from "./streamDeckPlus.js";
 
@@ -52,9 +67,18 @@ export interface SurfaceApplicationBoundary {
   readonly snapshot: SandalphonSnapshot;
   readonly reviewDetail: ReviewDetail | undefined;
   onSnapshot(listener: (snapshot: SandalphonSnapshot) => void): () => void;
-  selectSession(sessionId: string): Promise<void>;
+  selectSession(sessionId: string, selectionToken?: string): Promise<void>;
   invoke(invocation: OfferInvocation): Promise<IntentResult>;
 }
+
+export type DesktopControlStatus =
+  | { readonly phase: "disabled" }
+  | { readonly phase: "starting" | "stopping" }
+  | { readonly phase: "ready"; readonly taskCount: number }
+  | {
+      readonly phase: "unavailable";
+      readonly reason: DesktopControlLifecycleReason;
+    };
 
 interface PendingProviderRequest {
   readonly rpcId: RequestId;
@@ -66,8 +90,12 @@ interface PendingProviderRequest {
 
 export class SandalphonApplication {
   readonly #runtime: CodexRuntime;
+  readonly #desktopRuntime: DesktopControlRuntime;
   readonly #settingsStore: SettingsStore;
   readonly #listeners = new Set<(snapshot: SandalphonSnapshot) => void>();
+  readonly #desktopStatusListeners = new Set<
+    (status: DesktopControlStatus) => void
+  >();
   readonly #providerRequests = new Map<RequestId, PendingProviderRequest>();
   readonly #resolvingRequests = new Map<RequestId, string>();
   readonly #interruptions = new Map<string, string>();
@@ -79,22 +107,48 @@ export class SandalphonApplication {
   #state: CoreState = createCoreState();
   #ledger: InvocationLedger = createInvocationLedger();
   #connection: CodexConnection | undefined;
+  #desktopConnection: DesktopControlConnection | undefined;
+  #desktopState: DesktopControlState = {
+    availability: "unavailable",
+    reason: "disabled",
+    epoch: 0,
+    revision: 0,
+    targets: [],
+  };
+  #desktopStatus: DesktopControlStatus = { phase: "disabled" };
+  #selectedSurfaceSessionId: string | undefined;
+  #surfaceRevision = 0;
 
   constructor(
     settingsStore: SettingsStore,
     runtime: CodexRuntime = new LocalCodexRuntime(),
+    desktopRuntime: DesktopControlRuntime = new LocalDesktopControlRuntime(),
   ) {
     this.#settingsStore = settingsStore;
     this.#runtime = runtime;
+    this.#desktopRuntime = desktopRuntime;
   }
 
   get snapshot(): SandalphonSnapshot {
-    return toSnapshot(this.#state, this.#ledger.claimedEffects);
+    return this.#mergeDesktopSnapshot(
+      toSnapshot(this.#state, this.#ledger.claimedEffects),
+    );
+  }
+
+  get desktopControlStatus(): DesktopControlStatus {
+    return this.#desktopStatus;
+  }
+
+  get desktopControlEnabled(): boolean {
+    return this.#settings.desktopControl?.enabled ?? false;
   }
 
   get reviewDetail(): ReviewDetail | undefined {
     const session = this.#state.sessions.find(
-      ({ id }) => id === this.#state.selectedSessionId,
+      ({ id, access }) =>
+        id ===
+          (this.#selectedSurfaceSessionId ?? this.#state.selectedSessionId) &&
+        access === "owned",
     );
     const request = session?.pendingRequests[0];
     if (!request) return undefined;
@@ -116,6 +170,14 @@ export class SandalphonApplication {
     return () => this.#listeners.delete(listener);
   }
 
+  onDesktopControlStatus(
+    listener: (status: DesktopControlStatus) => void,
+  ): () => void {
+    this.#desktopStatusListeners.add(listener);
+    listener(this.#desktopStatus);
+    return () => this.#desktopStatusListeners.delete(listener);
+  }
+
   async start(): Promise<void> {
     const parsed = parseSettings(await this.#settingsStore.read());
     if (parsed.status === "future" || parsed.status === "invalid") {
@@ -123,6 +185,12 @@ export class SandalphonApplication {
       return;
     }
     this.#settings = parsed.settings;
+    if (parsed.status === "migrated") {
+      await this.#settingsStore.write(this.#settings);
+    }
+    if (this.#settings.desktopControl?.enabled) {
+      await this.#startDesktopControl();
+    }
     const selection = await this.#runtime.selectBinary(
       this.#settings.codexBinaryPath,
     );
@@ -164,6 +232,9 @@ export class SandalphonApplication {
           type: "selectSession",
           sessionId: selected.id,
         });
+        if (!this.#selectedSurfaceSessionId) {
+          this.#selectedSurfaceSessionId = selected.id;
+        }
       }
       this.#emit();
     } catch (error) {
@@ -177,12 +248,66 @@ export class SandalphonApplication {
     }
   }
 
-  async selectSession(sessionId: string): Promise<void> {
+  async selectSession(
+    sessionId: string,
+    selectionToken?: string,
+  ): Promise<void> {
+    const desktopSession = this.snapshot.sessions.find(
+      ({ id, access }) => id === sessionId && access === "external",
+    );
+    if (desktopSession) {
+      const connection = this.#desktopConnection;
+      if (!connection || !selectionToken) return;
+      const decision = validateDesktopTaskSelection(this.#desktopState, {
+        targetId: sessionId,
+        offerToken: selectionToken,
+      });
+      if (decision.status !== "accepted") return;
+      try {
+        this.#applyDesktopObservation(
+          await connection.selectTask(decision.targetId),
+        );
+      } catch {
+        this.#desktopDisconnected();
+      }
+      return;
+    }
     const next = reduceCore(this.#state, { type: "selectSession", sessionId });
     if (next === this.#state) return;
     this.#state = next;
+    this.#selectedSurfaceSessionId = sessionId;
     await this.#persist({ ...this.#settings, selectedThreadId: sessionId });
     this.#emit();
+  }
+
+  async setDesktopControlEnabled(enabled: boolean): Promise<void> {
+    if (enabled === (this.#settings.desktopControl?.enabled ?? false)) {
+      if (enabled && this.#desktopStatus.phase !== "ready") {
+        await this.#startDesktopControl();
+      }
+      return;
+    }
+    if (enabled) {
+      await this.#persist({
+        ...this.#settings,
+        desktopControl: { enabled: true },
+      });
+      await this.#startDesktopControl();
+      return;
+    }
+    await this.#stopDesktopControl();
+    if (this.#desktopStatus.phase === "disabled") {
+      await this.#persist({
+        ...this.#settings,
+        desktopControl: { enabled: false },
+      });
+    }
+  }
+
+  async retryDesktopControl(): Promise<void> {
+    if (this.#settings.desktopControl?.enabled) {
+      await this.#startDesktopControl();
+    }
   }
 
   async invoke(invocation: OfferInvocation): Promise<IntentResult> {
@@ -211,9 +336,10 @@ export class SandalphonApplication {
     }
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.#connection?.close();
     this.#connection = undefined;
+    await this.#stopDesktopControl();
   }
 
   async #dispatch(
@@ -516,6 +642,165 @@ export class SandalphonApplication {
     this.#emit();
   }
 
+  async #startDesktopControl(): Promise<void> {
+    if (this.#desktopConnection) return;
+    this.#setDesktopStatus({ phase: "starting" });
+    try {
+      const connection = await this.#desktopRuntime.connect();
+      this.#desktopConnection = connection;
+      connection.onObservation((observation) => {
+        this.#applyDesktopObservation(observation);
+      });
+      connection.onClose(() => this.#desktopDisconnected());
+      this.#applyDesktopObservation(connection.initialObservation);
+    } catch (error) {
+      this.#revokeDesktopState();
+      this.#setDesktopStatus({
+        phase: "unavailable",
+        reason: desktopLifecycleReason(error),
+      });
+    }
+  }
+
+  async #stopDesktopControl(): Promise<void> {
+    const connection = this.#desktopConnection;
+    this.#desktopConnection = undefined;
+    this.#revokeDesktopState();
+    if (!connection) {
+      this.#setDesktopStatus({ phase: "disabled" });
+      return;
+    }
+    this.#setDesktopStatus({ phase: "stopping" });
+    try {
+      await connection.close();
+      this.#setDesktopStatus({ phase: "disabled" });
+    } catch {
+      this.#setDesktopStatus({
+        phase: "unavailable",
+        reason: "cleanupFailed",
+      });
+    }
+  }
+
+  #applyDesktopObservation(
+    observation: Parameters<typeof evaluateDesktopControl>[1],
+  ): void {
+    const previousTargets = this.#desktopState.targets;
+    const next = evaluateDesktopControl(
+      {
+        enabled: this.#settings.desktopControl?.enabled ?? false,
+        allowedVersions: [PROVEN_DESKTOP_CONTROL_VERSION],
+      },
+      observation,
+    );
+    this.#desktopState = next;
+    if (next.availability !== "ready") {
+      this.#desktopDisconnected();
+      return;
+    }
+    const selectedWasDesktop = previousTargets.some(
+      ({ id }) => id === this.#selectedSurfaceSessionId,
+    );
+    if (!this.#selectedSurfaceSessionId || selectedWasDesktop) {
+      this.#selectedSurfaceSessionId = next.selectedTargetId;
+    }
+    this.#setDesktopStatus({ phase: "ready", taskCount: next.targets.length });
+    this.#emit();
+  }
+
+  #desktopDisconnected(): void {
+    const connection = this.#desktopConnection;
+    this.#desktopConnection = undefined;
+    this.#revokeDesktopState();
+    if (this.#settings.desktopControl?.enabled) {
+      this.#setDesktopStatus({
+        phase: "unavailable",
+        reason: "connectionFailed",
+      });
+    }
+    if (connection) {
+      void connection.close().catch(() => {
+        this.#setDesktopStatus({
+          phase: "unavailable",
+          reason: "cleanupFailed",
+        });
+      });
+    }
+  }
+
+  #revokeDesktopState(): void {
+    const wasDesktop = this.#desktopState.targets.some(
+      ({ id }) => id === this.#selectedSurfaceSessionId,
+    );
+    this.#desktopState = revokeDesktopControl(this.#desktopState);
+    if (wasDesktop) {
+      this.#selectedSurfaceSessionId = this.#state.selectedSessionId;
+    }
+    this.#emit();
+  }
+
+  #mergeDesktopSnapshot(base: SandalphonSnapshot): SandalphonSnapshot {
+    if (this.#desktopState.availability !== "ready") {
+      return {
+        ...base,
+        revision: this.#surfaceRevision,
+        ...(this.#selectedSurfaceSessionId
+          ? { selectedSessionId: this.#selectedSurfaceSessionId }
+          : {}),
+      };
+    }
+    const offers = new Map(
+      issueDesktopTaskSelectionOffers(this.#desktopState).map((offer) => [
+        offer.targetId,
+        offer.offerToken,
+      ]),
+    );
+    const targets = new Map(
+      this.#desktopState.targets.map((target, index) => [
+        target.id,
+        { target, index },
+      ]),
+    );
+    const sessions: SessionSnapshot[] = base.sessions.map((session) => {
+      const desktop = targets.get(session.id);
+      if (!desktop || session.access === "owned") return session;
+      return desktopSessionSnapshot(session, offers.get(session.id));
+    });
+    for (const [id, { index }] of targets) {
+      if (sessions.some((session) => session.id === id)) continue;
+      const state = createSession(
+        id,
+        `Desktop task ${index + 1}`,
+        "external",
+        "current",
+      );
+      sessions.push(
+        desktopSessionSnapshot(
+          {
+            ...state,
+            primaryState: "idle",
+            actionOffers: [],
+          },
+          offers.get(id),
+        ),
+      );
+    }
+    const selected = this.#selectedSurfaceSessionId;
+    return {
+      ...base,
+      revision: this.#surfaceRevision,
+      sessions,
+      ...(selected && sessions.some(({ id }) => id === selected)
+        ? { selectedSessionId: selected }
+        : {}),
+    };
+  }
+
+  #setDesktopStatus(status: DesktopControlStatus): void {
+    this.#desktopStatus = status;
+    for (const listener of this.#desktopStatusListeners) listener(status);
+  }
+
   #unavailable(
     reason:
       | "missingBinary"
@@ -537,9 +822,34 @@ export class SandalphonApplication {
   }
 
   #emit(): void {
+    this.#surfaceRevision += 1;
     const snapshot = this.snapshot;
     for (const listener of this.#listeners) listener(snapshot);
   }
+}
+
+function desktopSessionSnapshot(
+  session: SessionSnapshot,
+  selectionToken: string | undefined,
+): SessionSnapshot {
+  return {
+    ...session,
+    access: "external",
+    freshness: "current",
+    primaryState: "idle",
+    actionOffers: [],
+    ...(selectionToken ? { selectionToken } : {}),
+  };
+}
+
+function desktopLifecycleReason(error: unknown): DesktopControlLifecycleReason {
+  const message = error instanceof Error ? error.message : "";
+  return message === "restartRequired" ||
+    message === "unsupportedVersion" ||
+    message === "launchFailed" ||
+    message === "cleanupFailed"
+    ? message
+    : "connectionFailed";
 }
 
 export function decodeThreadList(value: unknown): CodexThreadList {

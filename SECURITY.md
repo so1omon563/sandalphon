@@ -36,18 +36,28 @@ Security-sensitive areas include:
 - Stream Deck package integrity and release automation;
 - dependency and supply-chain changes.
 
-SO1-179 also contains a disabled-by-default feasibility contract for privileged
-desktop control. Any live proof must use a random loopback-only endpoint, exact
-application, engine, and protocol allowlisting, explicit user opt-in,
-content-free diagnostics, and verified cleanup. It is not a supported release
-surface. A loopback Chrome DevTools listener still exposes renderer authority
-to other processes running as the same macOS user.
+The optional Codex desktop-control plane is privileged and disabled by default.
+The Stream Deck property inspector presents the same-user listener warning and
+requires explicit opt-in before Sandalphon launches or attaches. The runtime
+accepts only the exact documented application, Chromium, and CDP tuple, one
+verified `127.0.0.1` page endpoint, the exact Codex process arguments, and live
+`task.list` plus `task.select` capabilities. It retains only bounded opaque task
+identifiers and selected booleans in memory; settings persist only the opt-in
+boolean. Diagnostics contain no task identifiers or Codex content.
 
-`scripts/probe-desktop-control.mjs` implements only that bounded proof. It
-rejects non-loopback discovery, version drift, multiple or malformed page
-targets, malformed task state, and failed restoration. It never emits task
-identifiers or content. Running it does not authorize production use; normal
-Codex restart and listener verification are mandatory after every proof.
+Disabling desktop control, a normal plugin shutdown, or a detected transport
+failure immediately revokes every task offer and attempts to terminate the
+controlled Codex process, verify the random listener is gone, and reopen Codex
+normally. The opt-in remains set when cleanup cannot be verified so the next
+plugin run does not mistake an incomplete cleanup for a safe disabled state.
+The property inspector then requires a normal Codex restart. A loopback Chrome
+DevTools listener still exposes renderer authority to other processes running
+as the same macOS user while the mode is active.
+
+`scripts/probe-desktop-control.mjs` remains the bounded source-clean proof tool.
+It rejects non-loopback discovery, version drift, multiple or malformed page
+targets, malformed task state, and failed restoration, and never emits task
+identifiers or content.
 
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.

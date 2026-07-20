@@ -49,14 +49,17 @@ class SurfaceApplication implements SurfaceApplicationBoundary {
       kind: "Inspect" as const,
     });
   });
-  readonly selectSession = vi.fn((sessionId: string) => {
-    this.emit({
-      ...this.snapshot,
-      revision: this.snapshot.revision + 1,
-      selectedSessionId: sessionId,
-    });
-    return Promise.resolve();
-  });
+  readonly selectSession = vi.fn(
+    (sessionId: string, _selectionToken?: string) => {
+      void _selectionToken;
+      this.emit({
+        ...this.snapshot,
+        revision: this.snapshot.revision + 1,
+        selectedSessionId: sessionId,
+      });
+      return Promise.resolve();
+    },
+  );
   reviewDetail:
     { requestId: string; text: string; inspection: "complete" } | undefined;
 
@@ -110,6 +113,25 @@ describe("Stream Deck Classic 15 MVP surface", () => {
     await releaseKey(surface, 1);
     expect(application.selectSession).toHaveBeenCalledWith("thread-2");
     expect(surface.frame.keys[0]?.label).toBe("Second thread");
+    surface.dispose();
+  });
+
+  it("passes the desktop offer token through Classic selection", async () => {
+    const snapshot = historicalSnapshot();
+    const application = new SurfaceApplication({
+      ...snapshot,
+      sessions: snapshot.sessions.map((session) =>
+        session.id === "thread-2"
+          ? { ...session, selectionToken: "desktop:4:9:thread-2" }
+          : session,
+      ),
+    });
+    const surface = new Classic15MvpSurface(application);
+    await releaseKey(surface, 1);
+    expect(application.selectSession).toHaveBeenCalledWith(
+      "thread-2",
+      "desktop:4:9:thread-2",
+    );
     surface.dispose();
   });
 

@@ -50,6 +50,30 @@ Before a pull request:
 The check target validates formatting, lint, strict types, deterministic
 coverage, bundle output, manifest structure, and a package dry run.
 
+## Opt-in Codex Desktop Control
+
+The packaged plugin includes a disabled-by-default desktop task-selection mode
+for the exact supported Codex desktop tuple. Selecting any Sandalphon action in
+the Stream Deck application opens its property inspector. Read the same-user
+listener warning before enabling the checkbox.
+
+If Codex is already running normally, Sandalphon fails closed with **Quit Codex,
+then retry**. Quit Codex yourself and press **Retry after quitting Codex**.
+Sandalphon then launches the exact application executable with a random
+`127.0.0.1` debugging port, verifies the application, Chromium engine, CDP
+protocol, page endpoint, process arguments, and live task capabilities, and
+shows only opaque task-selection state to the shared application boundary.
+
+Disabling the checkbox revokes offers before cleanup, terminates only the
+verified controlled Codex process, confirms that the random listener is gone,
+and reopens Codex normally. If cleanup cannot be proven, opt-in remains set and
+the inspector instructs the user to restart Codex normally. Never treat the
+stale `DevToolsActivePort` file alone as evidence that a listener is active.
+
+This mode can list and select desktop tasks only. It cannot submit composer
+text, answer requests, approve, reject, interrupt, change reasoning, or execute
+general renderer actions.
+
 ## Desktop-Control Feasibility Proof
 
 The desktop proof is privileged, explicit-opt-in development tooling. It is
@@ -108,6 +132,19 @@ evidence.
 Automated checks cannot prove physical interaction quality. Device milestones
 record the Stream Deck application version, reference hardware, visible state,
 input exercised, expected result, and observed result.
+
+### SO1-180 desktop task-selection verification — pending
+
+- Install the current branch and enable desktop control through the property
+  inspector after manually quitting a normally running Codex app.
+- On Stream Deck Mk.2, select a different visible desktop task with the existing
+  roster key and select the original task again.
+- On Stream Deck +, rotate the Sessions dial to preview another desktop task,
+  press to select it, then preview and restore the original task.
+- Confirm an old key frame or dial preview cannot select after the desktop task
+  revision changes.
+- Disable desktop control, confirm Codex reopens normally, and verify the former
+  random port has no listening socket.
 
 Do not claim Classic 15 or Stream Deck + behavior from a build alone.
 

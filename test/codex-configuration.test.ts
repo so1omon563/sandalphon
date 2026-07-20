@@ -10,13 +10,13 @@ describe("Codex configuration", () => {
   it("uses a versioned empty configuration without overwriting newer data", () => {
     expect(parseSettings({})).toEqual({
       status: "missing",
-      settings: { schemaVersion: 1 },
+      settings: { schemaVersion: 2 },
     });
     expect(parseSettings(null)).toEqual({
       status: "missing",
-      settings: { schemaVersion: 1 },
+      settings: { schemaVersion: 2 },
     });
-    expect(parseSettings({ schemaVersion: 2, future: true })).toEqual({
+    expect(parseSettings({ schemaVersion: 3, future: true })).toEqual({
       status: "future",
       reason: "newerSettings",
     });
@@ -25,14 +25,30 @@ describe("Codex configuration", () => {
   it("accepts only the current settings shape", () => {
     expect(
       parseSettings({
+        schemaVersion: 2,
+        codexBinaryPath: "/opt/homebrew/bin/codex",
+        selectedThreadId: "thread-1",
+        desktopControl: { enabled: true },
+      }),
+    ).toEqual({
+      status: "ready",
+      settings: {
+        schemaVersion: 2,
+        codexBinaryPath: "/opt/homebrew/bin/codex",
+        selectedThreadId: "thread-1",
+        desktopControl: { enabled: true },
+      },
+    });
+    expect(
+      parseSettings({
         schemaVersion: 1,
         codexBinaryPath: "/opt/homebrew/bin/codex",
         selectedThreadId: "thread-1",
       }),
     ).toEqual({
-      status: "ready",
+      status: "migrated",
       settings: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         codexBinaryPath: "/opt/homebrew/bin/codex",
         selectedThreadId: "thread-1",
       },
@@ -42,10 +58,13 @@ describe("Codex configuration", () => {
       status: "invalid",
     });
     expect(
-      parseSettings({ schemaVersion: 1, codexBinaryPath: "" }),
+      parseSettings({ schemaVersion: 2, codexBinaryPath: "" }),
     ).toMatchObject({ status: "invalid" });
     expect(
-      parseSettings({ schemaVersion: 1, selectedThreadId: 1 }),
+      parseSettings({ schemaVersion: 2, selectedThreadId: 1 }),
+    ).toMatchObject({ status: "invalid" });
+    expect(
+      parseSettings({ schemaVersion: 2, desktopControl: { enabled: "yes" } }),
     ).toMatchObject({ status: "invalid" });
   });
 

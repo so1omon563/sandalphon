@@ -265,7 +265,16 @@ export class PlusMvpSurface {
         index === 3
           ? this.#attentionSessions()[this.#attentionPreviewIndex()]
           : this.#snapshot.sessions[this.#sessionPreview];
-      if (target) await this.#application.selectSession(target.id);
+      if (target) {
+        if (target.selectionToken) {
+          await this.#application.selectSession(
+            target.id,
+            target.selectionToken,
+          );
+        } else {
+          await this.#application.selectSession(target.id);
+        }
+      }
       return;
     }
     if (this.frame.view === "session" && index === 1) {

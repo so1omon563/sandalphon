@@ -1,10 +1,13 @@
-export const SANDALPHON_SETTINGS_SCHEMA_VERSION = 1;
+export const SANDALPHON_SETTINGS_SCHEMA_VERSION = 2;
 export const SUPPORTED_CODEX_VERSION = "0.144.1";
 
 export interface SandalphonSettings {
   readonly schemaVersion: typeof SANDALPHON_SETTINGS_SCHEMA_VERSION;
   readonly codexBinaryPath?: string;
   readonly selectedThreadId?: string;
+  readonly desktopControl?: {
+    readonly enabled: boolean;
+  };
 }
 
 export type SettingsResult =
@@ -14,6 +17,10 @@ export type SettingsResult =
     }
   | {
       readonly status: "missing";
+      readonly settings: SandalphonSettings;
+    }
+  | {
+      readonly status: "migrated";
       readonly settings: SandalphonSettings;
     }
   | {
@@ -64,15 +71,39 @@ export function parseSettings(value: unknown): SettingsResult {
   }
 
   const schemaVersion = value.schemaVersion;
-  if (typeof schemaVersion === "number" && schemaVersion > 1) {
+  if (
+    typeof schemaVersion === "number" &&
+    schemaVersion > SANDALPHON_SETTINGS_SCHEMA_VERSION
+  ) {
     return { status: "future", reason: "newerSettings" };
+  }
+  if (schemaVersion === 1) {
+    if (
+      !optionalNonEmptyString(value.codexBinaryPath) ||
+      !optionalNonEmptyString(value.selectedThreadId)
+    ) {
+      return { status: "invalid", reason: "invalidSettings" };
+    }
+    return {
+      status: "migrated",
+      settings: {
+        schemaVersion: SANDALPHON_SETTINGS_SCHEMA_VERSION,
+        ...(typeof value.codexBinaryPath === "string"
+          ? { codexBinaryPath: value.codexBinaryPath }
+          : {}),
+        ...(typeof value.selectedThreadId === "string"
+          ? { selectedThreadId: value.selectedThreadId }
+          : {}),
+      },
+    };
   }
   if (schemaVersion !== SANDALPHON_SETTINGS_SCHEMA_VERSION) {
     return { status: "invalid", reason: "invalidSettings" };
   }
   if (
     !optionalNonEmptyString(value.codexBinaryPath) ||
-    !optionalNonEmptyString(value.selectedThreadId)
+    !optionalNonEmptyString(value.selectedThreadId) ||
+    !optionalDesktopControl(value.desktopControl)
   ) {
     return { status: "invalid", reason: "invalidSettings" };
   }
@@ -86,6 +117,13 @@ export function parseSettings(value: unknown): SettingsResult {
         : {}),
       ...(typeof value.selectedThreadId === "string"
         ? { selectedThreadId: value.selectedThreadId }
+        : {}),
+      ...(isRecord(value.desktopControl)
+        ? {
+            desktopControl: {
+              enabled: value.desktopControl.enabled as boolean,
+            },
+          }
         : {}),
     },
   };
@@ -125,4 +163,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalNonEmptyString(value: unknown): boolean {
   return value === undefined || (typeof value === "string" && value.length > 0);
+}
+
+function optionalDesktopControl(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (isRecord(value) &&
+      Object.keys(value).length === 1 &&
+      typeof value.enabled === "boolean")
+  );
 }
