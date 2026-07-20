@@ -88,6 +88,27 @@ describe("ComposableControls", () => {
     expect(harness.selectSession).toHaveBeenCalledTimes(1);
   });
 
+  it("cycles through every attention session in order", async () => {
+    const harness = applicationHarness(threeAttentionSnapshot("alpha", 1));
+    const controls = new ComposableControls(harness.application);
+    const attention = keyAction("attention");
+    controls.registerAttention(attention.action);
+
+    controls.attentionDown(attention.action);
+    await controls.attentionUp(attention.action);
+    expect(harness.selectSession).toHaveBeenLastCalledWith("beta");
+
+    harness.emit(threeAttentionSnapshot("beta", 2));
+    controls.attentionDown(attention.action);
+    await controls.attentionUp(attention.action);
+    expect(harness.selectSession).toHaveBeenLastCalledWith("gamma");
+
+    harness.emit(threeAttentionSnapshot("gamma", 3));
+    controls.attentionDown(attention.action);
+    await controls.attentionUp(attention.action);
+    expect(harness.selectSession).toHaveBeenLastCalledWith("alpha");
+  });
+
   it("previews sessions locally and selects only on dial press", async () => {
     const harness = applicationHarness(readySnapshot());
     const controls = new ComposableControls(harness.application);
@@ -219,6 +240,23 @@ function snapshotWithoutAttention(): SandalphonSnapshot {
     ...snapshot,
     revision: 4,
     sessions: snapshot.sessions.map((item) => ({ ...item, attention: [] })),
+  };
+}
+
+function threeAttentionSnapshot(
+  selectedSessionId: string,
+  revision: number,
+): SandalphonSnapshot {
+  const snapshot = readySnapshot();
+  return {
+    ...snapshot,
+    revision,
+    selectedSessionId,
+    sessions: [
+      session("alpha", "Alpha session", "waiting", ["approval"], []),
+      session("beta", "Beta session", "waiting", ["approval"], []),
+      session("gamma", "Gamma session", "waiting", ["approval"], []),
+    ],
   };
 }
 

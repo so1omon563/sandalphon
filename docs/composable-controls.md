@@ -18,7 +18,7 @@ Sandalphon Exit control.
 | ------------------ | -------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
 | Session Status key | Selected session name plus a session glyph and primary-state accent                    | None                               | Read-only                                       |
 | Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank | Press and release                  | Revalidates and dispatches only `ResumeSession` |
-| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank        | Press and release                  | Selects an attention session only               |
+| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank        | Press and release                  | Selects the next attention session only         |
 | Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter             | Rotate to preview; press to select | Session selection only                          |
 
 The four controls may be placed anywhere in the user's profile. Sandalphon
@@ -33,8 +33,9 @@ Composable controls cannot approve, reject, cancel, interrupt, retry, redirect,
 or commit a next-turn setting. They never receive managed-surface authority.
 Resume captures the current revision and opaque offer token on key-down and
 dispatches only if both are unchanged on release. Attention similarly rejects
-a stale target. Dial rotation is local preview; selection requires a separate
-press.
+a stale target and advances through attention sessions in roster order,
+wrapping after the last. Dial rotation is local preview; selection requires a
+separate press.
 
 Complete request inspection and final high-consequence confirmation remain on
 the optional managed surface with the accepted review, separate-confirmation,

@@ -18,6 +18,8 @@ All notable changes to Sandalphon are recorded here.
   identity glyph whose accent still reflects the session's actual state.
 - Made blank contextual controls render true black so they do not appear
   faintly active beside genuinely unused keys.
+- Made composable Attention cycle through every attention session in roster
+  order instead of alternating between only the first two.
 - Made managed Exit dispatch immediately on key-down and documented the
   Stream Deck restart case where the official prior-profile API cannot return
   to a user-defined profile.

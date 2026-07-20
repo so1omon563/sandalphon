@@ -233,10 +233,11 @@ function attentionTarget(
   const attention = snapshot.sessions.filter(
     (session) => session.attention.length > 0,
   );
-  return (
-    attention.find(({ id }) => id !== snapshot.selectedSessionId) ??
-    attention[0]
+  if (attention.length === 0) return undefined;
+  const selectedIndex = attention.findIndex(
+    ({ id }) => id === snapshot.selectedSessionId,
   );
+  return attention[(selectedIndex + 1) % attention.length];
 }
 
 function statusView(snapshot: SandalphonSnapshot): ComposableKeyView {
