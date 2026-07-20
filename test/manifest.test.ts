@@ -99,7 +99,6 @@ describe("Stream Deck manifest", () => {
     expect(propertyInspectorScript).toContain("rendererTimeout");
     expect(propertyInspectorScript).toContain("endpointUnavailable");
     expect(propertyInspectorScript).toContain("targetSetRejected");
-    expect(propertyInspectorScript).toContain("targetRouteRejected");
     expect(propertyInspectorScript).toContain("debuggerUrlRejected");
     expect(propertyInspectorScript).toContain("processRejected");
     expect(propertyInspectorScript).toContain("capabilityUnavailable");

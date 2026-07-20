@@ -349,7 +349,6 @@ describe("Sandalphon application", () => {
     "targetRejected",
     "targetTypeRejected",
     "targetOriginRejected",
-    "targetRouteRejected",
     "debuggerUrlRejected",
     "listenerRejected",
     "processRejected",

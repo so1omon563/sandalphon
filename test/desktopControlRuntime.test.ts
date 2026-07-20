@@ -218,7 +218,7 @@ describe("desktop control runtime", () => {
     expect(() => decodeListenerProcessIds("f10\n")).toThrow("listenerRejected");
   });
 
-  it("normalizes only the root application page on the exact loopback port", () => {
+  it("accepts navigation within only the exact application origin and loopback port", () => {
     const target = (url: string, type = "page") => ({
       type,
       url,
@@ -230,6 +230,12 @@ describe("desktop control runtime", () => {
     expect(decodeDesktopPageDebuggerUrl(target("app://-/"), 49152)).toBe(
       "ws://127.0.0.1:49152/devtools/page/one",
     );
+    expect(
+      decodeDesktopPageDebuggerUrl(
+        target("app://-/thread/opaque?restored=true#active"),
+        49152,
+      ),
+    ).toBe("ws://127.0.0.1:49152/devtools/page/one");
     expect(() =>
       decodeDesktopPageDebuggerUrl(target("app://-", "webview"), 49152),
     ).toThrow("targetTypeRejected");
@@ -237,8 +243,8 @@ describe("desktop control runtime", () => {
       decodeDesktopPageDebuggerUrl(target("https://example.com"), 49152),
     ).toThrow("targetOriginRejected");
     expect(() =>
-      decodeDesktopPageDebuggerUrl(target("app://-/thread/opaque"), 49152),
-    ).toThrow("targetRouteRejected");
+      decodeDesktopPageDebuggerUrl(target("app://user@-/thread/opaque"), 49152),
+    ).toThrow("targetOriginRejected");
     expect(() =>
       decodeDesktopPageDebuggerUrl(
         {

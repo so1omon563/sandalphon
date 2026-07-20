@@ -43,7 +43,6 @@ export type DesktopControlLifecycleReason =
   | "targetRejected"
   | "targetTypeRejected"
   | "targetOriginRejected"
-  | "targetRouteRejected"
   | "debuggerUrlRejected"
   | "listenerRejected"
   | "processRejected"
@@ -609,15 +608,14 @@ export function decodeDesktopPageDebuggerUrl(
   } catch {
     throw new Error("targetOriginRejected");
   }
-  if (pageUrl.protocol !== "app:" || pageUrl.hostname !== "-") {
-    throw new Error("targetOriginRejected");
-  }
   if (
-    (pageUrl.pathname !== "" && pageUrl.pathname !== "/") ||
-    pageUrl.search !== "" ||
-    pageUrl.hash !== ""
+    pageUrl.protocol !== "app:" ||
+    pageUrl.hostname !== "-" ||
+    pageUrl.username !== "" ||
+    pageUrl.password !== "" ||
+    pageUrl.port !== ""
   ) {
-    throw new Error("targetRouteRejected");
+    throw new Error("targetOriginRejected");
   }
   let debuggerUrl: URL;
   try {
@@ -710,7 +708,6 @@ async function waitForEndpoint(
       message === "targetRejected" ||
       message === "targetTypeRejected" ||
       message === "targetOriginRejected" ||
-      message === "targetRouteRejected" ||
       message === "debuggerUrlRejected" ||
       message === "listenerRejected" ||
       message === "processRejected"
