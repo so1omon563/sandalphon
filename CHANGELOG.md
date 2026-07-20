@@ -15,6 +15,9 @@ All notable changes to Sandalphon are recorded here.
   Chromium helper processes also report the same debugging listener.
 - Align controlled startup with the accepted macOS `open -na … --args` proof
   route while still discovering and verifying the exact resulting process.
+- Normalize the accepted Codex root application page across its equivalent
+  `app://-` and `app://-/` spellings while continuing to reject subroutes,
+  parameters, fragments, and non-page targets.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

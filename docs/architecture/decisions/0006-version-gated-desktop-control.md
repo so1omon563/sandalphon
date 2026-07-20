@@ -111,6 +111,10 @@ satisfy all of these constraints:
 - Controlled startup uses the accepted macOS `open -na … --args` proof route,
   but the launcher result itself grants no authority; Sandalphon separately
   discovers and verifies exactly one controlled Codex main process.
+- Renderer attachment accepts only the root Codex application origin,
+  normalizing the equivalent `app://-` and `app://-/` URL spellings. A
+  subroute, query, fragment, non-page target, or mismatched debugger endpoint
+  fails closed.
 - Cleanup failure retains opt-in recovery state and requires a normal Codex
   restart; it never reports the bridge safely disabled without verification.
 - Initial renderer readiness may be retried only inside one bounded controlled

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   capabilityExpression,
   controlledLaunchArguments,
+  decodeDesktopPageDebuggerUrl,
   decodeDesktopTargets,
   decodeListenerProcessIds,
   LocalDesktopControlRuntime,
@@ -215,6 +216,38 @@ describe("desktop control runtime", () => {
       42, 84,
     ]);
     expect(() => decodeListenerProcessIds("f10\n")).toThrow("listenerRejected");
+  });
+
+  it("normalizes only the root application page on the exact loopback port", () => {
+    const target = (url: string, type = "page") => ({
+      type,
+      url,
+      webSocketDebuggerUrl: "ws://127.0.0.1:49152/devtools/page/one",
+    });
+    expect(decodeDesktopPageDebuggerUrl(target("app://-"), 49152)).toBe(
+      "ws://127.0.0.1:49152/devtools/page/one",
+    );
+    expect(decodeDesktopPageDebuggerUrl(target("app://-/"), 49152)).toBe(
+      "ws://127.0.0.1:49152/devtools/page/one",
+    );
+    expect(() =>
+      decodeDesktopPageDebuggerUrl(target("app://-", "webview"), 49152),
+    ).toThrow("targetTypeRejected");
+    expect(() =>
+      decodeDesktopPageDebuggerUrl(target("https://example.com"), 49152),
+    ).toThrow("targetOriginRejected");
+    expect(() =>
+      decodeDesktopPageDebuggerUrl(target("app://-/thread/opaque"), 49152),
+    ).toThrow("targetRouteRejected");
+    expect(() =>
+      decodeDesktopPageDebuggerUrl(
+        {
+          ...target("app://-"),
+          webSocketDebuggerUrl: "ws://0.0.0.0:49152/devtools/page/one",
+        },
+        49152,
+      ),
+    ).toThrow("debuggerUrlRejected");
   });
 
   it("reports bounded renderer timeout without exposing renderer content", async () => {

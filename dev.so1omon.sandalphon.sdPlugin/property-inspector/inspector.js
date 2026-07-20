@@ -79,6 +79,12 @@ function render(payload) {
       "Codex opened, but its debugging target set did not match the accepted contract.",
     targetRejected:
       "Codex opened, but its application page did not match the accepted contract.",
+    targetTypeRejected:
+      "Codex opened, but its application target was not a page.",
+    targetOriginRejected:
+      "Codex opened, but its application page was not at the accepted app origin.",
+    targetRouteRejected:
+      "Codex opened, but its application page included an unaccepted route or parameters.",
     debuggerUrlRejected:
       "Codex opened, but its page debugger URL was not the expected loopback endpoint.",
     listenerRejected:

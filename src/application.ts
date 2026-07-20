@@ -863,6 +863,9 @@ function desktopLifecycleReason(error: unknown): DesktopControlLifecycleReason {
     message === "versionRejected" ||
     message === "targetSetRejected" ||
     message === "targetRejected" ||
+    message === "targetTypeRejected" ||
+    message === "targetOriginRejected" ||
+    message === "targetRouteRejected" ||
     message === "debuggerUrlRejected" ||
     message === "listenerRejected" ||
     message === "processRejected" ||

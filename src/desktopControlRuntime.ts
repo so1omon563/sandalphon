@@ -41,6 +41,9 @@ export type DesktopControlLifecycleReason =
   | "versionRejected"
   | "targetSetRejected"
   | "targetRejected"
+  | "targetTypeRejected"
+  | "targetOriginRejected"
+  | "targetRouteRejected"
   | "debuggerUrlRejected"
   | "listenerRejected"
   | "processRejected"
@@ -380,23 +383,7 @@ export class MacDesktopControlHost implements DesktopControlHost {
     ) {
       throw new Error("versionRejected");
     }
-    const target = asRecord(targets[0]);
-    if (target?.type !== "page" || target.url !== "app://-") {
-      throw new Error("targetRejected");
-    }
-    let debuggerUrl: URL;
-    try {
-      debuggerUrl = new URL(String(target.webSocketDebuggerUrl));
-    } catch {
-      throw new Error("debuggerUrlRejected");
-    }
-    if (
-      debuggerUrl.protocol !== "ws:" ||
-      debuggerUrl.hostname !== "127.0.0.1" ||
-      debuggerUrl.port !== String(port)
-    ) {
-      throw new Error("debuggerUrlRejected");
-    }
+    const debuggerUrl = decodeDesktopPageDebuggerUrl(targets[0], port);
     const controlledProcessIds: number[] = [];
     for (const processId of listenerOwners) {
       try {
@@ -414,7 +401,7 @@ export class MacDesktopControlHost implements DesktopControlHost {
     return {
       port,
       processId,
-      debuggerUrl: debuggerUrl.href,
+      debuggerUrl,
       version: {
         application: PROVEN_DESKTOP_CONTROL_VERSION.application,
         engine: browser.slice("Chrome/".length),
@@ -607,6 +594,47 @@ export function decodeDesktopTargets(
   return targets;
 }
 
+export function decodeDesktopPageDebuggerUrl(
+  value: unknown,
+  port: number,
+): string {
+  const target = asRecord(value);
+  if (target?.type !== "page") throw new Error("targetTypeRejected");
+  if (typeof target.url !== "string") {
+    throw new Error("targetOriginRejected");
+  }
+  let pageUrl: URL;
+  try {
+    pageUrl = new URL(target.url);
+  } catch {
+    throw new Error("targetOriginRejected");
+  }
+  if (pageUrl.protocol !== "app:" || pageUrl.hostname !== "-") {
+    throw new Error("targetOriginRejected");
+  }
+  if (
+    (pageUrl.pathname !== "" && pageUrl.pathname !== "/") ||
+    pageUrl.search !== "" ||
+    pageUrl.hash !== ""
+  ) {
+    throw new Error("targetRouteRejected");
+  }
+  let debuggerUrl: URL;
+  try {
+    debuggerUrl = new URL(String(target.webSocketDebuggerUrl));
+  } catch {
+    throw new Error("debuggerUrlRejected");
+  }
+  if (
+    debuggerUrl.protocol !== "ws:" ||
+    debuggerUrl.hostname !== "127.0.0.1" ||
+    debuggerUrl.port !== String(port)
+  ) {
+    throw new Error("debuggerUrlRejected");
+  }
+  return debuggerUrl.href;
+}
+
 export function taskListExpression(): string {
   return `(() => Array.from(document.querySelectorAll(${JSON.stringify(TASK_ROW_SELECTOR)})).map((row) => ({ id: row.getAttribute("data-app-action-sidebar-thread-id"), selected: row.getAttribute("aria-current") === "page" })))()`;
 }
@@ -680,6 +708,9 @@ async function waitForEndpoint(
       message === "versionRejected" ||
       message === "targetSetRejected" ||
       message === "targetRejected" ||
+      message === "targetTypeRejected" ||
+      message === "targetOriginRejected" ||
+      message === "targetRouteRejected" ||
       message === "debuggerUrlRejected" ||
       message === "listenerRejected" ||
       message === "processRejected"
