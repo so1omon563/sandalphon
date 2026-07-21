@@ -28,6 +28,13 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- An independently supervised desktop-companion lifecycle and headless local
+  IPC proof with explicit stopped, starting, ready, degraded, cleanup, and
+  recovery-required states, same-user Unix-socket permissions, bounded
+  content-free requests, serialized ownership operations, and fail-closed
+  restart reconciliation.
+- ADR 0007 moving every privileged Codex desktop launch, attachment, and
+  cleanup responsibility out of the restart-sensitive Stream Deck plugin.
 - Official `review/start` and `thread/compact/start` controls for idle owned
   sessions, with terminal-turn tracking and mutually exclusive work startup on
   both managed device layouts.

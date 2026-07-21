@@ -82,6 +82,25 @@ arguments, and verifying the former port has no listener. A stale
 `DevToolsActivePort` file is not evidence of an active listener; verify the
 socket itself.
 
+## Supervised Companion Headless Proof
+
+ADR 0007 replaces in-plugin desktop lifecycle ownership with a separately
+supervised companion. The first slice is deliberately headless: it exercises
+the lifecycle supervisor and a real Unix-domain socket with deterministic
+drivers, without launching Codex, restarting Stream Deck, or enabling task
+selection in the plugin.
+
+Run the focused proof with:
+
+    npm test -- --run test/desktopCompanion.test.ts test/desktopCompanionServer.test.ts
+
+The IPC test creates a short temporary macOS socket path, verifies a `0600`
+socket inside a `0700` current-user directory, disconnects and reconnects a
+client without changing companion ownership, and removes the socket on clean
+shutdown. The macOS driver and launchd definition remain a later SO1-180 slice;
+do not repeat live Codex or hardware restart testing until that driver passes
+its own bounded lifecycle matrix.
+
 ## Packaging
 
     make package
