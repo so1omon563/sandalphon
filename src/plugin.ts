@@ -1,6 +1,7 @@
 import streamDeck from "@elgato/streamdeck";
 
 import { ComposableAttentionAction } from "./actions/composable-attention.js";
+import { ComposableReviewAction } from "./actions/composable-review.js";
 import { ComposableResumeAction } from "./actions/composable-resume.js";
 import { ComposableSessionDialAction } from "./actions/composable-session-dial.js";
 import { ComposableStatusAction } from "./actions/composable-status.js";
@@ -33,6 +34,9 @@ streamDeck.actions.registerAction(
 );
 streamDeck.actions.registerAction(
   new ComposableResumeAction(composableControls),
+);
+streamDeck.actions.registerAction(
+  new ComposableReviewAction(composableControls),
 );
 streamDeck.actions.registerAction(
   new ComposableAttentionAction(composableControls),

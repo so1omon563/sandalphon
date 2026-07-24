@@ -5,6 +5,8 @@ export const COMPOSABLE_STATUS_ACTION =
   "dev.so1omon.sandalphon.composable-status";
 export const COMPOSABLE_RESUME_ACTION =
   "dev.so1omon.sandalphon.composable-resume";
+export const COMPOSABLE_REVIEW_ACTION =
+  "dev.so1omon.sandalphon.composable-review";
 export const COMPOSABLE_ATTENTION_ACTION =
   "dev.so1omon.sandalphon.composable-attention";
 export const COMPOSABLE_SESSION_DIAL_ACTION =

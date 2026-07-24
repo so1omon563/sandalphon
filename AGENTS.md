@@ -82,9 +82,9 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   contract.
 - src/foundation.ts owns package action identifiers and device-specific managed
   profile names used by the entry action and generated profiles.
-- src/composableControls.ts owns self-contained status, Resume, attention, and
-  Plus session-dial behavior for ordinary user profiles. These controls never
-  inherit managed-surface confirmation authority.
+- src/composableControls.ts owns self-contained status, Resume, Review Changes,
+  attention, and Plus session-dial behavior for ordinary user profiles. These
+  controls never inherit managed-surface confirmation authority.
 - src/desktopControlContract.ts owns the disabled-by-default, exact-version and
   capability gate for the desktop-control feasibility boundary. It grants only
   revision-bound task-selection authority and contains no live renderer

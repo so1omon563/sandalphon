@@ -45,6 +45,26 @@
       "Controllers": [
         "Keypad"
       ],
+      "Icon": "imgs/actions/composable-review",
+      "Name": "Review Changes",
+      "States": [
+        {
+          "Image": "imgs/actions/composable-review",
+          "ShowTitle": false,
+          "Title": "Review",
+          "TitleAlignment": "middle"
+        }
+      ],
+      "SupportedInKeyLogicActions": false,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Start an official Codex review for the selected idle Sandalphon-owned session.",
+      "UserTitleEnabled": false,
+      "UUID": "dev.so1omon.sandalphon.composable-review"
+    },
+    {
+      "Controllers": [
+        "Keypad"
+      ],
       "Icon": "imgs/actions/composable-attention",
       "Name": "Attention",
       "States": [
