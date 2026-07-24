@@ -42,7 +42,12 @@ export async function listenDesktopCompanion(
     throw new Error("socketPathTooLong");
   }
   await removeStaleOwnedSocket(socketPath);
-  const server = createServer((socket) => serveConnection(socket, supervisor));
+  const activeSockets = new Set<Socket>();
+  const server = createServer((socket) => {
+    activeSockets.add(socket);
+    socket.once("close", () => activeSockets.delete(socket));
+    serveConnection(socket, supervisor);
+  });
   server.maxConnections = 8;
   try {
     await listen(server, socketPath);
@@ -55,7 +60,9 @@ export async function listenDesktopCompanion(
   return {
     socketPath,
     close: async () => {
-      await close(server);
+      const closed = close(server);
+      for (const socket of activeSockets) socket.destroy();
+      await closed;
       const current = await lstat(socketPath).catch(() => undefined);
       if (current?.isSocket() && current.ino === socketIdentity.ino) {
         await unlink(socketPath);

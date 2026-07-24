@@ -58,8 +58,9 @@ runtime directory. The directory is owned by the current uid with mode `0700`;
 the socket has mode `0600`. The native socket path is limited to 103 UTF-8
 bytes so macOS cannot silently truncate it. The initial protocol is version 1,
 uses newline-delimited JSON capped at 4096 raw bytes per line, permits at most
-eight simultaneous clients and one request per connection, and accepts only
-this exact request envelope:
+eight simultaneous clients and one request per connection, destroys every
+active client connection during shutdown, and accepts only this exact request
+envelope:
 
 ```json
 {

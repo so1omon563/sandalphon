@@ -56,7 +56,9 @@ local clients only through a current-uid runtime directory with mode `0700` and
 a Unix socket with mode `0600`. It rejects socket paths beyond the macOS native
 bound, caps newline-delimited JSON requests at 4096 raw bytes, accepts only an
 exact versioned method envelope with one request per connection, and emits
-content-free failure categories. Supervisor start, reconciliation, and cleanup
+content-free failure categories. Shutdown destroys all active client
+connections before unlinking the socket, including clients with incomplete
+requests. Supervisor start, reconciliation, and cleanup
 operations have fixed deadlines, abort signals, and an abort-quiescence fence.
 A fresh supervisor must reconcile before Start. An operation that remains live
 after its fence authorizes neither cleanup nor stopped state until the

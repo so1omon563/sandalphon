@@ -183,6 +183,31 @@ describe("desktop companion local IPC", () => {
     await server.close();
   });
 
+  it("closes idle partial-request sockets during shutdown", async () => {
+    const runtime = await createRuntime();
+    const server = await listenDesktopCompanion(
+      runtime,
+      new DesktopCompanionSupervisor(new ServerDriver(), policy),
+    );
+    const socket = createConnection(server.socketPath);
+    await new Promise<void>((resolve, reject) => {
+      socket.once("connect", () => {
+        socket.write('{"protocolVersion":1');
+        resolve();
+      });
+      socket.once("error", reject);
+    });
+    const disconnected = new Promise<void>((resolve) =>
+      socket.once("close", () => resolve()),
+    );
+
+    await server.close();
+
+    await disconnected;
+    expect(socket.destroyed).toBe(true);
+    await expect(lstat(server.socketPath)).rejects.toThrow();
+  });
+
   it("rejects unsafe runtime directories and occupied socket paths", async () => {
     const runtime = await createRuntime();
     await chmod(runtime, 0o755);
