@@ -49,6 +49,26 @@ targets, malformed task state, and failed restoration. It never emits task
 identifiers or content. Running it does not authorize production use; normal
 Codex restart and listener verification are mandatory after every proof.
 
+SO1-180 moves any future privileged desktop lifecycle into a separately
+supervised same-user companion. The Stream Deck plugin must not launch,
+terminate, or attach to Codex desktop. The headless companion proof accepts
+local clients only through a current-uid runtime directory with mode `0700` and
+a Unix socket with mode `0600`. It rejects socket paths beyond the macOS native
+bound, caps newline-delimited JSON requests at 4096 raw bytes, accepts only an
+exact versioned method envelope with one request per connection, and emits
+content-free failure categories. Shutdown destroys all active client
+connections before unlinking the socket, including clients with incomplete
+requests. Supervisor start, reconciliation, and cleanup
+operations have fixed deadlines, abort signals, and an abort-quiescence fence.
+A reported loss of an accepted renderer capability revokes authority and
+queues cleanup in the same serialized lifecycle operation.
+A fresh supervisor must reconcile before Start. An operation that remains live
+after its fence authorizes neither cleanup nor stopped state until the
+companion restarts, and ambiguous recovery authorizes no termination target.
+These permissions exclude other local users but do not defend against a
+malicious process already running as the same user. No live macOS driver or
+plugin client is enabled by this proof.
+
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.
 

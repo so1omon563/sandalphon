@@ -89,6 +89,11 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   capability gate for the desktop-control feasibility boundary. It grants only
   revision-bound task-selection authority and contains no live renderer
   attachment.
+- src/desktopCompanion.ts owns the separately supervised companion lifecycle,
+  serialized driver boundary, and strict content-free local request contract.
+- src/desktopCompanionServer.ts owns the bounded same-user Unix-socket proof.
+  It is not imported by the Stream Deck plugin and grants the plugin no Codex
+  process authority.
 - scripts/probe-desktop-control.mjs is the explicit-opt-in, exact-version,
   loopback-only live feasibility tool. It lists opaque desktop task identifiers
   and can switch once and restore; it is not production plugin wiring.
