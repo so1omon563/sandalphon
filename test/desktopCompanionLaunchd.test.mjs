@@ -102,7 +102,11 @@ describe("desktop companion launchd management", () => {
         sequence: 5,
         failure: "cleanupFailed",
         priorFailure: "rendererTargetsOverLimit",
-        diagnostics: { rendererTargetCount: 97, rejectedTarget: "private" },
+        diagnostics: {
+          rendererTargetCount: 97,
+          rendererPageCount: 2,
+          rejectedTarget: "private",
+        },
         desktop: { availability: "unavailable", targets: [] },
       }),
     ).toEqual({
@@ -110,7 +114,7 @@ describe("desktop companion launchd management", () => {
       sequence: 5,
       failure: "cleanupFailed",
       priorFailure: "rendererTargetsOverLimit",
-      diagnostics: { rendererTargetCount: 97 },
+      diagnostics: { rendererTargetCount: 97, rendererPageCount: 2 },
       desktop: { availability: "unavailable", taskCount: 0 },
     });
   });

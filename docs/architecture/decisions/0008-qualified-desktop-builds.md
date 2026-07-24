@@ -51,6 +51,10 @@ If bounded discovery exhausts its readiness window, companion protocol revision
 was empty or over the accepted limit. If cleanup then fails, the cleanup failure
 remains primary and the renderer rejection is retained as the prior bounded
 failure.
+If the bounded target list does not contain exactly one canonical `app://-`
+page, companion protocol revision 3 reports only whether that page is missing
+or ambiguous and its numeric candidate count. This observation must inform a
+reviewed contract change; it does not automatically broaden renderer authority.
 
 The first start for each signed-build and renderer-contract tuple performs one
 reversible canary. It records the selected opaque task, selects one other task,

@@ -20,6 +20,7 @@ import {
   MACOS_CODEX_APPLICATION_PATH,
   MACOS_CODEX_EXECUTABLE_PATH,
   MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+  MacosDesktopPageCountError,
   MacosDesktopTargetCountError,
   controlledLaunchArguments,
   type MacosCodexApplicationIdentity,
@@ -512,6 +513,7 @@ export function isRetryableRendererDiscovery(error: unknown): boolean {
     error instanceof Error &&
     (error.message === "desktopDiscoveryFailed" ||
       error.message === "invalidDesktopTargetCount" ||
+      error instanceof MacosDesktopPageCountError ||
       error instanceof MacosDesktopTargetCountError ||
       error.message === "invalidDesktopPageContract")
   );
@@ -620,7 +622,7 @@ export function decodeDebuggerPage(
         "string",
   );
   if (applicationPages.length !== 1) {
-    throw new Error("invalidDesktopPageContract");
+    throw new MacosDesktopPageCountError(applicationPages.length);
   }
   const target = applicationPages[0]!;
   const url = new URL(target.webSocketDebuggerUrl as string);

@@ -30,6 +30,18 @@ export class MacosDesktopTargetCountError extends Error {
   }
 }
 
+export class MacosDesktopPageCountError extends Error {
+  readonly count: number;
+
+  constructor(count: number) {
+    super(count === 0 ? "missingDesktopPage" : "ambiguousDesktopPages");
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error("invalidDesktopPageCount");
+    }
+    this.count = count;
+  }
+}
+
 export interface MacosControlledProcess {
   readonly pid: number;
   readonly startedAt: string;
@@ -590,6 +602,12 @@ function receiptMatches(
 }
 
 function rendererStartError(error: unknown): DesktopCompanionStartError {
+  if (error instanceof MacosDesktopPageCountError) {
+    return new DesktopCompanionStartError(
+      error.count === 0 ? "rendererPageMissing" : "rendererPagesAmbiguous",
+      { rendererPageCount: error.count },
+    );
+  }
   if (error instanceof MacosDesktopTargetCountError) {
     return new DesktopCompanionStartError(
       error.count === 0 ? "rendererTargetsEmpty" : "rendererTargetsOverLimit",

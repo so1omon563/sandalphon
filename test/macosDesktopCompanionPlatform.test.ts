@@ -13,7 +13,10 @@ import {
   taskListExpression,
   taskSelectionExpression,
 } from "../src/macosDesktopCompanionPlatform.js";
-import { MacosDesktopTargetCountError } from "../src/macosDesktopCompanionDriver.js";
+import {
+  MacosDesktopPageCountError,
+  MacosDesktopTargetCountError,
+} from "../src/macosDesktopCompanionDriver.js";
 
 const ENGINE = "150.0.7871.124";
 
@@ -100,15 +103,29 @@ describe("macOS desktop companion platform boundaries", () => {
       engine: ENGINE,
       protocol: "1.3",
     });
-    expect(() =>
-      decodeDebuggerPage(
-        {
-          ...discovery,
-          targets: [...discovery.targets, ...discovery.targets],
-        },
-        49152,
-      ),
-    ).toThrow("invalidDesktopPageContract");
+    for (const pageCount of [0, 2]) {
+      try {
+        decodeDebuggerPage(
+          {
+            ...discovery,
+            targets:
+              pageCount === 0
+                ? [
+                    {
+                      type: "background_page",
+                      url: "chrome-extension://ignored",
+                    },
+                  ]
+                : [...discovery.targets, ...discovery.targets],
+          },
+          49152,
+        );
+        throw new Error("expectedPageCountRejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(MacosDesktopPageCountError);
+        expect(error).toMatchObject({ count: pageCount });
+      }
+    }
     for (const targetCount of [0, 65]) {
       try {
         decodeDebuggerPage(
@@ -149,6 +166,9 @@ describe("macOS desktop companion platform boundaries", () => {
     ).toBe(true);
     expect(
       isRetryableRendererDiscovery(new MacosDesktopTargetCountError(65)),
+    ).toBe(true);
+    expect(
+      isRetryableRendererDiscovery(new MacosDesktopPageCountError(2)),
     ).toBe(true);
     expect(
       isRetryableRendererDiscovery(new Error("invalidDesktopPageContract")),

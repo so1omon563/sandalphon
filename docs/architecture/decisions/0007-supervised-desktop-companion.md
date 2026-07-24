@@ -90,6 +90,9 @@ Protocol revision 2 adds only an optional prior bounded failure category and
 the numeric renderer target count. This preserves the rejected stage when
 cleanup also fails and distinguishes an empty discovery list from an
 over-limit list without exposing any target metadata.
+Protocol revision 3 adds only the numeric count of canonical renderer pages and
+separate missing or ambiguous failure categories. It does not expose target
+types, URLs, debugger endpoints, or other discovery metadata.
 
 ### Lifecycle
 

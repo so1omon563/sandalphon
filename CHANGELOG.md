@@ -25,6 +25,9 @@ All notable changes to Sandalphon are recorded here.
 - Revised the local companion protocol to preserve the original bounded Start
   failure through cleanup and report only the numeric renderer target count
   when discovery is empty or exceeds its accepted bound.
+- Added a content-free canonical renderer-page count diagnostic that
+  distinguishes a missing page from ambiguous candidates without retaining
+  target metadata.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

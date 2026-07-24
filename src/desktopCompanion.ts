@@ -6,7 +6,7 @@ import {
   type DesktopControlState,
 } from "./desktopControlContract.js";
 
-export const DESKTOP_COMPANION_PROTOCOL_VERSION = 2 as const;
+export const DESKTOP_COMPANION_PROTOCOL_VERSION = 3 as const;
 
 export type DesktopCompanionLifecycle =
   | "stopped"
@@ -32,6 +32,8 @@ export type DesktopCompanionFailure =
   | "rendererTargetCountRejected"
   | "rendererTargetsEmpty"
   | "rendererTargetsOverLimit"
+  | "rendererPageMissing"
+  | "rendererPagesAmbiguous"
   | "rendererPageRejected"
   | "rendererVersionRejected"
   | "rendererEndpointRejected"
@@ -64,6 +66,7 @@ export interface DesktopCompanionSnapshot {
 
 export interface DesktopCompanionDiagnostics {
   readonly rendererTargetCount?: number;
+  readonly rendererPageCount?: number;
 }
 
 export type DesktopCompanionRecovery =
@@ -135,6 +138,8 @@ export class DesktopCompanionStartError extends Error {
     | "rendererTargetCountRejected"
     | "rendererTargetsEmpty"
     | "rendererTargetsOverLimit"
+    | "rendererPageMissing"
+    | "rendererPagesAmbiguous"
     | "rendererPageRejected"
     | "rendererVersionRejected"
     | "rendererEndpointRejected"

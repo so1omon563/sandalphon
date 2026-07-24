@@ -63,6 +63,8 @@ operations have fixed deadlines, abort signals, and an abort-quiescence fence.
 A protocol revision 2 failure diagnostic may retain one prior allowlisted
 failure category and the numeric renderer target count; it never includes
 target metadata or renderer content.
+Protocol revision 3 may additionally report only the numeric count of canonical
+renderer-page candidates and whether that count is missing or ambiguous.
 A reported loss of an accepted renderer capability revokes authority and
 queues cleanup in the same serialized lifecycle operation.
 A fresh supervisor must reconcile before Start. An operation that remains live

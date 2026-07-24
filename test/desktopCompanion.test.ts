@@ -43,7 +43,12 @@ class FakeDriver implements DesktopCompanionDriver {
   reconcileCount = 0;
   recovery: DesktopCompanionRecovery = { kind: "normal" };
   startError = false;
-  startDiagnostics: { readonly rendererTargetCount?: number } | undefined;
+  startDiagnostics:
+    | {
+        readonly rendererTargetCount?: number;
+        readonly rendererPageCount?: number;
+      }
+    | undefined;
   startFailure: DesktopCompanionStartError["failure"] | undefined;
   startCount = 0;
   startObservation: DesktopControlObservation = observation;
@@ -281,6 +286,19 @@ describe("desktop companion supervisor", () => {
     });
   });
 
+  it("preserves a canonical renderer-page count through cleanup", async () => {
+    const driver = new FakeDriver();
+    driver.startFailure = "rendererPagesAmbiguous";
+    driver.startDiagnostics = { rendererPageCount: 2 };
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    await expect(supervisor.start()).resolves.toMatchObject({
+      lifecycle: "stopped",
+      failure: "rendererPagesAmbiguous",
+      diagnostics: { rendererPageCount: 2 },
+    });
+  });
+
   it("reattaches only to a reconciled controlled renderer", async () => {
     const driver = new FakeDriver();
     driver.recovery = { kind: "controlled", observation };
@@ -329,7 +347,7 @@ describe("desktop companion supervisor", () => {
     for (const invalid of [
       null,
       {},
-      { ...request, protocolVersion: 3 },
+      { ...request, protocolVersion: 4 },
       { ...request, requestId: "contains spaces" },
       { ...request, method: "select", targetId: "leaked" },
       { ...request, extra: true },

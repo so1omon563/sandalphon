@@ -4,6 +4,7 @@ import {
   MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
   MACOS_CONTROL_RECORD_SCHEMA,
   MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+  MacosDesktopPageCountError,
   MacosDesktopTargetCountError,
   MacosDesktopCompanionDriver,
   controlledLaunchArguments,
@@ -275,6 +276,20 @@ describe("macOS desktop companion driver", () => {
             ? "rendererTargetsEmpty"
             : "rendererTargetsOverLimit",
         diagnostics: { rendererTargetCount: targetCount },
+      });
+    }
+  });
+
+  it("reports a content-free canonical renderer-page count", async () => {
+    for (const pageCount of [0, 2]) {
+      const platform = new FakePlatform();
+      platform.observeError = new MacosDesktopPageCountError(pageCount);
+      await expect(
+        driver(platform).startControlled(new AbortController().signal),
+      ).rejects.toMatchObject({
+        failure:
+          pageCount === 0 ? "rendererPageMissing" : "rendererPagesAmbiguous",
+        diagnostics: { rendererPageCount: pageCount },
       });
     }
   });

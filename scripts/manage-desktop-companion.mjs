@@ -18,7 +18,7 @@ import { promisify } from "node:util";
 
 export const DESKTOP_COMPANION_LAUNCH_AGENT_LABEL =
   "dev.so1omon.sandalphon.desktop-companion";
-export const DESKTOP_COMPANION_PROTOCOL_VERSION = 2;
+export const DESKTOP_COMPANION_PROTOCOL_VERSION = 3;
 const execFileAsync = promisify(execFile);
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = dirname(scriptDirectory);
@@ -130,17 +130,30 @@ export function summarizeSnapshot(snapshot) {
   if (!desktop || typeof desktop !== "object") {
     throw new Error("invalidCompanionResponse");
   }
+  const rendererTargetCount =
+    snapshot.diagnostics &&
+    Number.isSafeInteger(snapshot.diagnostics.rendererTargetCount) &&
+    snapshot.diagnostics.rendererTargetCount >= 0
+      ? snapshot.diagnostics.rendererTargetCount
+      : undefined;
+  const rendererPageCount =
+    snapshot.diagnostics &&
+    Number.isSafeInteger(snapshot.diagnostics.rendererPageCount) &&
+    snapshot.diagnostics.rendererPageCount >= 0
+      ? snapshot.diagnostics.rendererPageCount
+      : undefined;
   return {
     lifecycle: snapshot.lifecycle,
     sequence: snapshot.sequence,
     ...(snapshot.failure ? { failure: snapshot.failure } : {}),
     ...(snapshot.priorFailure ? { priorFailure: snapshot.priorFailure } : {}),
-    ...(snapshot.diagnostics &&
-    Number.isSafeInteger(snapshot.diagnostics.rendererTargetCount) &&
-    snapshot.diagnostics.rendererTargetCount >= 0
+    ...(rendererTargetCount !== undefined || rendererPageCount !== undefined
       ? {
           diagnostics: {
-            rendererTargetCount: snapshot.diagnostics.rendererTargetCount,
+            ...(rendererTargetCount !== undefined
+              ? { rendererTargetCount }
+              : {}),
+            ...(rendererPageCount !== undefined ? { rendererPageCount } : {}),
           },
         }
       : {}),
