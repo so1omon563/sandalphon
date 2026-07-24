@@ -212,15 +212,13 @@ export class DesktopCompanionSupervisor {
     });
   }
 
-  capabilityLost(): DesktopCompanionSnapshot {
-    if (this.#snapshot.lifecycle === "ready") {
-      this.#transition(
-        "degraded",
-        "capabilityLost",
-        revoked(this.#snapshot.desktop),
-      );
-    }
-    return this.status();
+  capabilityLost(): Promise<DesktopCompanionSnapshot> {
+    return this.#enqueue(async () => {
+      if (this.#snapshot.lifecycle === "ready") {
+        await this.#failAndClean("capabilityLost");
+      }
+      return this.status();
+    });
   }
 
   #enqueue<T>(operation: () => Promise<T>): Promise<T> {

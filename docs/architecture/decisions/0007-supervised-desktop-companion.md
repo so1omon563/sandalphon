@@ -94,7 +94,7 @@ The companion exposes exactly six lifecycle states:
 | `stopped`          | No controlled authority is retained; normal Codex is the required terminal condition.                    |
 | `starting`         | Launch or restart reconciliation is in progress; no client action authority exists.                      |
 | `ready`            | Exact process, listener, version, renderer, and task capabilities are proven.                            |
-| `degraded`         | Prior authority was revoked after a start or capability failure; cleanup must follow.                    |
+| `degraded`         | Prior authority was revoked after a start or capability failure; serialized cleanup follows immediately. |
 | `cleaningUp`       | Exact controlled-process termination, listener removal, and normal restart verification are in progress. |
 | `recoveryRequired` | Ownership or cleanup is ambiguous; automatic relaunch and task actions remain disabled.                  |
 

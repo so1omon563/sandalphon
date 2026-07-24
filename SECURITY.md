@@ -60,6 +60,8 @@ content-free failure categories. Shutdown destroys all active client
 connections before unlinking the socket, including clients with incomplete
 requests. Supervisor start, reconciliation, and cleanup
 operations have fixed deadlines, abort signals, and an abort-quiescence fence.
+A reported loss of an accepted renderer capability revokes authority and
+queues cleanup in the same serialized lifecycle operation.
 A fresh supervisor must reconcile before Start. An operation that remains live
 after its fence authorizes neither cleanup nor stopped state until the
 companion restarts, and ambiguous recovery authorizes no termination target.

@@ -248,12 +248,12 @@ describe("desktop companion supervisor", () => {
     driver.recovery = { kind: "controlled", observation };
     const supervisor = new DesktopCompanionSupervisor(driver, policy);
     expect(await supervisor.recover()).toMatchObject({ lifecycle: "ready" });
-    expect(supervisor.capabilityLost()).toMatchObject({
-      lifecycle: "degraded",
+    expect(await supervisor.capabilityLost()).toMatchObject({
+      lifecycle: "stopped",
       failure: "capabilityLost",
       desktop: { availability: "unavailable", targets: [] },
     });
-    expect(await supervisor.stop()).toMatchObject({ lifecycle: "stopped" });
+    expect(driver.cleanupCount).toBe(1);
   });
 
   it("does not guess when recovery ownership is ambiguous", async () => {
