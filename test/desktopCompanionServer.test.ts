@@ -1,5 +1,5 @@
 import { chmod, lstat, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { createConnection } from "node:net";
+import { createConnection, type Socket } from "node:net";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -57,6 +57,41 @@ class ServerDriver implements DesktopCompanionDriver {
   }
 }
 
+class BlockingServerDriver implements DesktopCompanionDriver {
+  cleanupCount = 0;
+  startCount = 0;
+  readonly started: Promise<void>;
+  #markStarted!: () => void;
+  #releaseStart!: (observation: DesktopControlObservation) => void;
+
+  constructor() {
+    this.started = new Promise((resolve) => {
+      this.#markStarted = resolve;
+    });
+  }
+
+  startControlled(): Promise<DesktopControlObservation> {
+    this.startCount += 1;
+    this.#markStarted();
+    return new Promise((resolve) => {
+      this.#releaseStart = resolve;
+    });
+  }
+
+  reconcileControlled(): Promise<{ readonly kind: "normal" }> {
+    return Promise.resolve({ kind: "normal" });
+  }
+
+  cleanupControlled(): Promise<void> {
+    this.cleanupCount += 1;
+    return Promise.resolve();
+  }
+
+  releaseStart(): void {
+    this.#releaseStart(observation);
+  }
+}
+
 describe("desktop companion local IPC", () => {
   it("creates a same-user-only socket and survives client disconnect", async () => {
     const runtime = await createRuntime();
@@ -67,9 +102,19 @@ describe("desktop companion local IPC", () => {
     const server = await listenDesktopCompanion(runtime, supervisor);
     expect((await lstat(server.socketPath)).mode & 0o777).toBe(0o600);
 
+    const recovery = await request(server.socketPath, {
+      protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
+      requestId: "recover-1",
+      method: "recover",
+    });
+    expect(recovery).toMatchObject({
+      ok: true,
+      snapshot: { lifecycle: "stopped" },
+    });
+
     const first = await request(server.socketPath, {
       protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
-      requestId: "start-1",
+      requestId: "start-2",
       method: "start",
     });
     expect(first).toMatchObject({
@@ -79,7 +124,7 @@ describe("desktop companion local IPC", () => {
 
     const second = await request(server.socketPath, {
       protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
-      requestId: "status-2",
+      requestId: "status-3",
       method: "status",
     });
     expect(second).toMatchObject({
@@ -88,6 +133,54 @@ describe("desktop companion local IPC", () => {
     });
     await server.close();
     await expect(lstat(server.socketPath)).rejects.toThrow();
+  });
+
+  it("executes only the first request sent across socket data events", async () => {
+    const runtime = await createRuntime();
+    const driver = new BlockingServerDriver();
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    const server = await listenDesktopCompanion(runtime, supervisor);
+    let requestSocket!: Socket;
+    const response = new Promise<Record<string, unknown>>((resolve, reject) => {
+      const socket = createConnection(server.socketPath);
+      requestSocket = socket;
+      let body = "";
+      socket.setEncoding("utf8");
+      socket.once("connect", () => {
+        socket.write(
+          `${JSON.stringify({
+            protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
+            requestId: "start-only",
+            method: "start",
+          })}\n`,
+        );
+      });
+      socket.on("data", (chunk: string) => {
+        body += chunk;
+      });
+      socket.once("end", () => {
+        resolve(JSON.parse(body.trim()) as Record<string, unknown>);
+      });
+      socket.once("error", reject);
+    });
+    await driver.started;
+    requestSocket.write(
+      `${JSON.stringify({
+        protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
+        requestId: "stop-ignored",
+        method: "stop",
+      })}\n`,
+    );
+
+    driver.releaseStart();
+    expect(await response).toMatchObject({
+      requestId: "start-only",
+      snapshot: { lifecycle: "ready" },
+    });
+    expect(driver.startCount).toBe(1);
+    expect(driver.cleanupCount).toBe(0);
+    await server.close();
   });
 
   it("rejects unsafe runtime directories and occupied socket paths", async () => {

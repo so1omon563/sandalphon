@@ -17,15 +17,19 @@ export type DesktopCompanionLifecycle =
   | "recoveryRequired";
 
 export type DesktopCompanionFailure =
+  | "startupReconciliationRequired"
   | "startFailed"
   | "startTimedOut"
+  | "startUnfenced"
   | "capabilityRejected"
   | "capabilityLost"
   | "cleanupFailed"
   | "cleanupTimedOut"
+  | "cleanupUnfenced"
   | "recoveryAmbiguous"
   | "reconcileFailed"
-  | "reconcileTimedOut";
+  | "reconcileTimedOut"
+  | "reconcileUnfenced";
 
 export interface DesktopCompanionSnapshot {
   readonly protocolVersion: typeof DESKTOP_COMPANION_PROTOCOL_VERSION;
@@ -53,6 +57,7 @@ export interface DesktopCompanionTimeouts {
   readonly startMs: number;
   readonly reconcileMs: number;
   readonly cleanupMs: number;
+  readonly abortGraceMs: number;
 }
 
 export type DesktopCompanionMethod = "status" | "start" | "stop" | "recover";
@@ -81,9 +86,11 @@ const DEFAULT_TIMEOUTS: DesktopCompanionTimeouts = Object.freeze({
   startMs: 30_000,
   reconcileMs: 10_000,
   cleanupMs: 30_000,
+  abortGraceMs: 1_000,
 });
 
 class DriverTimeoutError extends Error {}
+class DriverUnfencedError extends Error {}
 
 export class DesktopCompanionSupervisor {
   readonly #driver: DesktopCompanionDriver;
@@ -91,10 +98,13 @@ export class DesktopCompanionSupervisor {
   readonly #timeouts: DesktopCompanionTimeouts;
   #snapshot: DesktopCompanionSnapshot = {
     protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
-    lifecycle: "stopped",
+    lifecycle: "recoveryRequired",
     sequence: 0,
     desktop: disconnectedDesktopState(0, 0),
+    failure: "startupReconciliationRequired",
   };
+  #cleanupAuthorized = false;
+  #operationUnfenced = false;
   #tail: Promise<void> = Promise.resolve();
 
   constructor(
@@ -114,13 +124,26 @@ export class DesktopCompanionSupervisor {
   start(): Promise<DesktopCompanionSnapshot> {
     return this.#enqueue(async () => {
       if (this.#snapshot.lifecycle !== "stopped") return this.status();
+      this.#cleanupAuthorized = true;
       this.#transition("starting");
       let observation: DesktopControlObservation;
       try {
-        observation = await withDeadline(this.#timeouts.startMs, (signal) =>
-          this.#driver.startControlled(signal),
+        observation = await withDeadline(
+          this.#timeouts.startMs,
+          this.#timeouts.abortGraceMs,
+          (signal) => this.#driver.startControlled(signal),
         );
       } catch (error) {
+        if (error instanceof DriverUnfencedError) {
+          this.#cleanupAuthorized = false;
+          this.#operationUnfenced = true;
+          this.#transition(
+            "recoveryRequired",
+            "startUnfenced",
+            revoked(this.#snapshot.desktop),
+          );
+          return this.status();
+        }
         await this.#failAndClean(
           error instanceof DriverTimeoutError ? "startTimedOut" : "startFailed",
         );
@@ -133,7 +156,9 @@ export class DesktopCompanionSupervisor {
 
   stop(): Promise<DesktopCompanionSnapshot> {
     return this.#enqueue(async () => {
-      if (this.#snapshot.lifecycle === "stopped") return this.status();
+      if (this.#snapshot.lifecycle === "stopped" || !this.#cleanupAuthorized) {
+        return this.status();
+      }
       await this.#clean();
       return this.status();
     });
@@ -142,34 +167,46 @@ export class DesktopCompanionSupervisor {
   recover(): Promise<DesktopCompanionSnapshot> {
     return this.#enqueue(async () => {
       if (
-        this.#snapshot.lifecycle !== "stopped" &&
-        this.#snapshot.lifecycle !== "recoveryRequired"
+        this.#operationUnfenced ||
+        (this.#snapshot.lifecycle !== "stopped" &&
+          this.#snapshot.lifecycle !== "recoveryRequired")
       ) {
         return this.status();
       }
+      this.#cleanupAuthorized = false;
       this.#transition("starting");
       let recovery: DesktopCompanionRecovery;
       try {
-        recovery = await withDeadline(this.#timeouts.reconcileMs, (signal) =>
-          this.#driver.reconcileControlled(signal),
+        recovery = await withDeadline(
+          this.#timeouts.reconcileMs,
+          this.#timeouts.abortGraceMs,
+          (signal) => this.#driver.reconcileControlled(signal),
         );
       } catch (error) {
+        if (error instanceof DriverUnfencedError) {
+          this.#operationUnfenced = true;
+        }
         this.#transition(
           "recoveryRequired",
-          error instanceof DriverTimeoutError
-            ? "reconcileTimedOut"
-            : "reconcileFailed",
+          error instanceof DriverUnfencedError
+            ? "reconcileUnfenced"
+            : error instanceof DriverTimeoutError
+              ? "reconcileTimedOut"
+              : "reconcileFailed",
         );
         return this.status();
       }
       if (recovery.kind === "normal") {
+        this.#cleanupAuthorized = false;
         this.#transition("stopped", undefined, revoked(this.#snapshot.desktop));
         return this.status();
       }
       if (recovery.kind === "ambiguous") {
+        this.#cleanupAuthorized = false;
         this.#transition("recoveryRequired", "recoveryAmbiguous");
         return this.status();
       }
+      this.#cleanupAuthorized = true;
       await this.#acceptObservationOrClean(recovery.observation);
       return this.status();
     });
@@ -218,20 +255,29 @@ export class DesktopCompanionSupervisor {
       revoked(this.#snapshot.desktop),
     );
     try {
-      await withDeadline(this.#timeouts.cleanupMs, (signal) =>
-        this.#driver.cleanupControlled(signal),
+      await withDeadline(
+        this.#timeouts.cleanupMs,
+        this.#timeouts.abortGraceMs,
+        (signal) => this.#driver.cleanupControlled(signal),
       );
+      this.#cleanupAuthorized = false;
       this.#transition(
         "stopped",
         priorFailure,
         revoked(this.#snapshot.desktop),
       );
     } catch (error) {
+      if (error instanceof DriverUnfencedError) {
+        this.#cleanupAuthorized = false;
+        this.#operationUnfenced = true;
+      }
       this.#transition(
         "recoveryRequired",
-        error instanceof DriverTimeoutError
-          ? "cleanupTimedOut"
-          : "cleanupFailed",
+        error instanceof DriverUnfencedError
+          ? "cleanupUnfenced"
+          : error instanceof DriverTimeoutError
+            ? "cleanupTimedOut"
+            : "cleanupFailed",
         revoked(this.#snapshot.desktop),
       );
     }
@@ -338,19 +384,51 @@ function cloneSnapshot(
 
 async function withDeadline<T>(
   timeoutMs: number,
+  abortGraceMs: number,
   operation: (signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   const controller = new AbortController();
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_resolve, reject) => {
-    timeout = setTimeout(() => {
-      controller.abort();
-      reject(new DriverTimeoutError());
-    }, timeoutMs);
-  });
+  let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+  let graceTimer: ReturnType<typeof setTimeout> | undefined;
+  const outcome = Promise.resolve()
+    .then(() => operation(controller.signal))
+    .then<DriverOutcome<T>, DriverOutcome<T>>(
+      (value) => ({ kind: "success", value }),
+      (error: unknown) => ({ kind: "failure", error }),
+    );
   try {
-    return await Promise.race([operation(controller.signal), deadline]);
+    const first = await Promise.race([
+      outcome,
+      new Promise<DriverDeadline>((resolve) => {
+        deadlineTimer = setTimeout(
+          () => resolve({ kind: "deadline" }),
+          timeoutMs,
+        );
+      }),
+    ]);
+    if (first.kind === "success") return first.value;
+    if (first.kind === "failure") throw first.error;
+
+    controller.abort();
+    const fenced = await Promise.race([
+      outcome,
+      new Promise<DriverUnfenced>((resolve) => {
+        graceTimer = setTimeout(
+          () => resolve({ kind: "unfenced" }),
+          abortGraceMs,
+        );
+      }),
+    ]);
+    if (fenced.kind === "unfenced") throw new DriverUnfencedError();
+    throw new DriverTimeoutError();
   } finally {
-    if (timeout) clearTimeout(timeout);
+    if (deadlineTimer) clearTimeout(deadlineTimer);
+    if (graceTimer) clearTimeout(graceTimer);
   }
 }
+
+type DriverOutcome<T> =
+  | { readonly kind: "success"; readonly value: T }
+  | { readonly kind: "failure"; readonly error: unknown };
+type DriverDeadline = { readonly kind: "deadline" };
+type DriverUnfenced = { readonly kind: "unfenced" };

@@ -57,8 +57,10 @@ a Unix socket with mode `0600`. It rejects socket paths beyond the macOS native
 bound, caps newline-delimited JSON requests at 4096 raw bytes, accepts only an
 exact versioned method envelope with one request per connection, and emits
 content-free failure categories. Supervisor start, reconciliation, and cleanup
-operations have fixed deadlines and abort signals; a timeout cannot leave the
-surface ready or permit an automatic relaunch.
+operations have fixed deadlines, abort signals, and an abort-quiescence fence.
+A fresh supervisor must reconcile before Start. An operation that remains live
+after its fence authorizes neither cleanup nor stopped state until the
+companion restarts, and ambiguous recovery authorizes no termination target.
 These permissions exclude other local users but do not defend against a
 malicious process already running as the same user. No live macOS driver or
 plugin client is enabled by this proof.

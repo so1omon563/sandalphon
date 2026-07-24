@@ -103,12 +103,18 @@ immediately revokes every task target and offer before cleanup begins.
 
 Start, stop, and recovery operations are serialized across all clients. A
 start is bounded to 30 seconds, restart reconciliation to 10 seconds, and
-cleanup to 30 seconds. Drivers receive an abort signal for each deadline. A
-failed or timed-out start always attempts cleanup. A cleanup failure or timeout enters
+cleanup to 30 seconds. A new supervisor begins in `recoveryRequired` and must
+reconcile before it can accept Start. Drivers receive an abort signal for each
+deadline plus one second to prove the timed-out operation has quiesced. A
+failed or quiesced timed-out start attempts cleanup. An operation that remains
+live beyond the abort fence enters `recoveryRequired` without cleanup and can
+never lead to stopped state; the companion must restart before accepting
+another lifecycle operation. A cleanup failure or timeout also enters
 `recoveryRequired`; it never reports stopped, launches another controlled
 process, or guesses at ownership. Restart reconciliation may accept only one
 of three content-free results: normal, one exactly verified controlled process,
-or ambiguous. Ambiguous state is never a kill target.
+or ambiguous. Ambiguous state authorizes neither Stop nor cleanup and is never
+a kill target.
 
 ### Bounded implementation sequence
 

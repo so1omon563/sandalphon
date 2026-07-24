@@ -40,21 +40,28 @@ const observation: DesktopControlObservation = {
 class FakeDriver implements DesktopCompanionDriver {
   cleanupError = false;
   cleanupCount = 0;
+  reconcileCount = 0;
   recovery: DesktopCompanionRecovery = { kind: "normal" };
   startError = false;
+  startCount = 0;
   startObservation: DesktopControlObservation = observation;
 
-  startControlled(): Promise<DesktopControlObservation> {
+  startControlled(signal: AbortSignal): Promise<DesktopControlObservation> {
+    void signal;
+    this.startCount += 1;
     return this.startError
       ? Promise.reject(new Error("private detail"))
       : Promise.resolve(this.startObservation);
   }
 
-  reconcileControlled(): Promise<DesktopCompanionRecovery> {
+  reconcileControlled(signal: AbortSignal): Promise<DesktopCompanionRecovery> {
+    void signal;
+    this.reconcileCount += 1;
     return Promise.resolve(this.recovery);
   }
 
-  cleanupControlled(): Promise<void> {
+  cleanupControlled(signal: AbortSignal): Promise<void> {
+    void signal;
     this.cleanupCount += 1;
     return this.cleanupError
       ? Promise.reject(new Error("private detail"))
@@ -66,6 +73,15 @@ describe("desktop companion supervisor", () => {
   it("starts only after the exact desktop contract becomes ready", async () => {
     const driver = new FakeDriver();
     const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    expect(supervisor.status()).toMatchObject({
+      lifecycle: "recoveryRequired",
+      failure: "startupReconciliationRequired",
+    });
+    expect(await supervisor.start()).toMatchObject({
+      lifecycle: "recoveryRequired",
+    });
+    expect(driver.startCount).toBe(0);
+    expect(await supervisor.recover()).toMatchObject({ lifecycle: "stopped" });
     const snapshot = await supervisor.start();
     expect(snapshot).toMatchObject({
       lifecycle: "ready",
@@ -85,6 +101,7 @@ describe("desktop companion supervisor", () => {
     const driver = new FakeDriver();
     driver.startControlled = () => pendingStart;
     const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
     const starting = supervisor.start();
     const stopping = supervisor.stop();
     await Promise.resolve();
@@ -98,10 +115,9 @@ describe("desktop companion supervisor", () => {
   it("cleans a failed start without exposing driver errors", async () => {
     const driver = new FakeDriver();
     driver.startError = true;
-    const snapshot = await new DesktopCompanionSupervisor(
-      driver,
-      policy,
-    ).start();
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    const snapshot = await supervisor.start();
     expect(snapshot).toMatchObject({
       lifecycle: "stopped",
       failure: "startFailed",
@@ -113,12 +129,22 @@ describe("desktop companion supervisor", () => {
 
   it("turns a wedged start into bounded cleanup", async () => {
     const driver = new FakeDriver();
-    driver.startControlled = () => new Promise(() => undefined);
-    const snapshot = await new DesktopCompanionSupervisor(driver, policy, {
+    driver.startControlled = (
+      signal: AbortSignal,
+    ): Promise<DesktopControlObservation> =>
+      new Promise<DesktopControlObservation>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("aborted")), {
+          once: true,
+        });
+      });
+    const supervisor = new DesktopCompanionSupervisor(driver, policy, {
       startMs: 1,
       reconcileMs: 1,
       cleanupMs: 1,
-    }).start();
+      abortGraceMs: 10,
+    });
+    await supervisor.recover();
+    const snapshot = await supervisor.start();
     expect(snapshot).toMatchObject({
       lifecycle: "stopped",
       failure: "startTimedOut",
@@ -126,14 +152,49 @@ describe("desktop companion supervisor", () => {
     expect(driver.cleanupCount).toBe(1);
   });
 
+  it("does not clean or stop while a timed-out start remains unfenced", async () => {
+    const driver = new FakeDriver();
+    let completeStart!: (value: DesktopControlObservation) => void;
+    driver.startControlled = () =>
+      new Promise((resolve) => {
+        completeStart = resolve;
+      });
+    const supervisor = new DesktopCompanionSupervisor(driver, policy, {
+      startMs: 1,
+      reconcileMs: 10,
+      cleanupMs: 10,
+      abortGraceMs: 1,
+    });
+    await supervisor.recover();
+    const snapshot = await supervisor.start();
+    expect(snapshot).toMatchObject({
+      lifecycle: "recoveryRequired",
+      failure: "startUnfenced",
+    });
+    expect(driver.cleanupCount).toBe(0);
+    expect(await supervisor.stop()).toEqual(snapshot);
+    expect(await supervisor.recover()).toEqual(snapshot);
+    expect(driver.reconcileCount).toBe(1);
+    completeStart(observation);
+    await Promise.resolve();
+    expect(supervisor.status()).toEqual(snapshot);
+  });
+
   it("keeps cleanup timeouts in explicit recovery", async () => {
     const driver = new FakeDriver();
-    driver.cleanupControlled = () => new Promise(() => undefined);
+    driver.cleanupControlled = (signal: AbortSignal): Promise<void> =>
+      new Promise<void>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("aborted")), {
+          once: true,
+        });
+      });
     const supervisor = new DesktopCompanionSupervisor(driver, policy, {
       startMs: 10,
       reconcileMs: 10,
       cleanupMs: 1,
+      abortGraceMs: 10,
     });
+    await supervisor.recover();
     await supervisor.start();
     expect(await supervisor.stop()).toMatchObject({
       lifecycle: "recoveryRequired",
@@ -144,11 +205,19 @@ describe("desktop companion supervisor", () => {
 
   it("bounds restart reconciliation without guessing", async () => {
     const driver = new FakeDriver();
-    driver.reconcileControlled = () => new Promise(() => undefined);
+    driver.reconcileControlled = (
+      signal: AbortSignal,
+    ): Promise<DesktopCompanionRecovery> =>
+      new Promise<DesktopCompanionRecovery>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("aborted")), {
+          once: true,
+        });
+      });
     const snapshot = await new DesktopCompanionSupervisor(driver, policy, {
       startMs: 10,
       reconcileMs: 1,
       cleanupMs: 10,
+      abortGraceMs: 10,
     }).recover();
     expect(snapshot).toMatchObject({
       lifecycle: "recoveryRequired",
@@ -164,10 +233,9 @@ describe("desktop companion supervisor", () => {
       endpointHost: "0.0.0.0",
     };
     driver.cleanupError = true;
-    const snapshot = await new DesktopCompanionSupervisor(
-      driver,
-      policy,
-    ).start();
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    const snapshot = await supervisor.start();
     expect(snapshot).toMatchObject({
       lifecycle: "recoveryRequired",
       failure: "cleanupFailed",
@@ -191,14 +259,13 @@ describe("desktop companion supervisor", () => {
   it("does not guess when recovery ownership is ambiguous", async () => {
     const driver = new FakeDriver();
     driver.recovery = { kind: "ambiguous" };
-    const snapshot = await new DesktopCompanionSupervisor(
-      driver,
-      policy,
-    ).recover();
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    const snapshot = await supervisor.recover();
     expect(snapshot).toMatchObject({
       lifecycle: "recoveryRequired",
       failure: "recoveryAmbiguous",
     });
+    expect(await supervisor.stop()).toEqual(snapshot);
     expect(driver.cleanupCount).toBe(0);
   });
 
@@ -216,7 +283,10 @@ describe("desktop companion supervisor", () => {
       protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
       requestId: "request-1",
       ok: true,
-      snapshot: { lifecycle: "stopped" },
+      snapshot: {
+        lifecycle: "recoveryRequired",
+        failure: "startupReconciliationRequired",
+      },
     });
     for (const invalid of [
       null,

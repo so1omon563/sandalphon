@@ -121,7 +121,9 @@ function serveConnection(
   supervisor: DesktopCompanionSupervisor,
 ): void {
   let buffer = Buffer.alloc(0);
-  socket.on("data", (chunk: Buffer) => {
+  let handled = false;
+  const onData = (chunk: Buffer): void => {
+    if (handled) return;
     if (buffer.length + chunk.length > DESKTOP_COMPANION_MAX_LINE_BYTES + 1) {
       writeProtocolError(socket);
       return;
@@ -138,9 +140,11 @@ function serveConnection(
       return;
     }
     const line = buffer.subarray(0, newline);
+    handled = true;
     buffer = Buffer.alloc(0);
     void processLine(socket, supervisor, line);
-  });
+  };
+  socket.on("data", onData);
   socket.on("error", () => undefined);
 }
 
