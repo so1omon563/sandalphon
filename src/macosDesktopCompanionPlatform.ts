@@ -20,6 +20,7 @@ import {
   MACOS_CODEX_APPLICATION_PATH,
   MACOS_CODEX_EXECUTABLE_PATH,
   MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+  MacosDesktopTargetCountError,
   controlledLaunchArguments,
   type MacosCodexApplicationIdentity,
   type MacosControlledLaunchRecord,
@@ -511,6 +512,7 @@ export function isRetryableRendererDiscovery(error: unknown): boolean {
     error instanceof Error &&
     (error.message === "desktopDiscoveryFailed" ||
       error.message === "invalidDesktopTargetCount" ||
+      error instanceof MacosDesktopTargetCountError ||
       error.message === "invalidDesktopPageContract")
   );
 }
@@ -594,12 +596,11 @@ export function decodeDebuggerPage(
   if (!discovery.version || typeof discovery.version !== "object") {
     throw new Error("invalidDesktopDiscovery");
   }
-  if (
-    !Array.isArray(discovery.targets) ||
-    discovery.targets.length === 0 ||
-    discovery.targets.length > 64
-  ) {
+  if (!Array.isArray(discovery.targets)) {
     throw new Error("invalidDesktopTargetCount");
+  }
+  if (discovery.targets.length === 0 || discovery.targets.length > 64) {
+    throw new MacosDesktopTargetCountError(discovery.targets.length);
   }
   const version = discovery.version as Record<string, unknown>;
   const browser =
@@ -755,7 +756,15 @@ async function isDirectOwnedChild(
     if (isExitCode(error, 1)) return false;
     throw error;
   }
-  const match = /^\s*(\d+)\s+(\d+)\s*$/u.exec(stdout);
+  return isDirectOwnedChildObservation(stdout, expectedParentPid, expectedUid);
+}
+
+export function isDirectOwnedChildObservation(
+  value: string,
+  expectedParentPid: number,
+  expectedUid: number,
+): boolean {
+  const match = /^\s*(\d+)\s+(\d+)\s*$/u.exec(value);
   return (
     !!match &&
     Number.parseInt(match[1]!, 10) === expectedParentPid &&

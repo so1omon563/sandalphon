@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DESKTOP_COMPANION_LAUNCH_AGENT_LABEL,
+  DESKTOP_COMPANION_PROTOCOL_VERSION,
   companionPaths,
   parseManagementArguments,
   renderLaunchAgentPlist,
@@ -94,6 +95,26 @@ describe("desktop companion launchd management", () => {
     expect(JSON.stringify(summary)).not.toContain("private-one");
   });
 
+  it("retains only bounded content-free failure diagnostics", () => {
+    expect(
+      summarizeSnapshot({
+        lifecycle: "recoveryRequired",
+        sequence: 5,
+        failure: "cleanupFailed",
+        priorFailure: "rendererTargetsOverLimit",
+        diagnostics: { rendererTargetCount: 97, rejectedTarget: "private" },
+        desktop: { availability: "unavailable", targets: [] },
+      }),
+    ).toEqual({
+      lifecycle: "recoveryRequired",
+      sequence: 5,
+      failure: "cleanupFailed",
+      priorFailure: "rendererTargetsOverLimit",
+      diagnostics: { rendererTargetCount: 97 },
+      desktop: { availability: "unavailable", taskCount: 0 },
+    });
+  });
+
   it("keeps the one-request connection open for an asynchronous response", async () => {
     const directory = await mkdtemp(join(tmpdir(), "sandalphon-manager-"));
     const socketPath = join(directory, "companion.sock");
@@ -103,7 +124,7 @@ describe("desktop companion launchd management", () => {
         setTimeout(() => {
           socket.end(
             `${JSON.stringify({
-              protocolVersion: 1,
+              protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
               requestId: request.requestId,
               ok: true,
               snapshot: {

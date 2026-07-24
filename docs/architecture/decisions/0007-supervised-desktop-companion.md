@@ -86,6 +86,11 @@ existing desktop-control contract is ready. They contain no task titles,
 prompts, responses, reasoning, diffs, commands, credentials, renderer payloads,
 or raw driver errors.
 
+Protocol revision 2 adds only an optional prior bounded failure category and
+the numeric renderer target count. This preserves the rejected stage when
+cleanup also fails and distinguishes an empty discovery list from an
+over-limit list without exposing any target metadata.
+
 ### Lifecycle
 
 The companion exposes exactly six lifecycle states:

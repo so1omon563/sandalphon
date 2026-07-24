@@ -4,6 +4,7 @@ import {
   MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
   MACOS_CONTROL_RECORD_SCHEMA,
   MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+  MacosDesktopTargetCountError,
   MacosDesktopCompanionDriver,
   controlledLaunchArguments,
   parseMacosControlledLaunchRecord,
@@ -53,7 +54,7 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   deleted = 0;
   launchedNormal = 0;
   normalCount = 1;
-  observeError: string | undefined;
+  observeError: Error | string | undefined;
   owner: number | undefined;
   record: unknown;
   stoppedNormal = 0;
@@ -125,7 +126,11 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
     Omit<DesktopControlObservation, "epoch" | "revision">
   > {
     if (this.observeError) {
-      return Promise.reject(new Error(this.observeError));
+      return Promise.reject(
+        this.observeError instanceof Error
+          ? this.observeError
+          : new Error(this.observeError),
+      );
     }
     return Promise.resolve({
       connected: true,
@@ -256,6 +261,22 @@ describe("macOS desktop companion driver", () => {
     await expect(
       driver(targetCountPlatform).startControlled(new AbortController().signal),
     ).rejects.toThrow("rendererTargetCountRejected");
+  });
+
+  it("reports a content-free renderer target count diagnostic", async () => {
+    for (const targetCount of [0, 97]) {
+      const platform = new FakePlatform();
+      platform.observeError = new MacosDesktopTargetCountError(targetCount);
+      await expect(
+        driver(platform).startControlled(new AbortController().signal),
+      ).rejects.toMatchObject({
+        failure:
+          targetCount === 0
+            ? "rendererTargetsEmpty"
+            : "rendererTargetsOverLimit",
+        diagnostics: { rendererTargetCount: targetCount },
+      });
+    }
   });
 
   it("reattaches only to the exact recorded process and listener", async () => {

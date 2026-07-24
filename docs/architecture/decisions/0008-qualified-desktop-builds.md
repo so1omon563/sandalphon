@@ -46,6 +46,11 @@ requires the listener to disappear. Unrelated, reparented, or deeper owners
 remain ambiguous and fail closed.
 The observed Chromium version is diagnostic and part of the qualification key;
 it is not manually allowlisted.
+If bounded discovery exhausts its readiness window, companion protocol revision
+2 may report only the exact number of renderer targets and whether that number
+was empty or over the accepted limit. If cleanup then fails, the cleanup failure
+remains primary and the renderer rejection is retained as the prior bounded
+failure.
 
 The first start for each signed-build and renderer-contract tuple performs one
 reversible canary. It records the selected opaque task, selects one other task,

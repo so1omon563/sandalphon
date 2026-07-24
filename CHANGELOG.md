@@ -22,6 +22,9 @@ All notable changes to Sandalphon are recorded here.
 - Recognized same-user direct children of the exact controlled Codex PID as
   inherited holders of its listener descriptor, while keeping unrelated or
   reparented listener owners ambiguous and non-terminable.
+- Revised the local companion protocol to preserve the original bounded Start
+  failure through cleanup and report only the numeric renderer target count
+  when discovery is empty or exceeds its accepted bound.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

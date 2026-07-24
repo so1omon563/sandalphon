@@ -60,6 +60,9 @@ content-free failure categories. Shutdown destroys all active client
 connections before unlinking the socket, including clients with incomplete
 requests. Supervisor start, reconciliation, and cleanup
 operations have fixed deadlines, abort signals, and an abort-quiescence fence.
+A protocol revision 2 failure diagnostic may retain one prior allowlisted
+failure category and the numeric renderer target count; it never includes
+target metadata or renderer content.
 A reported loss of an accepted renderer capability revokes authority and
 queues cleanup in the same serialized lifecycle operation.
 A fresh supervisor must reconcile before Start. An operation that remains live

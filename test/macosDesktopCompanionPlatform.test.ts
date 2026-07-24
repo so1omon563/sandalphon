@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   decodeDebuggerPage,
   decodeDesktopTaskTargets,
+  isDirectOwnedChildObservation,
   isRetryableRendererDiscovery,
   parseMacosCodexApplicationIdentity,
   parseListenerOwner,
@@ -12,6 +13,7 @@ import {
   taskListExpression,
   taskSelectionExpression,
 } from "../src/macosDesktopCompanionPlatform.js";
+import { MacosDesktopTargetCountError } from "../src/macosDesktopCompanionDriver.js";
 
 const ENGINE = "150.0.7871.124";
 
@@ -54,6 +56,13 @@ describe("macOS desktop companion platform boundaries", () => {
     expect(() => parseListenerOwner("p42\np43\n")).toThrow(
       "ambiguousListenerOwner",
     );
+  });
+
+  it("accepts only a same-user direct listener child observation", () => {
+    expect(isDirectOwnedChildObservation(" 42 501\n", 42, 501)).toBe(true);
+    expect(isDirectOwnedChildObservation(" 43 501\n", 42, 501)).toBe(false);
+    expect(isDirectOwnedChildObservation(" 42 502\n", 42, 501)).toBe(false);
+    expect(isDirectOwnedChildObservation("malformed", 42, 501)).toBe(false);
   });
 
   it("admits only the exact loopback debugger page and version tuple", () => {
@@ -100,18 +109,24 @@ describe("macOS desktop companion platform boundaries", () => {
         49152,
       ),
     ).toThrow("invalidDesktopPageContract");
-    expect(() =>
-      decodeDebuggerPage(
-        {
-          ...discovery,
-          targets: Array.from({ length: 65 }, () => ({
-            type: "background_page",
-            url: "chrome-extension://ignored",
-          })),
-        },
-        49152,
-      ),
-    ).toThrow("invalidDesktopTargetCount");
+    for (const targetCount of [0, 65]) {
+      try {
+        decodeDebuggerPage(
+          {
+            ...discovery,
+            targets: Array.from({ length: targetCount }, () => ({
+              type: "background_page",
+              url: "chrome-extension://ignored",
+            })),
+          },
+          49152,
+        );
+        throw new Error("expectedTargetCountRejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(MacosDesktopTargetCountError);
+        expect(error).toMatchObject({ count: targetCount });
+      }
+    }
     expect(() =>
       decodeDebuggerPage(
         {
@@ -131,6 +146,9 @@ describe("macOS desktop companion platform boundaries", () => {
   it("retries only transient renderer discovery readiness", () => {
     expect(
       isRetryableRendererDiscovery(new Error("invalidDesktopTargetCount")),
+    ).toBe(true);
+    expect(
+      isRetryableRendererDiscovery(new MacosDesktopTargetCountError(65)),
     ).toBe(true);
     expect(
       isRetryableRendererDiscovery(new Error("invalidDesktopPageContract")),

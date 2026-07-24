@@ -6,7 +6,7 @@ import {
   type DesktopControlState,
 } from "./desktopControlContract.js";
 
-export const DESKTOP_COMPANION_PROTOCOL_VERSION = 1 as const;
+export const DESKTOP_COMPANION_PROTOCOL_VERSION = 2 as const;
 
 export type DesktopCompanionLifecycle =
   | "stopped"
@@ -30,6 +30,8 @@ export type DesktopCompanionFailure =
   | "rendererDiscoveryRejected"
   | "rendererHttpRejected"
   | "rendererTargetCountRejected"
+  | "rendererTargetsEmpty"
+  | "rendererTargetsOverLimit"
   | "rendererPageRejected"
   | "rendererVersionRejected"
   | "rendererEndpointRejected"
@@ -56,6 +58,12 @@ export interface DesktopCompanionSnapshot {
   readonly sequence: number;
   readonly desktop: DesktopControlState;
   readonly failure?: DesktopCompanionFailure;
+  readonly priorFailure?: DesktopCompanionFailure;
+  readonly diagnostics?: DesktopCompanionDiagnostics;
+}
+
+export interface DesktopCompanionDiagnostics {
+  readonly rendererTargetCount?: number;
 }
 
 export type DesktopCompanionRecovery =
@@ -125,6 +133,8 @@ export class DesktopCompanionStartError extends Error {
     | "rendererDiscoveryRejected"
     | "rendererHttpRejected"
     | "rendererTargetCountRejected"
+    | "rendererTargetsEmpty"
+    | "rendererTargetsOverLimit"
     | "rendererPageRejected"
     | "rendererVersionRejected"
     | "rendererEndpointRejected"
@@ -134,10 +144,15 @@ export class DesktopCompanionStartError extends Error {
     | "qualificationFailed"
     | "qualificationRestoreFailed"
   >;
+  readonly diagnostics: DesktopCompanionDiagnostics | undefined;
 
-  constructor(failure: DesktopCompanionStartError["failure"]) {
+  constructor(
+    failure: DesktopCompanionStartError["failure"],
+    diagnostics?: DesktopCompanionDiagnostics,
+  ) {
     super(failure);
     this.failure = failure;
+    this.diagnostics = diagnostics;
   }
 }
 
@@ -193,12 +208,17 @@ export class DesktopCompanionSupervisor {
           );
           return this.status();
         }
-        await this.#failAndClean(
+        const failure =
           error instanceof DriverTimeoutError
             ? "startTimedOut"
             : error instanceof DesktopCompanionStartError
               ? error.failure
-              : "startFailed",
+              : "startFailed";
+        await this.#failAndClean(
+          failure,
+          error instanceof DesktopCompanionStartError
+            ? error.diagnostics
+            : undefined,
         );
         return this.status();
       }
@@ -294,16 +314,28 @@ export class DesktopCompanionSupervisor {
     await this.#failAndClean("capabilityRejected");
   }
 
-  async #failAndClean(failure: DesktopCompanionFailure): Promise<void> {
-    this.#transition("degraded", failure, revoked(this.#snapshot.desktop));
-    await this.#clean(failure);
+  async #failAndClean(
+    failure: DesktopCompanionFailure,
+    diagnostics?: DesktopCompanionDiagnostics,
+  ): Promise<void> {
+    this.#transition(
+      "degraded",
+      failure,
+      revoked(this.#snapshot.desktop),
+      diagnostics ? { diagnostics } : undefined,
+    );
+    await this.#clean(failure, diagnostics);
   }
 
-  async #clean(priorFailure?: DesktopCompanionFailure): Promise<void> {
+  async #clean(
+    priorFailure?: DesktopCompanionFailure,
+    diagnostics?: DesktopCompanionDiagnostics,
+  ): Promise<void> {
     this.#transition(
       "cleaningUp",
       priorFailure,
       revoked(this.#snapshot.desktop),
+      diagnostics ? { diagnostics } : undefined,
     );
     try {
       await withDeadline(
@@ -316,20 +348,27 @@ export class DesktopCompanionSupervisor {
         "stopped",
         priorFailure,
         revoked(this.#snapshot.desktop),
+        diagnostics ? { diagnostics } : undefined,
       );
     } catch (error) {
       if (error instanceof DriverUnfencedError) {
         this.#cleanupAuthorized = false;
         this.#operationUnfenced = true;
       }
-      this.#transition(
-        "recoveryRequired",
+      const failure =
         error instanceof DriverUnfencedError
           ? "cleanupUnfenced"
           : error instanceof DriverTimeoutError
             ? "cleanupTimedOut"
-            : "cleanupFailed",
+            : "cleanupFailed";
+      this.#transition(
+        "recoveryRequired",
+        failure,
         revoked(this.#snapshot.desktop),
+        {
+          ...(priorFailure ? { priorFailure } : {}),
+          ...(diagnostics ? { diagnostics } : {}),
+        },
       );
     }
   }
@@ -338,6 +377,10 @@ export class DesktopCompanionSupervisor {
     lifecycle: DesktopCompanionLifecycle,
     failure?: DesktopCompanionFailure,
     desktop: DesktopControlState = this.#snapshot.desktop,
+    metadata?: {
+      readonly priorFailure?: DesktopCompanionFailure;
+      readonly diagnostics?: DesktopCompanionDiagnostics;
+    },
   ): void {
     this.#snapshot = {
       protocolVersion: DESKTOP_COMPANION_PROTOCOL_VERSION,
@@ -345,6 +388,12 @@ export class DesktopCompanionSupervisor {
       sequence: this.#snapshot.sequence + 1,
       desktop,
       ...(failure ? { failure } : {}),
+      ...(metadata?.priorFailure
+        ? { priorFailure: metadata.priorFailure }
+        : {}),
+      ...(metadata?.diagnostics
+        ? { diagnostics: { ...metadata.diagnostics } }
+        : {}),
     };
   }
 }
@@ -429,6 +478,9 @@ function cloneSnapshot(
       : { ...snapshot.desktop, targets: [] as const };
   return {
     ...snapshot,
+    ...(snapshot.diagnostics
+      ? { diagnostics: { ...snapshot.diagnostics } }
+      : {}),
     desktop,
   };
 }

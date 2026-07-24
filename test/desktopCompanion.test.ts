@@ -43,6 +43,7 @@ class FakeDriver implements DesktopCompanionDriver {
   reconcileCount = 0;
   recovery: DesktopCompanionRecovery = { kind: "normal" };
   startError = false;
+  startDiagnostics: { readonly rendererTargetCount?: number } | undefined;
   startFailure: DesktopCompanionStartError["failure"] | undefined;
   startCount = 0;
   startObservation: DesktopControlObservation = observation;
@@ -51,7 +52,12 @@ class FakeDriver implements DesktopCompanionDriver {
     void signal;
     this.startCount += 1;
     return this.startFailure
-      ? Promise.reject(new DesktopCompanionStartError(this.startFailure))
+      ? Promise.reject(
+          new DesktopCompanionStartError(
+            this.startFailure,
+            this.startDiagnostics,
+          ),
+        )
       : this.startError
         ? Promise.reject(new Error("private detail"))
         : Promise.resolve(this.startObservation);
@@ -255,7 +261,23 @@ describe("desktop companion supervisor", () => {
     expect(snapshot).toMatchObject({
       lifecycle: "recoveryRequired",
       failure: "cleanupFailed",
+      priorFailure: "capabilityRejected",
       desktop: { availability: "unavailable", targets: [] },
+    });
+  });
+
+  it("preserves the start diagnostic when cleanup also fails", async () => {
+    const driver = new FakeDriver();
+    driver.startFailure = "rendererTargetsOverLimit";
+    driver.startDiagnostics = { rendererTargetCount: 97 };
+    driver.cleanupError = true;
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    await expect(supervisor.start()).resolves.toMatchObject({
+      lifecycle: "recoveryRequired",
+      failure: "cleanupFailed",
+      priorFailure: "rendererTargetsOverLimit",
+      diagnostics: { rendererTargetCount: 97 },
     });
   });
 
@@ -307,7 +329,7 @@ describe("desktop companion supervisor", () => {
     for (const invalid of [
       null,
       {},
-      { ...request, protocolVersion: 2 },
+      { ...request, protocolVersion: 3 },
       { ...request, requestId: "contains spaces" },
       { ...request, method: "select", targetId: "leaked" },
       { ...request, extra: true },

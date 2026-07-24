@@ -16,6 +16,20 @@ export const MACOS_COMPATIBILITY_RECEIPT_SCHEMA = 1 as const;
 const CONTROL_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
+export class MacosDesktopTargetCountError extends Error {
+  readonly count: number;
+
+  constructor(count: number) {
+    super(
+      count === 0 ? "emptyDesktopTargetList" : "overLimitDesktopTargetList",
+    );
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error("invalidDesktopTargetCount");
+    }
+    this.count = count;
+  }
+}
+
 export interface MacosControlledProcess {
   readonly pid: number;
   readonly startedAt: string;
@@ -314,7 +328,7 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     try {
       observed = await this.#platform.observeDesktop(record, signal);
     } catch (error) {
-      throw new DesktopCompanionStartError(rendererFailure(error));
+      throw rendererStartError(error);
     }
     await this.#requireReceipt(record, observed, signal);
   }
@@ -334,7 +348,7 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     try {
       observed = await this.#platform.observeDesktop(record, signal);
     } catch (error) {
-      throw new DesktopCompanionStartError(rendererFailure(error));
+      throw rendererStartError(error);
     }
     await this.#qualify(record, observed, signal);
     const next = { ...record, revision: record.revision + 1 };
@@ -575,33 +589,49 @@ function receiptMatches(
   );
 }
 
-function rendererFailure(
-  error: unknown,
-): DesktopCompanionStartError["failure"] {
-  if (!(error instanceof Error)) return "rendererRejected";
+function rendererStartError(error: unknown): DesktopCompanionStartError {
+  if (error instanceof MacosDesktopTargetCountError) {
+    return new DesktopCompanionStartError(
+      error.count === 0 ? "rendererTargetsEmpty" : "rendererTargetsOverLimit",
+      { rendererTargetCount: error.count },
+    );
+  }
+  if (!(error instanceof Error)) {
+    return new DesktopCompanionStartError("rendererRejected");
+  }
+  let failure: DesktopCompanionStartError["failure"];
   switch (error.message) {
     case "desktopDiscoveryFailed":
-      return "rendererHttpRejected";
+      failure = "rendererHttpRejected";
+      break;
     case "invalidDesktopTargetCount":
-      return "rendererTargetCountRejected";
+      failure = "rendererTargetCountRejected";
+      break;
     case "invalidDesktopPageContract":
-      return "rendererPageRejected";
+      failure = "rendererPageRejected";
+      break;
     case "invalidDesktopDiscovery":
-      return "rendererDiscoveryRejected";
+      failure = "rendererDiscoveryRejected";
+      break;
     case "unsupportedDesktopVersion":
-      return "rendererVersionRejected";
+      failure = "rendererVersionRejected";
+      break;
     case "unsafeDesktopEndpoint":
-      return "rendererEndpointRejected";
+      failure = "rendererEndpointRejected";
+      break;
     case "desktopConnectFailed":
     case "desktopDisconnected":
     case "desktopProtocolFailed":
-      return "rendererConnectionRejected";
+      failure = "rendererConnectionRejected";
+      break;
     case "desktopEvaluationFailed":
     case "invalidDesktopTasks":
-      return "taskContractRejected";
+      failure = "taskContractRejected";
+      break;
     default:
-      return "rendererRejected";
+      failure = "rendererRejected";
   }
+  return new DesktopCompanionStartError(failure);
 }
 
 export function controlledLaunchArguments(

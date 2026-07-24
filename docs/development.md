@@ -113,8 +113,9 @@ Installation writes an owner-only artifact under the current user's
 LaunchAgent under `~/Library/LaunchAgents`. The service reconciles any durable
 controlled-launch record before listening. Status output is content-free and
 reports only lifecycle, a bounded rejected stage, availability, and task
-count. It never returns the underlying process, signature, renderer, or task
-payload that caused a rejection.
+count. Protocol revision 2 may additionally report a prior bounded failure and
+the numeric renderer target count. It never returns the underlying process,
+signature, renderer, target metadata, or task payload that caused a rejection.
 
 `companion-start` is privileged and disruptive: it stops an argument-free
 normal Codex process and launches the official signed Codex application with a
