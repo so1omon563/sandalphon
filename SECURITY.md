@@ -49,7 +49,7 @@ targets, malformed task state, and failed restoration. It never emits task
 identifiers or content. Running it does not authorize production use; normal
 Codex restart and listener verification are mandatory after every proof.
 
-SO1-180 moves any future privileged desktop lifecycle into a separately
+SO1-180 moved the privileged desktop lifecycle boundary into a separately
 supervised same-user companion. The Stream Deck plugin must not launch,
 terminate, or attach to Codex desktop. The headless companion proof accepts
 local clients only through a current-uid runtime directory with mode `0700` and
@@ -67,7 +67,21 @@ after its fence authorizes neither cleanup nor stopped state until the
 companion restarts, and ambiguous recovery authorizes no termination target.
 These permissions exclude other local users but do not defend against a
 malicious process already running as the same user. No live macOS driver or
-plugin client is enabled by this proof.
+plugin client is enabled by the headless proof.
+
+SO1-196 implements the macOS driver behind that same boundary. The companion
+persists an owner-only launch record before stopping normal Codex, admits only
+the current uid and exact PID/start-time/control-marker tuple, requires the
+listener owner to match that process, and rechecks the exact allowlisted
+application, Chromium, protocol, page, and task contract. Cleanup terminates
+only the recorded process, verifies listener removal, and restores exactly one
+argument-free normal Codex process. Version drift or ambiguous ownership fails
+closed without creating another controlled process or choosing a termination
+target. The per-user LaunchAgent installs an owner-only companion artifact and
+record; its management output omits opaque task identifiers and renderer
+content. The driver remains an explicit development feasibility surface until
+its bounded live lifecycle matrix passes, and the Stream Deck plugin still has
+no companion client.
 
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.

@@ -28,6 +28,14 @@ All notable changes to Sandalphon are recorded here.
 
 ### Added
 
+- A separately bundled macOS companion driver and per-user launchd lifecycle
+  with exact current-uid process identity, pre-launch ownership persistence,
+  loopback listener ownership checks, exact renderer discovery, continuous
+  capability monitoring, verified controlled-process cleanup, and restoration
+  of one argument-free normal Codex process.
+- Content-free companion install, status, start, stop, recovery, and uninstall
+  commands that keep the privileged desktop lifecycle outside the Stream Deck
+  plugin.
 - An independently supervised desktop-companion lifecycle and headless local
   IPC proof with explicit stopped, starting, ready, degraded, cleanup, and
   recovery-required states, same-user Unix-socket permissions, bounded

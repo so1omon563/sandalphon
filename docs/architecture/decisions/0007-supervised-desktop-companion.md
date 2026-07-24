@@ -125,11 +125,15 @@ drivers. This headless proof demonstrates serialization, plugin disconnect and
 reconnect, exact capability acceptance, fail-closed cleanup, and ambiguous
 restart behavior without launching Codex or touching Stream Deck hardware.
 
-The next slice may implement the macOS driver and launchd definition. It must
-pass repeated cold start, companion restart, controlled-process loss, cleanup,
-and normal-restart trials before the plugin gains an IPC client. Only after
-those trials pass may task selection be reconnected and tested on the Stream
-Deck Mk.2 and Stream Deck +.
+The second slice implements the macOS driver, separately bundled executable,
+and per-user launchd definition. It persists ownership before replacing normal
+Codex, binds observations to the current uid and exact PID/start-time/listener
+tuple, continuously rechecks the accepted renderer capability, and restores
+one argument-free normal Codex process after cleanup or abandoned-start
+recovery. It must still pass repeated cold start, companion restart,
+controlled-process loss, cleanup, and normal-restart trials before the plugin
+gains an IPC client. Only after those trials pass may task selection be
+reconnected and tested on the Stream Deck Mk.2 and Stream Deck +.
 
 ## Consequences
 

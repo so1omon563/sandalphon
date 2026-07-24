@@ -82,24 +82,50 @@ arguments, and verifying the former port has no listener. A stale
 `DevToolsActivePort` file is not evidence of an active listener; verify the
 socket itself.
 
-## Supervised Companion Headless Proof
+## Supervised Desktop Companion
 
 ADR 0007 replaces in-plugin desktop lifecycle ownership with a separately
-supervised companion. The first slice is deliberately headless: it exercises
-the lifecycle supervisor and a real Unix-domain socket with deterministic
-drivers, without launching Codex, restarting Stream Deck, or enabling task
-selection in the plugin.
+supervised companion. The Stream Deck plugin remains disconnected from this
+surface. The companion is a separately bundled development feasibility
+component with its own current-user LaunchAgent and strict local protocol.
 
-Run the focused proof with:
+Run the deterministic companion coverage with:
 
-    npm test -- --run test/desktopCompanion.test.ts test/desktopCompanionServer.test.ts
+    npm test -- --run \
+      test/desktopCompanion.test.ts \
+      test/desktopCompanionServer.test.ts \
+      test/desktopCompanionMain.test.ts \
+      test/desktopCompanionLaunchd.test.mjs \
+      test/macosDesktopCompanionDriver.test.ts \
+      test/macosDesktopCompanionPlatform.test.ts
 
-The IPC test creates a short temporary macOS socket path, verifies a `0600`
-socket inside a `0700` current-user directory, disconnects and reconnects a
-client without changing companion ownership, and removes the socket on clean
-shutdown. The macOS driver and launchd definition remain a later SO1-180 slice;
-do not repeat live Codex or hardware restart testing until that driver passes
-its own bounded lifecycle matrix.
+Install or manage the current checkout's companion with:
+
+    make companion-install
+    make companion-status
+    make companion-start
+    make companion-stop
+    make companion-recover
+    make companion-uninstall
+
+Installation writes an owner-only artifact under the current user's
+`~/Library/Application Support/Sandalphon` directory and an owner-only
+LaunchAgent under `~/Library/LaunchAgents`. The service reconciles any durable
+controlled-launch record before listening. Status output is content-free and
+reports only lifecycle, failure category, availability, and task count.
+
+`companion-start` is privileged and disruptive: it stops an argument-free
+normal Codex process and launches the exact allowlisted application build with
+a random loopback debugging listener. Run it only for the bounded SO1-196 live
+lifecycle matrix. If the installed application version differs from
+`MACOS_DESKTOP_CONTROL_VERSION`, reconciliation and Start fail closed; update
+the tuple only after a new source-clean feasibility proof. End every live trial
+with `make companion-stop` and verify stopped state before uninstalling.
+
+The required live matrix covers cold start, companion restart while controlled,
+controlled-process loss, capability loss, explicit cleanup, and restoration of
+exactly one argument-free normal Codex process. Do not add a plugin IPC client
+or repeat Stream Deck hardware testing until that matrix passes.
 
 ## Packaging
 

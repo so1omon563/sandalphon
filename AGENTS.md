@@ -94,9 +94,18 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
 - src/desktopCompanionServer.ts owns the bounded same-user Unix-socket proof.
   It is not imported by the Stream Deck plugin and grants the plugin no Codex
   process authority.
+- src/macosDesktopCompanionDriver.ts and
+  src/macosDesktopCompanionPlatform.ts own the exact-version macOS process,
+  listener, renderer-discovery, cleanup, and normal-launch boundary used only
+  by the separately bundled companion executable.
+- src/desktopCompanionMain.ts owns companion startup reconciliation,
+  capability monitoring, and signal-safe socket shutdown under launchd.
 - scripts/probe-desktop-control.mjs is the explicit-opt-in, exact-version,
   loopback-only live feasibility tool. It lists opaque desktop task identifiers
   and can switch once and restore; it is not production plugin wiring.
+- scripts/manage-desktop-companion.mjs installs and manages the owner-only
+  per-user LaunchAgent and its separately built companion artifact. It must not
+  mutate Stream Deck plugin state.
 - test contains Vitest unit and manifest-contract coverage.
 - docs/architecture/decisions contains numbered ADRs.
 - artwork/source contains editable original asset sources.
@@ -130,6 +139,12 @@ Use Node.js 24 or newer and Stream Deck 7.1 or newer.
 - make test: run deterministic Vitest tests.
 - make coverage: enforce the current coverage threshold.
 - make build: bundle the plugin into the sdPlugin directory.
+- make companion-install: build and install the current per-user companion
+  LaunchAgent.
+- make companion-status, make companion-start, make companion-stop, and make
+  companion-recover: invoke the bounded local lifecycle protocol.
+- make companion-uninstall: verify cleanup before removing the per-user
+  LaunchAgent and companion artifact.
 - make validate: run official Stream Deck validation.
 - make package: produce a local installer under dist.
 - make release-candidate: run the canonical gate, create the real installer,
