@@ -115,12 +115,18 @@ controlled-launch record before listening. Status output is content-free and
 reports only lifecycle, failure category, availability, and task count.
 
 `companion-start` is privileged and disruptive: it stops an argument-free
-normal Codex process and launches the exact allowlisted application build with
-a random loopback debugging listener. Run it only for the bounded SO1-196 live
-lifecycle matrix. If the installed application version differs from
-`MACOS_DESKTOP_CONTROL_VERSION`, reconciliation and Start fail closed; update
-the tuple only after a new source-clean feasibility proof. End every live trial
-with `make companion-stop` and verify stopped state before uninstalling.
+normal Codex process and launches the official signed Codex application with a
+random loopback debugging listener. Run it only for the bounded SO1-196 live
+lifecycle matrix. On the first controlled start for a new signed build, the
+companion verifies the OpenAI bundle and Team ID, sealed code signature,
+Gatekeeper assessment, exact renderer page and protocol, then switches to one
+other task and restores the original task. Only a successful restoration
+writes the owner-only compatibility receipt. Later starts reuse that receipt
+only while the signed identity, renderer engine, protocol, and Sandalphon
+contract revision still match. Any mismatch or failed canary disables desktop
+control and restores normal Codex; it does not require a source change merely
+because the application version changed. End every live trial with
+`make companion-stop` and verify stopped state before uninstalling.
 
 The required live matrix covers cold start, companion restart while controlled,
 controlled-process loss, capability loss, explicit cleanup, and restoration of

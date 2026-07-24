@@ -30,9 +30,7 @@ afterEach(async () => {
 
 const policy: DesktopControlPolicy = {
   enabled: true,
-  allowedVersions: [
-    { application: "app", engine: "engine", protocol: "protocol" },
-  ],
+  allowedContractRevisions: [1],
 };
 
 const observation: DesktopControlObservation = {
@@ -40,7 +38,8 @@ const observation: DesktopControlObservation = {
   endpointHost: "127.0.0.1",
   epoch: 1,
   revision: 1,
-  version: policy.allowedVersions[0]!,
+  contractRevision: 1,
+  version: { application: "app", engine: "engine", protocol: "protocol" },
   capabilities: ["task.list", "task.select"],
   targets: [{ id: "opaque", selected: true }],
 };

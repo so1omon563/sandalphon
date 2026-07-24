@@ -14,19 +14,22 @@ import { promisify } from "node:util";
 
 import type {
   DesktopControlObservation,
-  DesktopControlVersion,
   DesktopTaskTarget,
 } from "./desktopControlContract.js";
 import {
   MACOS_CODEX_APPLICATION_PATH,
   MACOS_CODEX_EXECUTABLE_PATH,
+  MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
   controlledLaunchArguments,
+  type MacosCodexApplicationIdentity,
   type MacosControlledLaunchRecord,
   type MacosControlledProcess,
   type MacosDesktopCompanionPlatform,
+  type MacosDesktopCompatibilityReceipt,
 } from "./macosDesktopCompanionDriver.js";
 
 export const MACOS_CONTROL_RECORD_NAME = "controlled-launch.json";
+export const MACOS_COMPATIBILITY_RECEIPT_NAME = "desktop-compatibility.json";
 const TASK_ROW_SELECTOR =
   '[role="button"][data-app-action-sidebar-thread-row][data-app-action-sidebar-thread-id]';
 const MAX_DISCOVERY_BYTES = 256 * 1024;
@@ -37,28 +40,72 @@ const execFileAsync = promisify(execFile);
 
 export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionPlatform {
   readonly #runtimeDirectory: string;
-  readonly #version: DesktopControlVersion;
+  readonly #stateDirectory: string;
   readonly #uid: number;
 
-  constructor(runtimeDirectory: string, version: DesktopControlVersion) {
+  constructor(runtimeDirectory: string, stateDirectory: string) {
     const uid = process.getuid?.();
     if (uid === undefined) throw new Error("unsupportedPlatform");
     this.#runtimeDirectory = runtimeDirectory;
-    this.#version = version;
+    this.#stateDirectory = stateDirectory;
     this.#uid = uid;
   }
 
-  async readApplicationVersion(signal: AbortSignal): Promise<string> {
-    const { stdout } = await execFileAsync(
-      "/usr/libexec/PlistBuddy",
-      [
-        "-c",
-        "Print :CFBundleShortVersionString",
-        `${MACOS_CODEX_APPLICATION_PATH}/Contents/Info.plist`,
-      ],
-      { encoding: "utf8", signal },
+  async readApplicationIdentity(
+    signal: AbortSignal,
+  ): Promise<MacosCodexApplicationIdentity> {
+    await execFileAsync(
+      "/usr/bin/codesign",
+      ["--verify", "--deep", "--strict", MACOS_CODEX_APPLICATION_PATH],
+      { signal },
     );
-    return stdout.trim();
+    const infoPath = `${MACOS_CODEX_APPLICATION_PATH}/Contents/Info.plist`;
+    const readPlist = async (key: string): Promise<string> => {
+      const { stdout } = await execFileAsync(
+        "/usr/libexec/PlistBuddy",
+        ["-c", `Print :${key}`, infoPath],
+        { encoding: "utf8", signal },
+      );
+      return stdout.trim();
+    };
+    const [, signature, applicationVersion, bundleVersion, bundleIdentifier] =
+      await Promise.all([
+        execFileAsync(
+          "/usr/sbin/spctl",
+          ["--assess", "--type", "execute", MACOS_CODEX_APPLICATION_PATH],
+          { signal },
+        ),
+        execFileAsync(
+          "/usr/bin/codesign",
+          ["-dv", "--verbose=4", MACOS_CODEX_APPLICATION_PATH],
+          { encoding: "utf8", signal },
+        ),
+        readPlist("CFBundleShortVersionString"),
+        readPlist("CFBundleVersion"),
+        readPlist("CFBundleIdentifier"),
+      ]);
+    return parseMacosCodexApplicationIdentity({
+      applicationVersion,
+      bundleVersion,
+      bundleIdentifier,
+      signature: signature.stderr,
+    });
+  }
+
+  readCompatibilityReceipt(signal: AbortSignal): Promise<unknown> {
+    return this.#readSecureJson(this.#receiptPath(), 4096, signal);
+  }
+
+  async writeCompatibilityReceipt(
+    receipt: MacosDesktopCompatibilityReceipt,
+    signal: AbortSignal,
+  ): Promise<void> {
+    await this.#writeSecureJson(
+      this.#receiptPath(),
+      `.desktop-compatibility-${receipt.identity.cdHash}.tmp`,
+      receipt,
+      signal,
+    );
   }
 
   async readLaunchRecord(signal: AbortSignal): Promise<unknown> {
@@ -233,19 +280,47 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
       fetchJson(`${origin}/json/version`, signal),
       fetchJson(`${origin}/json/list`, signal),
     ]);
-    const debuggerUrl = decodeDebuggerUrl(
-      { version, targets },
-      record.port,
-      this.#version,
-    );
-    const tasks = await evaluateDesktopTasks(debuggerUrl, signal);
+    const discovery = decodeDebuggerPage({ version, targets }, record.port);
+    const tasks = await evaluateDesktopTasks(discovery.debuggerUrl, signal);
     return {
       connected: true,
       endpointHost: "127.0.0.1",
-      version: this.#version,
+      contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+      version: {
+        application: record.identity.applicationVersion,
+        engine: discovery.engine,
+        protocol: discovery.protocol,
+      },
       capabilities: ["task.list", "task.select"],
       targets: tasks,
     };
+  }
+
+  async selectDesktopTask(
+    record: MacosControlledLaunchRecord,
+    targetId: string,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (!targetId || targetId.length > 256) throw new Error("invalidTargetId");
+    const origin = `http://127.0.0.1:${record.port}`;
+    const [version, targets] = await Promise.all([
+      fetchJson(`${origin}/json/version`, signal),
+      fetchJson(`${origin}/json/list`, signal),
+    ]);
+    const discovery = decodeDebuggerPage({ version, targets }, record.port);
+    const clicked = await evaluateDesktopValue(
+      discovery.debuggerUrl,
+      taskSelectionExpression(targetId),
+      signal,
+    );
+    if (clicked !== true) throw new Error("desktopSelectionFailed");
+    const deadline = Date.now() + 2_000;
+    while (Date.now() < deadline) {
+      const tasks = await evaluateDesktopTasks(discovery.debuggerUrl, signal);
+      if (tasks.find((target) => target.selected)?.id === targetId) return;
+      await delay(50, undefined, { signal });
+    }
+    throw new Error("desktopSelectionUnverified");
   }
 
   async terminateControlled(
@@ -327,6 +402,56 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
   #recordPath(): string {
     return join(this.#runtimeDirectory, MACOS_CONTROL_RECORD_NAME);
   }
+
+  #receiptPath(): string {
+    return join(this.#stateDirectory, MACOS_COMPATIBILITY_RECEIPT_NAME);
+  }
+
+  async #readSecureJson(
+    path: string,
+    maxBytes: number,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    throwIfAborted(signal);
+    const status = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (!status) return undefined;
+    if (
+      !status.isFile() ||
+      status.isSymbolicLink() ||
+      status.uid !== this.#uid ||
+      (status.mode & 0o777) !== 0o600 ||
+      status.size > maxBytes
+    ) {
+      throw new Error("unsafeCompatibilityReceipt");
+    }
+    return JSON.parse(
+      await readFile(path, { encoding: "utf8", signal }),
+    ) as unknown;
+  }
+
+  async #writeSecureJson(
+    path: string,
+    temporaryName: string,
+    value: unknown,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const temporary = join(this.#stateDirectory, temporaryName);
+    await unlink(temporary).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    await writeFile(temporary, `${JSON.stringify(value)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+      signal,
+    });
+    await chmod(temporary, 0o600);
+    await rename(temporary, path);
+    await chmod(path, 0o600);
+  }
 }
 
 export interface ParsedMacosProcess {
@@ -393,11 +518,14 @@ export function parseListenerOwner(value: string): number | undefined {
   return unique[0];
 }
 
-export function decodeDebuggerUrl(
+export function decodeDebuggerPage(
   discovery: { readonly version: unknown; readonly targets: unknown },
   port: number,
-  expected: DesktopControlVersion,
-): string {
+): {
+  readonly debuggerUrl: string;
+  readonly engine: string;
+  readonly protocol: "1.3";
+} {
   if (
     !discovery.version ||
     typeof discovery.version !== "object" ||
@@ -407,10 +535,11 @@ export function decodeDebuggerUrl(
     throw new Error("invalidDesktopDiscovery");
   }
   const version = discovery.version as Record<string, unknown>;
-  if (
-    version.Browser !== `Chrome/${expected.engine}` ||
-    version["Protocol-Version"] !== expected.protocol
-  ) {
+  const browser =
+    typeof version.Browser === "string"
+      ? /^Chrome\/(\d+(?:\.\d+){3})$/u.exec(version.Browser)
+      : null;
+  if (!browser || version["Protocol-Version"] !== "1.3") {
     throw new Error("unsupportedDesktopVersion");
   }
   const target = discovery.targets[0] as Record<string, unknown> | undefined;
@@ -430,7 +559,45 @@ export function decodeDebuggerUrl(
   ) {
     throw new Error("unsafeDesktopEndpoint");
   }
-  return url.href;
+  return {
+    debuggerUrl: url.href,
+    engine: browser[1]!,
+    protocol: "1.3",
+  };
+}
+
+export function parseMacosCodexApplicationIdentity(value: {
+  readonly applicationVersion: string;
+  readonly bundleVersion: string;
+  readonly bundleIdentifier: string;
+  readonly signature: string;
+}): MacosCodexApplicationIdentity {
+  const fields = new Map(
+    value.signature
+      .split("\n")
+      .map((line) => line.split("=", 2))
+      .filter((parts): parts is [string, string] => parts.length === 2),
+  );
+  const teamIdentifier = fields.get("TeamIdentifier");
+  const cdHash = fields.get("CDHash");
+  if (
+    !/^[0-9.]{1,32}$/u.test(value.applicationVersion) ||
+    !/^[0-9]{1,16}$/u.test(value.bundleVersion) ||
+    value.bundleIdentifier !== "com.openai.codex" ||
+    fields.get("Identifier") !== "com.openai.codex" ||
+    teamIdentifier !== "2DC432GLL2" ||
+    !cdHash ||
+    !/^[0-9a-f]{40}$/u.test(cdHash)
+  ) {
+    throw new Error("untrustedCodexApplication");
+  }
+  return {
+    applicationVersion: value.applicationVersion,
+    bundleVersion: value.bundleVersion,
+    bundleIdentifier: "com.openai.codex",
+    teamIdentifier: "2DC432GLL2",
+    cdHash,
+  };
 }
 
 export function decodeDesktopTaskTargets(
@@ -468,6 +635,16 @@ export function taskListExpression(): string {
     id: row.getAttribute("data-app-action-sidebar-thread-id"),
     selected: row.getAttribute("aria-current") === "page",
   })))()`;
+}
+
+export function taskSelectionExpression(targetId: string): string {
+  return `(() => {
+    const row = Array.from(document.querySelectorAll(${JSON.stringify(TASK_ROW_SELECTOR)}))
+      .find((candidate) => candidate.getAttribute("data-app-action-sidebar-thread-id") === ${JSON.stringify(targetId)});
+    if (!(row instanceof HTMLElement)) return false;
+    row.click();
+    return true;
+  })()`;
 }
 
 async function inspectProcess(
@@ -511,6 +688,16 @@ async function evaluateDesktopTasks(
   debuggerUrl: string,
   signal: AbortSignal,
 ): Promise<readonly DesktopTaskTarget[]> {
+  return decodeDesktopTaskTargets(
+    await evaluateDesktopValue(debuggerUrl, taskListExpression(), signal),
+  );
+}
+
+async function evaluateDesktopValue(
+  debuggerUrl: string,
+  expression: string,
+  signal: AbortSignal,
+): Promise<unknown> {
   throwIfAborted(signal);
   const socket = new WebSocket(debuggerUrl);
   const abort = (): void => socket.close();
@@ -538,7 +725,7 @@ async function evaluateDesktopTasks(
         id: 1,
         method: "Runtime.evaluate",
         params: {
-          expression: taskListExpression(),
+          expression,
           awaitPromise: true,
           returnByValue: true,
         },
@@ -590,7 +777,7 @@ async function evaluateDesktopTasks(
     } finally {
       signal.removeEventListener("abort", evaluationAbort);
     }
-    return decodeDesktopTaskTargets(value);
+    return value;
   } finally {
     signal.removeEventListener("abort", abort);
     socket.close();

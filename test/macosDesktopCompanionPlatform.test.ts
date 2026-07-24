@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { MACOS_DESKTOP_CONTROL_VERSION } from "../src/macosDesktopCompanionDriver.js";
 import {
-  decodeDebuggerUrl,
+  decodeDebuggerPage,
   decodeDesktopTaskTargets,
+  parseMacosCodexApplicationIdentity,
   parseListenerOwner,
   parseMacosCodexProcessList,
   parseMacosProcessList,
   taskListExpression,
+  taskSelectionExpression,
 } from "../src/macosDesktopCompanionPlatform.js";
+
+const ENGINE = "150.0.7871.124";
 
 describe("macOS desktop companion platform boundaries", () => {
   it("parses exact process identities without retaining unrelated fields", () => {
@@ -53,8 +56,8 @@ describe("macOS desktop companion platform boundaries", () => {
   it("admits only the exact loopback debugger page and version tuple", () => {
     const discovery = {
       version: {
-        Browser: `Chrome/${MACOS_DESKTOP_CONTROL_VERSION.engine}`,
-        "Protocol-Version": MACOS_DESKTOP_CONTROL_VERSION.protocol,
+        Browser: `Chrome/${ENGINE}`,
+        "Protocol-Version": "1.3",
       },
       targets: [
         {
@@ -64,11 +67,13 @@ describe("macOS desktop companion platform boundaries", () => {
         },
       ],
     };
-    expect(
-      decodeDebuggerUrl(discovery, 49152, MACOS_DESKTOP_CONTROL_VERSION),
-    ).toBe("ws://127.0.0.1:49152/devtools/page/opaque");
+    expect(decodeDebuggerPage(discovery, 49152)).toEqual({
+      debuggerUrl: "ws://127.0.0.1:49152/devtools/page/opaque",
+      engine: ENGINE,
+      protocol: "1.3",
+    });
     expect(() =>
-      decodeDebuggerUrl(
+      decodeDebuggerPage(
         {
           ...discovery,
           targets: [
@@ -79,9 +84,32 @@ describe("macOS desktop companion platform boundaries", () => {
           ],
         },
         49152,
-        MACOS_DESKTOP_CONTROL_VERSION,
       ),
     ).toThrow("unsafeDesktopEndpoint");
+  });
+
+  it("admits only the official signed application identity", () => {
+    const signature =
+      "Identifier=com.openai.codex\nTeamIdentifier=2DC432GLL2\nCDHash=753af97d4310c3c393348bdc0f28794e51b096ed\n";
+    expect(
+      parseMacosCodexApplicationIdentity({
+        applicationVersion: "26.721.41059",
+        bundleVersion: "5848",
+        bundleIdentifier: "com.openai.codex",
+        signature,
+      }),
+    ).toMatchObject({
+      teamIdentifier: "2DC432GLL2",
+      cdHash: "753af97d4310c3c393348bdc0f28794e51b096ed",
+    });
+    expect(() =>
+      parseMacosCodexApplicationIdentity({
+        applicationVersion: "26.721.41059",
+        bundleVersion: "5848",
+        bundleIdentifier: "com.openai.codex",
+        signature: signature.replace("2DC432GLL2", "UNTRUSTED"),
+      }),
+    ).toThrow("untrustedCodexApplication");
   });
 
   it("projects only bounded opaque task identity", () => {
@@ -115,5 +143,8 @@ describe("macOS desktop companion platform boundaries", () => {
     expect(expression).toContain("aria-current");
     expect(expression).not.toContain("textContent");
     expect(expression).not.toContain("innerText");
+    const selection = taskSelectionExpression('opaque"task');
+    expect(selection).toContain(JSON.stringify('opaque"task'));
+    expect(selection).not.toContain("textContent");
   });
 });

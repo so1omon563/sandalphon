@@ -16,8 +16,9 @@ listener yet still retain recovery state. Restarting the Stream Deck host also
 restarts the plugin at exactly the point where stable ownership is most needed.
 
 That implementation was closed without merge. Its result rejects the process
-boundary, not the exact-gated task capability or the official app-server
-controls already on `main`.
+boundary, not the bounded task capability or the official app-server controls
+already on `main`. ADR 0008 later replaces the companion's manual application
+version allowlist with signed-build runtime qualification.
 
 The replacement must remain independently authored from Sandalphon's accepted
 contracts and public interfaces. It must not use another implementation as a
@@ -38,8 +39,8 @@ may:
 
 - create and retain the controlled-launch record;
 - choose the random loopback debugging port;
-- launch the exact allowlisted Codex executable with the bounded listener;
-- prove the exact application, Chromium, CDP, page, and task capabilities;
+- launch the verified official Codex executable with the bounded listener;
+- prove the signed application, CDP, page, and task capabilities;
 - attach to that exact renderer;
 - terminate only the exact controlled process it owns;
 - verify listener removal; and
@@ -99,7 +100,7 @@ The companion exposes exactly six lifecycle states:
 | `recoveryRequired` | Ownership or cleanup is ambiguous; automatic relaunch and task actions remain disabled.                  |
 
 Every transition advances a monotonic sequence. Renderer authority is carried
-only by the existing exact-version desktop-control state. Capability loss
+only by the qualified desktop-control state. Capability loss
 immediately revokes every task target and offer before cleanup begins.
 
 Start, stop, and recovery operations are serialized across all clients. A
@@ -143,8 +144,8 @@ reconnected and tested on the Stream Deck Mk.2 and Stream Deck +.
   its own upgrade, compatibility, diagnostics, and cleanup obligations.
 - A stable companion can reconcile plugin restarts without changing desktop
   process ownership.
-- Same-user CDP remains a privileged opt-in risk and exact desktop version
-  allowlisting remains deliberate maintenance work.
+- Same-user CDP remains a privileged opt-in risk and each new signed build
+  requires the reversible qualification defined by ADR 0008.
 - The initial headless slice is not a supported desktop-control surface and is
   not imported into the plugin bundle.
 - SO1-175 remains blocked until the live companion driver, plugin IPC client,
@@ -155,6 +156,7 @@ reconnected and tested on the Stream Deck Mk.2 and Stream Deck +.
 ## Evidence
 
 - [ADR 0006](0006-version-gated-desktop-control.md)
+- [ADR 0008](0008-qualified-desktop-builds.md)
 - [SO1-179 desktop-control feasibility proof](../../so1-179-desktop-control-proof.md)
 - https://www.electronjs.org/docs/latest/api/command-line-switches
 - https://developer.chrome.com/blog/remote-debugging-port

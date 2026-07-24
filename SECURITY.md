@@ -72,16 +72,21 @@ plugin client is enabled by the headless proof.
 SO1-196 implements the macOS driver behind that same boundary. The companion
 persists an owner-only launch record before stopping normal Codex, admits only
 the current uid and exact PID/start-time/control-marker tuple, requires the
-listener owner to match that process, and rechecks the exact allowlisted
-application, Chromium, protocol, page, and task contract. Cleanup terminates
-only the recorded process, verifies listener removal, and restores exactly one
-argument-free normal Codex process. Version drift or ambiguous ownership fails
-closed without creating another controlled process or choosing a termination
-target. The per-user LaunchAgent installs an owner-only companion artifact and
-record; its management output omits opaque task identifiers and renderer
-content. The driver remains an explicit development feasibility surface until
-its bounded live lifecycle matrix passes, and the Stream Deck plugin still has
-no companion client.
+listener owner to match that process, and rechecks the official OpenAI bundle
+and Team ID, sealed code signature, Gatekeeper assessment, exact renderer page,
+CDP protocol, and bounded task contract. A new signed build gains authority
+only after a reversible task-selection canary restores the original task and
+writes an owner-only receipt bound to its code hash, build identity, renderer
+engine, protocol, and Sandalphon contract revision. Receipt or contract drift
+fails closed and requires requalification, not a source-level version
+allowlist change. Cleanup terminates only the recorded process, verifies
+listener removal, and restores exactly one argument-free normal Codex process.
+Ambiguous ownership fails closed without creating another controlled process
+or choosing a termination target. The per-user LaunchAgent installs an
+owner-only companion artifact and records; its management output omits opaque
+task identifiers and renderer content. The driver remains an explicit
+development feasibility surface until its bounded live lifecycle matrix
+passes, and the Stream Deck plugin still has no companion client.
 
 Issues in Codex, Stream Deck, macOS, Node.js, or a package dependency should be
 reported upstream unless Sandalphon directly contributes to the vulnerability.

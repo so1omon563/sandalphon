@@ -11,13 +11,7 @@ import {
 
 const policy: DesktopControlPolicy = {
   enabled: true,
-  allowedVersions: [
-    {
-      application: "26.715.52143",
-      engine: "150.0.7871.124",
-      protocol: "1.3",
-    },
-  ],
+  allowedContractRevisions: [1],
 };
 
 const observation: DesktopControlObservation = {
@@ -25,7 +19,12 @@ const observation: DesktopControlObservation = {
   endpointHost: "127.0.0.1",
   epoch: 4,
   revision: 9,
-  version: policy.allowedVersions[0]!,
+  contractRevision: 1,
+  version: {
+    application: "26.721.41059",
+    engine: "150.0.7871.124",
+    protocol: "1.3",
+  },
   capabilities: ["task.list", "task.select"],
   targets: [
     { id: "task-1", selected: true },
@@ -34,18 +33,18 @@ const observation: DesktopControlObservation = {
 };
 
 describe("desktop control contract", () => {
-  it("requires explicit enablement and an exact version tuple", () => {
+  it("requires explicit enablement and an accepted qualified contract", () => {
     expect(
       evaluateDesktopControl({ ...policy, enabled: false }, observation),
     ).toMatchObject({ availability: "unavailable", reason: "disabled" });
     expect(
       evaluateDesktopControl(policy, {
         ...observation,
-        version: { ...observation.version, engine: "150.0.7871.125" },
+        contractRevision: 2,
       }),
     ).toMatchObject({
       availability: "unavailable",
-      reason: "unsupportedVersion",
+      reason: "unsupportedContract",
     });
   });
 

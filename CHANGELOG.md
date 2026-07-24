@@ -6,6 +6,10 @@ All notable changes to Sandalphon are recorded here.
 
 ### Changed
 
+- Replaced the macOS companion's per-version Codex allowlist with automatic
+  official-signature verification and a reversible per-build compatibility
+  qualification receipt, so routine Codex updates fail closed and requalify
+  without requiring a Sandalphon source change.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

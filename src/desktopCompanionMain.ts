@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { DesktopCompanionSupervisor } from "./desktopCompanion.js";
@@ -6,7 +8,7 @@ import {
   listenDesktopCompanion,
 } from "./desktopCompanionServer.js";
 import {
-  MACOS_DESKTOP_CONTROL_VERSION,
+  MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
   MacosDesktopCompanionDriver,
 } from "./macosDesktopCompanionDriver.js";
 import { NodeMacosDesktopCompanionPlatform } from "./macosDesktopCompanionPlatform.js";
@@ -44,14 +46,17 @@ export async function runDesktopCompanion(
 ): Promise<void> {
   if (process.platform !== "darwin") throw new Error("unsupportedPlatform");
   const resolvedRuntime = await ensureSecureRuntimeDirectory(runtimeDirectory);
+  const resolvedState = await ensureSecureRuntimeDirectory(
+    join(homedir(), "Library", "Application Support", "Sandalphon"),
+  );
   const platform = new NodeMacosDesktopCompanionPlatform(
     resolvedRuntime,
-    MACOS_DESKTOP_CONTROL_VERSION,
+    resolvedState,
   );
   const driver = new MacosDesktopCompanionDriver(platform);
   const supervisor = new DesktopCompanionSupervisor(driver, {
     enabled: true,
-    allowedVersions: [MACOS_DESKTOP_CONTROL_VERSION],
+    allowedContractRevisions: [MACOS_DESKTOP_CONTROL_CONTRACT_REVISION],
   });
   await supervisor.recover();
   const server = await listenDesktopCompanion(resolvedRuntime, supervisor);

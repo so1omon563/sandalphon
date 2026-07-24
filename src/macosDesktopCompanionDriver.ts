@@ -4,21 +4,14 @@ import type {
   DesktopCompanionDriver,
   DesktopCompanionRecovery,
 } from "./desktopCompanion.js";
-import type {
-  DesktopControlObservation,
-  DesktopControlVersion,
-} from "./desktopControlContract.js";
+import type { DesktopControlObservation } from "./desktopControlContract.js";
 
 export const MACOS_CODEX_APPLICATION_PATH = "/Applications/ChatGPT.app";
 export const MACOS_CODEX_EXECUTABLE_PATH =
   "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT";
-export const MACOS_DESKTOP_CONTROL_VERSION: DesktopControlVersion =
-  Object.freeze({
-    application: "26.715.52143",
-    engine: "150.0.7871.124",
-    protocol: "1.3",
-  });
-export const MACOS_CONTROL_RECORD_SCHEMA = 1 as const;
+export const MACOS_DESKTOP_CONTROL_CONTRACT_REVISION = 1 as const;
+export const MACOS_CONTROL_RECORD_SCHEMA = 2 as const;
+export const MACOS_COMPATIBILITY_RECEIPT_SCHEMA = 1 as const;
 const CONTROL_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
@@ -27,10 +20,26 @@ export interface MacosControlledProcess {
   readonly startedAt: string;
 }
 
+export interface MacosCodexApplicationIdentity {
+  readonly applicationVersion: string;
+  readonly bundleVersion: string;
+  readonly bundleIdentifier: "com.openai.codex";
+  readonly teamIdentifier: "2DC432GLL2";
+  readonly cdHash: string;
+}
+
+export interface MacosDesktopCompatibilityReceipt {
+  readonly schema: typeof MACOS_COMPATIBILITY_RECEIPT_SCHEMA;
+  readonly contractRevision: typeof MACOS_DESKTOP_CONTROL_CONTRACT_REVISION;
+  readonly identity: MacosCodexApplicationIdentity;
+  readonly engine: string;
+  readonly protocol: "1.3";
+}
+
 export interface MacosControlledLaunchRecord {
   readonly schema: typeof MACOS_CONTROL_RECORD_SCHEMA;
   readonly phase: "launching" | "controlled";
-  readonly applicationVersion: string;
+  readonly identity: MacosCodexApplicationIdentity;
   readonly controlId: string;
   readonly port: number;
   readonly epoch: number;
@@ -39,7 +48,14 @@ export interface MacosControlledLaunchRecord {
 }
 
 export interface MacosDesktopCompanionPlatform {
-  readApplicationVersion(signal: AbortSignal): Promise<string>;
+  readApplicationIdentity(
+    signal: AbortSignal,
+  ): Promise<MacosCodexApplicationIdentity>;
+  readCompatibilityReceipt(signal: AbortSignal): Promise<unknown>;
+  writeCompatibilityReceipt(
+    receipt: MacosDesktopCompatibilityReceipt,
+    signal: AbortSignal,
+  ): Promise<void>;
   readLaunchRecord(signal: AbortSignal): Promise<unknown>;
   writeLaunchRecord(
     record: MacosControlledLaunchRecord,
@@ -60,6 +76,11 @@ export interface MacosDesktopCompanionPlatform {
     record: MacosControlledLaunchRecord,
     signal: AbortSignal,
   ): Promise<Omit<DesktopControlObservation, "epoch" | "revision">>;
+  selectDesktopTask(
+    record: MacosControlledLaunchRecord,
+    targetId: string,
+    signal: AbortSignal,
+  ): Promise<void>;
   terminateControlled(
     process: MacosControlledProcess,
     signal: AbortSignal,
@@ -70,14 +91,12 @@ export interface MacosDesktopCompanionPlatform {
 }
 
 export interface MacosDesktopCompanionDriverOptions {
-  readonly version?: DesktopControlVersion;
   readonly createControlId?: () => string;
   readonly createEpoch?: () => number;
 }
 
 export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
   readonly #platform: MacosDesktopCompanionPlatform;
-  readonly #version: DesktopControlVersion;
   readonly #createControlId: () => string;
   readonly #createEpoch: () => number;
 
@@ -86,7 +105,6 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     options: MacosDesktopCompanionDriverOptions = {},
   ) {
     this.#platform = platform;
-    this.#version = options.version ?? MACOS_DESKTOP_CONTROL_VERSION;
     this.#createControlId = options.createControlId ?? randomUUID;
     this.#createEpoch =
       options.createEpoch ?? (() => randomInt(1, Number.MAX_SAFE_INTEGER));
@@ -95,7 +113,7 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
   async startControlled(
     signal: AbortSignal,
   ): Promise<DesktopControlObservation> {
-    await this.#requireVersion(signal);
+    const identity = await this.#platform.readApplicationIdentity(signal);
     if ((await this.#readRecord(signal)) !== undefined) {
       throw new Error("controlledRecordExists");
     }
@@ -108,7 +126,7 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     const launching: MacosControlledLaunchRecord = {
       schema: MACOS_CONTROL_RECORD_SCHEMA,
       phase: "launching",
-      applicationVersion: this.#version.application,
+      identity,
       controlId: this.#createControlId(),
       port: await this.#platform.allocateLoopbackPort(signal),
       epoch: this.#createEpoch(),
@@ -240,7 +258,8 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     ) {
       throw new Error("listenerOwnershipChanged");
     }
-    await this.#platform.observeDesktop(record, signal);
+    const observed = await this.#platform.observeDesktop(record, signal);
+    await this.#requireReceipt(record, observed, signal);
   }
 
   async #observe(
@@ -251,6 +270,7 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     const owner = await this.#platform.listenerOwner(record.port, signal);
     if (owner !== process.pid) throw new Error("listenerOwnershipUnverified");
     const observed = await this.#platform.observeDesktop(record, signal);
+    await this.#qualify(record, observed, signal);
     const next = { ...record, revision: record.revision + 1 };
     await this.#platform.writeLaunchRecord(next, signal);
     return {
@@ -266,18 +286,68 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     const raw = await this.#platform.readLaunchRecord(signal);
     if (raw === undefined) return undefined;
     const record = parseMacosControlledLaunchRecord(raw);
-    if (record.applicationVersion !== this.#version.application) {
-      throw new Error("invalidControlledRecord");
-    }
     return record;
   }
 
-  async #requireVersion(signal: AbortSignal): Promise<void> {
+  async #qualify(
+    record: MacosControlledLaunchRecord,
+    observed: Omit<DesktopControlObservation, "epoch" | "revision">,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const rawReceipt = await this.#platform.readCompatibilityReceipt(signal);
+    if (rawReceipt !== undefined) {
+      try {
+        const receipt = parseMacosDesktopCompatibilityReceipt(rawReceipt);
+        if (receiptMatches(receipt, record.identity, observed)) return;
+      } catch {
+        // A stale or malformed receipt grants no authority.
+      }
+    }
+    const selected = observed.targets.find((target) => target.selected);
+    const alternate = observed.targets.find((target) => !target.selected);
+    if (!selected || !alternate)
+      throw new Error("qualificationCanaryUnavailable");
+    await this.#platform.selectDesktopTask(record, alternate.id, signal);
+    const changed = await this.#platform.observeDesktop(record, signal);
     if (
-      (await this.#platform.readApplicationVersion(signal)) !==
-      this.#version.application
+      changed.targets.find((target) => target.selected)?.id !== alternate.id
     ) {
-      throw new Error("unsupportedApplicationVersion");
+      throw new Error("qualificationCanaryFailed");
+    }
+    await this.#platform.selectDesktopTask(record, selected.id, signal);
+    const restored = await this.#platform.observeDesktop(record, signal);
+    if (
+      restored.targets.find((target) => target.selected)?.id !== selected.id
+    ) {
+      throw new Error("qualificationRestoreFailed");
+    }
+    await this.#platform.writeCompatibilityReceipt(
+      {
+        schema: MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
+        contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+        identity: record.identity,
+        engine: restored.version.engine,
+        protocol: "1.3",
+      },
+      signal,
+    );
+  }
+
+  async #requireReceipt(
+    record: MacosControlledLaunchRecord,
+    observed: Omit<DesktopControlObservation, "epoch" | "revision">,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const raw = await this.#platform.readCompatibilityReceipt(signal);
+    if (
+      raw === undefined ||
+      !receiptMatches(
+        parseMacosDesktopCompatibilityReceipt(raw),
+        record.identity,
+        observed,
+      )
+    ) {
+      throw new Error("compatibilityReceiptUnavailable");
     }
   }
 }
@@ -293,18 +363,18 @@ export function parseMacosControlledLaunchRecord(
   const expectedKeys =
     process === undefined
       ? [
-          "applicationVersion",
           "controlId",
           "epoch",
+          "identity",
           "phase",
           "port",
           "revision",
           "schema",
         ]
       : [
-          "applicationVersion",
           "controlId",
           "epoch",
+          "identity",
           "phase",
           "port",
           "process",
@@ -325,8 +395,7 @@ export function parseMacosControlledLaunchRecord(
     record.schema !== MACOS_CONTROL_RECORD_SCHEMA ||
     Object.keys(record).sort().join(",") !== expectedKeys.sort().join(",") ||
     (record.phase !== "launching" && record.phase !== "controlled") ||
-    typeof record.applicationVersion !== "string" ||
-    !/^[0-9.]{1,32}$/u.test(record.applicationVersion) ||
+    !isMacosCodexApplicationIdentity(record.identity) ||
     typeof record.controlId !== "string" ||
     !CONTROL_ID_PATTERN.test(record.controlId) ||
     !isPort(record.port) ||
@@ -342,7 +411,7 @@ export function parseMacosControlledLaunchRecord(
   return {
     schema: MACOS_CONTROL_RECORD_SCHEMA,
     phase: record.phase,
-    applicationVersion: record.applicationVersion,
+    identity: record.identity,
     controlId: record.controlId,
     port: record.port,
     epoch: record.epoch,
@@ -356,6 +425,60 @@ export function parseMacosControlledLaunchRecord(
         }
       : {}),
   };
+}
+
+export function parseMacosDesktopCompatibilityReceipt(
+  value: unknown,
+): MacosDesktopCompatibilityReceipt {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalidCompatibilityReceipt");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).sort().join(",") !==
+      "contractRevision,engine,identity,protocol,schema" ||
+    record.schema !== MACOS_COMPATIBILITY_RECEIPT_SCHEMA ||
+    record.contractRevision !== MACOS_DESKTOP_CONTROL_CONTRACT_REVISION ||
+    !isMacosCodexApplicationIdentity(record.identity) ||
+    typeof record.engine !== "string" ||
+    !/^\d+(?:\.\d+){3}$/u.test(record.engine) ||
+    record.protocol !== "1.3"
+  ) {
+    throw new Error("invalidCompatibilityReceipt");
+  }
+  return record as unknown as MacosDesktopCompatibilityReceipt;
+}
+
+function isMacosCodexApplicationIdentity(
+  value: unknown,
+): value is MacosCodexApplicationIdentity {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    Object.keys(record).sort().join(",") ===
+      "applicationVersion,bundleIdentifier,bundleVersion,cdHash,teamIdentifier" &&
+    typeof record.applicationVersion === "string" &&
+    /^[0-9.]{1,32}$/u.test(record.applicationVersion) &&
+    typeof record.bundleVersion === "string" &&
+    /^[0-9]{1,16}$/u.test(record.bundleVersion) &&
+    record.bundleIdentifier === "com.openai.codex" &&
+    record.teamIdentifier === "2DC432GLL2" &&
+    typeof record.cdHash === "string" &&
+    /^[0-9a-f]{40}$/u.test(record.cdHash)
+  );
+}
+
+function receiptMatches(
+  receipt: MacosDesktopCompatibilityReceipt,
+  identity: MacosCodexApplicationIdentity,
+  observation: Omit<DesktopControlObservation, "epoch" | "revision">,
+): boolean {
+  return (
+    JSON.stringify(receipt.identity) === JSON.stringify(identity) &&
+    receipt.contractRevision === observation.contractRevision &&
+    receipt.engine === observation.version.engine &&
+    receipt.protocol === observation.version.protocol
+  );
 }
 
 export function controlledLaunchArguments(

@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
   MACOS_CONTROL_RECORD_SCHEMA,
-  MACOS_DESKTOP_CONTROL_VERSION,
+  MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
   MacosDesktopCompanionDriver,
   controlledLaunchArguments,
   parseMacosControlledLaunchRecord,
+  parseMacosDesktopCompatibilityReceipt,
+  type MacosCodexApplicationIdentity,
   type MacosControlledLaunchRecord,
   type MacosControlledProcess,
   type MacosDesktopCompanionPlatform,
+  type MacosDesktopCompatibilityReceipt,
 } from "../src/macosDesktopCompanionDriver.js";
 import type { DesktopControlObservation } from "../src/desktopControlContract.js";
 
@@ -17,9 +21,32 @@ const PROCESS: MacosControlledProcess = {
   pid: 4242,
   startedAt: "Thu Jul 24 11:00:00 2026",
 };
+const IDENTITY: MacosCodexApplicationIdentity = {
+  applicationVersion: "26.721.41059",
+  bundleVersion: "5848",
+  bundleIdentifier: "com.openai.codex",
+  teamIdentifier: "2DC432GLL2",
+  cdHash: "753af97d4310c3c393348bdc0f28794e51b096ed",
+};
+const VERSION = {
+  application: IDENTITY.applicationVersion,
+  engine: "150.0.7871.124",
+  protocol: "1.3",
+} as const;
+const RECEIPT: MacosDesktopCompatibilityReceipt = {
+  schema: MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
+  contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+  identity: IDENTITY,
+  engine: VERSION.engine,
+  protocol: "1.3",
+};
 
 class FakePlatform implements MacosDesktopCompanionPlatform {
-  applicationVersion = MACOS_DESKTOP_CONTROL_VERSION.application;
+  identity = IDENTITY;
+  receipt: unknown = RECEIPT;
+  receiptWrites: MacosDesktopCompatibilityReceipt[] = [];
+  selectedId = "opaque-1";
+  selections: string[] = [];
   controlled: MacosControlledProcess[] = [];
   deleted = 0;
   launchedNormal = 0;
@@ -31,8 +58,18 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   unownedControlled: MacosControlledProcess[] = [];
   writes: MacosControlledLaunchRecord[] = [];
 
-  readApplicationVersion(): Promise<string> {
-    return Promise.resolve(this.applicationVersion);
+  readApplicationIdentity(): Promise<MacosCodexApplicationIdentity> {
+    return Promise.resolve(this.identity);
+  }
+  readCompatibilityReceipt(): Promise<unknown> {
+    return Promise.resolve(this.receipt);
+  }
+  writeCompatibilityReceipt(
+    receipt: MacosDesktopCompatibilityReceipt,
+  ): Promise<void> {
+    this.receipt = receipt;
+    this.receiptWrites.push(receipt);
+    return Promise.resolve();
   }
   readLaunchRecord(): Promise<unknown> {
     return Promise.resolve(this.record);
@@ -73,10 +110,22 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
     return Promise.resolve({
       connected: true,
       endpointHost: "127.0.0.1",
-      version: MACOS_DESKTOP_CONTROL_VERSION,
+      contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+      version: { ...VERSION, application: this.identity.applicationVersion },
       capabilities: ["task.list", "task.select"],
-      targets: [{ id: "opaque", selected: true }],
+      targets: [
+        { id: "opaque-1", selected: this.selectedId === "opaque-1" },
+        { id: "opaque-2", selected: this.selectedId === "opaque-2" },
+      ],
     });
+  }
+  selectDesktopTask(
+    _record: MacosControlledLaunchRecord,
+    targetId: string,
+  ): Promise<void> {
+    this.selectedId = targetId;
+    this.selections.push(targetId);
+    return Promise.resolve();
   }
   terminateControlled(): Promise<void> {
     this.controlled = [];
@@ -123,25 +172,26 @@ describe("macOS desktop companion driver", () => {
       endpointHost: "127.0.0.1",
       epoch: 7,
       revision: 1,
-      targets: [{ id: "opaque", selected: true }],
+      targets: [
+        { id: "opaque-1", selected: true },
+        { id: "opaque-2", selected: false },
+      ],
     });
   });
 
-  it("rejects version drift before creating launch state", async () => {
+  it("accepts a newly signed build and qualifies it with a reversible canary", async () => {
     const platform = new FakePlatform();
-    platform.applicationVersion = "newer";
-    await expect(
-      driver(platform).startControlled(new AbortController().signal),
-    ).rejects.toThrow("unsupportedApplicationVersion");
-    expect(platform.writes).toEqual([]);
-    await expect(
-      driver(platform).reconcileControlled(new AbortController().signal),
-    ).resolves.toEqual({ kind: "normal" });
+    platform.identity = { ...IDENTITY, applicationVersion: "26.722.1" };
+    platform.receipt = undefined;
+    await driver(platform).startControlled(new AbortController().signal);
+    expect(platform.selections).toEqual(["opaque-2", "opaque-1"]);
+    expect(platform.selectedId).toBe("opaque-1");
+    expect(platform.receiptWrites).toHaveLength(1);
+    expect(platform.receiptWrites[0]?.identity).toEqual(platform.identity);
   });
 
   it("reattaches only to the exact recorded process and listener", async () => {
     const platform = new FakePlatform();
-    platform.applicationVersion = "newer-on-disk";
     platform.record = record(PROCESS);
     platform.controlled = [PROCESS];
     platform.owner = PROCESS.pid;
@@ -266,8 +316,8 @@ describe("macOS desktop companion driver", () => {
     for (const invalid of [
       null,
       {},
-      { ...value, schema: 2 },
-      { ...value, applicationVersion: "not-a-version" },
+      { ...value, schema: 1 },
+      { ...value, identity: { ...IDENTITY, applicationVersion: "bad" } },
       { ...value, controlId: "bad" },
       { ...value, port: 0 },
       { ...value, extra: true },
@@ -280,6 +330,13 @@ describe("macOS desktop companion driver", () => {
         "invalidControlledRecord",
       );
     }
+    expect(parseMacosDesktopCompatibilityReceipt(RECEIPT)).toEqual(RECEIPT);
+    expect(() =>
+      parseMacosDesktopCompatibilityReceipt({
+        ...RECEIPT,
+        engine: "unbounded",
+      }),
+    ).toThrow("invalidCompatibilityReceipt");
   });
 });
 
@@ -287,7 +344,7 @@ function record(process?: MacosControlledProcess): MacosControlledLaunchRecord {
   return {
     schema: MACOS_CONTROL_RECORD_SCHEMA,
     phase: process ? "controlled" : "launching",
-    applicationVersion: MACOS_DESKTOP_CONTROL_VERSION.application,
+    identity: IDENTITY,
     controlId: CONTROL_ID,
     port: 49152,
     epoch: 7,

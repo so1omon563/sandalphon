@@ -85,7 +85,7 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
 - src/composableControls.ts owns self-contained status, Resume, attention, and
   Plus session-dial behavior for ordinary user profiles. These controls never
   inherit managed-surface confirmation authority.
-- src/desktopControlContract.ts owns the disabled-by-default, exact-version and
+- src/desktopControlContract.ts owns the disabled-by-default, revisioned
   capability gate for the desktop-control feasibility boundary. It grants only
   revision-bound task-selection authority and contains no live renderer
   attachment.
@@ -95,9 +95,10 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   It is not imported by the Stream Deck plugin and grants the plugin no Codex
   process authority.
 - src/macosDesktopCompanionDriver.ts and
-  src/macosDesktopCompanionPlatform.ts own the exact-version macOS process,
-  listener, renderer-discovery, cleanup, and normal-launch boundary used only
-  by the separately bundled companion executable.
+  src/macosDesktopCompanionPlatform.ts own the signed-application identity,
+  per-build compatibility qualification, macOS process, listener,
+  renderer-discovery, cleanup, and normal-launch boundary used only by the
+  separately bundled companion executable.
 - src/desktopCompanionMain.ts owns companion startup reconciliation,
   capability monitoring, and signal-safe socket shutdown under launchd.
 - scripts/probe-desktop-control.mjs is the explicit-opt-in, exact-version,

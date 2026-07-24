@@ -14,7 +14,7 @@ export interface DesktopControlVersion {
 
 export interface DesktopControlPolicy {
   readonly enabled: boolean;
-  readonly allowedVersions: readonly DesktopControlVersion[];
+  readonly allowedContractRevisions: readonly number[];
 }
 
 export interface DesktopTaskTarget {
@@ -27,6 +27,7 @@ export interface DesktopControlObservation {
   readonly endpointHost: string;
   readonly epoch: number;
   readonly revision: number;
+  readonly contractRevision: number;
   readonly version: DesktopControlVersion;
   readonly capabilities: readonly string[];
   readonly targets: readonly DesktopTaskTarget[];
@@ -36,7 +37,7 @@ export type DesktopControlUnavailableReason =
   | "disabled"
   | "disconnected"
   | "unsafeEndpoint"
-  | "unsupportedVersion"
+  | "unsupportedContract"
   | "missingCapability"
   | "invalidState";
 
@@ -83,8 +84,8 @@ export function evaluateDesktopControl(
   if (observation.endpointHost !== "127.0.0.1") {
     return unavailable(observation, "unsafeEndpoint");
   }
-  if (!isAllowedVersion(policy, observation.version)) {
-    return unavailable(observation, "unsupportedVersion");
+  if (!policy.allowedContractRevisions.includes(observation.contractRevision)) {
+    return unavailable(observation, "unsupportedContract");
   }
   if (
     !REQUIRED_DESKTOP_CONTROL_CAPABILITIES.every((capability) =>
@@ -173,6 +174,8 @@ function hasValidObservationContainer(
     typeof record.endpointHost === "string" &&
     isCounter(record.epoch) &&
     isCounter(record.revision) &&
+    Number.isSafeInteger(record.contractRevision) &&
+    (record.contractRevision as number) > 0 &&
     !!version &&
     typeof version === "object" &&
     typeof (version as Record<string, unknown>).application === "string" &&
@@ -200,18 +203,6 @@ function invalidObservationState(observation: unknown): DesktopControlState {
 
 function isCounter(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
-}
-
-function isAllowedVersion(
-  policy: DesktopControlPolicy,
-  version: DesktopControlVersion,
-): boolean {
-  return policy.allowedVersions.some(
-    (allowed) =>
-      allowed.application === version.application &&
-      allowed.engine === version.engine &&
-      allowed.protocol === version.protocol,
-  );
 }
 
 function hasValidTargets(targets: readonly DesktopTaskTarget[]): boolean {
