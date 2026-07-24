@@ -16,8 +16,8 @@ behavioral core, and verified live integrations for Stream Deck + and the
 15-key Stream Deck capability class:
 
 - an original Node.js 24 and TypeScript Stream Deck plugin;
-- self-contained Session Status, Resume, Attention, and Stream Deck + Sessions
-  dial actions for ordinary user profiles;
+- self-contained Session Status, Resume, Review Changes, Attention, and Stream
+  Deck + Sessions dial actions for ordinary user profiles;
 - strict formatting, linting, type checking, tests, coverage, build, validation,
   and packaging gates;
 - immutable agent/session/run state reduction with latched terminal results;

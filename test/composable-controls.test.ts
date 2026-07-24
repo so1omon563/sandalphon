@@ -38,6 +38,39 @@ describe("ComposableControls", () => {
     );
   });
 
+  it("dispatches only the unchanged current Review offer", async () => {
+    const harness = applicationHarness(reviewSnapshot(1));
+    const controls = new ComposableControls(harness.application);
+    const review = keyAction("review");
+    controls.registerReview(review.action);
+
+    await vi.waitFor(() =>
+      expect(lastSvg(review.setImage)).toContain("Review"),
+    );
+    controls.reviewDown(review.action);
+    await controls.reviewUp(review.action);
+    expect(harness.invoke).toHaveBeenCalledWith({
+      invocationId: "composable-review:1",
+      offerToken: "review-alpha",
+    });
+
+    controls.reviewDown(review.action);
+    harness.emit(reviewSnapshot(2));
+    await controls.reviewUp(review.action);
+    expect(harness.invoke).toHaveBeenCalledTimes(1);
+
+    harness.invoke.mockResolvedValueOnce({ status: "failed" });
+    controls.reviewDown(review.action);
+    await controls.reviewUp(review.action);
+    expect(harness.invoke).toHaveBeenCalledTimes(2);
+    expect(review.showAlert).toHaveBeenCalledOnce();
+
+    harness.emit(snapshotWithoutReview());
+    await vi.waitFor(() =>
+      expect(lastSvg(review.setImage)).toContain("role=blank"),
+    );
+  });
+
   it("dispatches only the unchanged current Resume offer", async () => {
     const harness = applicationHarness(readySnapshot());
     const controls = new ComposableControls(harness.application);
@@ -138,15 +171,20 @@ describe("ComposableControls", () => {
     const harness = applicationHarness(readySnapshot());
     const controls = new ComposableControls(harness.application);
     const resume = keyAction("resume");
+    const review = keyAction("review");
     const attention = keyAction("attention");
     controls.registerResume(resume.action);
+    controls.registerReview(review.action);
     controls.registerAttention(attention.action);
     controls.resumeDown(resume.action);
+    controls.reviewDown(review.action);
     controls.attentionDown(attention.action);
 
     controls.unregister("resume");
+    controls.unregister("review");
     controls.unregister("attention");
     await controls.resumeUp(resume.action);
+    await controls.reviewUp(review.action);
     await controls.attentionUp(attention.action);
 
     expect(harness.invoke).not.toHaveBeenCalled();
@@ -234,6 +272,41 @@ function snapshotWithoutResume(): SandalphonSnapshot {
   };
 }
 
+function reviewSnapshot(revision: number): SandalphonSnapshot {
+  const snapshot = readySnapshot();
+  return {
+    ...snapshot,
+    revision,
+    sessions: [
+      {
+        ...snapshot.sessions[0]!,
+        access: "owned",
+        freshness: "current",
+        actionOffers: [
+          {
+            kind: "ReviewChanges",
+            state: "available",
+            offerToken: "review-alpha",
+            safety: { confirmation: "release", inspection: "target" },
+          },
+        ],
+      },
+      snapshot.sessions[1]!,
+    ],
+  };
+}
+
+function snapshotWithoutReview(): SandalphonSnapshot {
+  const snapshot = reviewSnapshot(3);
+  return {
+    ...snapshot,
+    sessions: [
+      { ...snapshot.sessions[0]!, actionOffers: [] },
+      snapshot.sessions[1]!,
+    ],
+  };
+}
+
 function snapshotWithoutAttention(): SandalphonSnapshot {
   const snapshot = readySnapshot();
   return {
@@ -293,14 +366,16 @@ function session(
 
 function keyAction(id: string) {
   const setImage = vi.fn().mockResolvedValue(undefined);
+  const showAlert = vi.fn().mockResolvedValue(undefined);
   return {
     action: {
       id,
       setImage,
       setTitle: vi.fn().mockResolvedValue(undefined),
-      showAlert: vi.fn().mockResolvedValue(undefined),
+      showAlert,
     } as never,
     setImage,
+    showAlert,
   };
 }
 

@@ -44,6 +44,7 @@ const pluginActionOutputs = [
   },
   ...[
     ["composable-resume", "resume"],
+    ["composable-review", "review"],
     ["composable-attention", "attention"],
     ["composable-session-dial", "roster"],
   ].map(([fileName, iconName]) => ({

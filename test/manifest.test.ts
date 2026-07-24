@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   COMPOSABLE_ATTENTION_ACTION,
+  COMPOSABLE_REVIEW_ACTION,
   COMPOSABLE_RESUME_ACTION,
   COMPOSABLE_SESSION_DIAL_ACTION,
   COMPOSABLE_STATUS_ACTION,
@@ -90,6 +91,7 @@ describe("Stream Deck manifest", () => {
     expect(manifest.Actions.map(({ UUID }) => UUID)).toEqual([
       COMPOSABLE_STATUS_ACTION,
       COMPOSABLE_RESUME_ACTION,
+      COMPOSABLE_REVIEW_ACTION,
       COMPOSABLE_ATTENTION_ACTION,
       COMPOSABLE_SESSION_DIAL_ACTION,
       FOUNDATION_STATUS_ACTION,
@@ -97,7 +99,7 @@ describe("Stream Deck manifest", () => {
       MANAGED_PLUS_ACTION,
       MANAGED_PLUS_ENCODER_ACTION,
     ]);
-    expect(manifest.Actions.slice(0, 3)).toEqual(
+    expect(manifest.Actions.slice(0, 4)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           UUID: COMPOSABLE_STATUS_ACTION,
@@ -112,6 +114,12 @@ describe("Stream Deck manifest", () => {
           Controllers: ["Keypad"],
         }),
         expect.objectContaining({
+          UUID: COMPOSABLE_REVIEW_ACTION,
+          Name: "Review Changes",
+          Icon: "imgs/actions/composable-review",
+          Controllers: ["Keypad"],
+        }),
+        expect.objectContaining({
           UUID: COMPOSABLE_ATTENTION_ACTION,
           Name: "Attention",
           Icon: "imgs/actions/composable-attention",
@@ -119,14 +127,14 @@ describe("Stream Deck manifest", () => {
         }),
       ]),
     );
-    expect(manifest.Actions[3]).toMatchObject({
+    expect(manifest.Actions[4]).toMatchObject({
       UUID: COMPOSABLE_SESSION_DIAL_ACTION,
       Name: "Sessions",
       Icon: "imgs/actions/composable-session-dial",
       Controllers: ["Encoder"],
       Encoder: { layout: "layouts/plus-quarter.json" },
     });
-    for (const composable of manifest.Actions.slice(0, 4)) {
+    for (const composable of manifest.Actions.slice(0, 5)) {
       expect(composable.SupportedInMultiActions).toBe(false);
       expect(composable.SupportedInKeyLogicActions).toBe(false);
       expect(composable.VisibleInActionsList).toBeUndefined();
@@ -134,12 +142,6 @@ describe("Stream Deck manifest", () => {
   });
 
   it("separates hidden managed Classic and Plus action contracts", () => {
-    expect(manifest.Actions[5]).toMatchObject({
-      Controllers: ["Keypad"],
-      SupportedInMultiActions: false,
-      SupportedInKeyLogicActions: false,
-      VisibleInActionsList: false,
-    });
     expect(manifest.Actions[6]).toMatchObject({
       Controllers: ["Keypad"],
       SupportedInMultiActions: false,
@@ -147,6 +149,12 @@ describe("Stream Deck manifest", () => {
       VisibleInActionsList: false,
     });
     expect(manifest.Actions[7]).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      SupportedInKeyLogicActions: false,
+      VisibleInActionsList: false,
+    });
+    expect(manifest.Actions[8]).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
       Encoder: { layout: "$A1" },
       SupportedInMultiActions: false,

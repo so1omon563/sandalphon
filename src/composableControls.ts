@@ -32,6 +32,11 @@ interface PressedResume {
   readonly offerToken: string;
 }
 
+interface PressedReview {
+  readonly revision: number;
+  readonly offerToken: string;
+}
+
 interface PressedAttention {
   readonly revision: number;
   readonly sessionId: string;
@@ -46,9 +51,11 @@ export class ComposableControls {
   readonly #application: SurfaceApplicationBoundary;
   readonly #status = new Map<string, KeyAction>();
   readonly #resume = new Map<string, KeyAction>();
+  readonly #review = new Map<string, KeyAction>();
   readonly #attention = new Map<string, KeyAction>();
   readonly #sessionDials = new Map<string, RegisteredDial>();
   readonly #pressedResume = new Map<string, PressedResume>();
+  readonly #pressedReview = new Map<string, PressedReview>();
   readonly #pressedAttention = new Map<string, PressedAttention>();
   #snapshot: SandalphonSnapshot;
   #pendingSnapshot: SandalphonSnapshot | undefined;
@@ -81,6 +88,11 @@ export class ComposableControls {
     this.#scheduleRender(this.#snapshot);
   }
 
+  registerReview(action: KeyAction): void {
+    this.#review.set(action.id, action);
+    this.#scheduleRender(this.#snapshot);
+  }
+
   registerAttention(action: KeyAction): void {
     this.#attention.set(action.id, action);
     this.#scheduleRender(this.#snapshot);
@@ -99,9 +111,11 @@ export class ComposableControls {
   unregister(actionId: string): void {
     this.#status.delete(actionId);
     this.#resume.delete(actionId);
+    this.#review.delete(actionId);
     this.#attention.delete(actionId);
     this.#sessionDials.delete(actionId);
     this.#pressedResume.delete(actionId);
+    this.#pressedReview.delete(actionId);
     this.#pressedAttention.delete(actionId);
   }
 
@@ -131,6 +145,35 @@ export class ComposableControls {
       invocationId: `composable-resume:${this.#invocation}`,
       offerToken: pressed.offerToken,
     });
+  }
+
+  reviewDown(action: KeyAction): void {
+    if (!this.#review.has(action.id)) return;
+    const offer = reviewOffer(this.#snapshot);
+    if (!offer?.offerToken) return;
+    this.#pressedReview.set(action.id, {
+      revision: this.#snapshot.revision,
+      offerToken: offer.offerToken,
+    });
+  }
+
+  async reviewUp(action: KeyAction): Promise<void> {
+    const pressed = this.#pressedReview.get(action.id);
+    this.#pressedReview.delete(action.id);
+    const current = reviewOffer(this.#snapshot);
+    if (
+      !pressed ||
+      pressed.revision !== this.#snapshot.revision ||
+      pressed.offerToken !== current?.offerToken
+    ) {
+      return;
+    }
+    this.#invocation += 1;
+    const result = await this.#application.invoke({
+      invocationId: `composable-review:${this.#invocation}`,
+      offerToken: pressed.offerToken,
+    });
+    if (result.status === "failed") await safeAlert(action);
   }
 
   attentionDown(action: KeyAction): void {
@@ -203,6 +246,9 @@ export class ComposableControls {
         ...[...this.#resume.values()].map((action) =>
           renderKey(action, resumeView(snapshot)),
         ),
+        ...[...this.#review.values()].map((action) =>
+          renderKey(action, reviewView(snapshot)),
+        ),
         ...[...this.#attention.values()].map((action) =>
           renderKey(action, attentionView(snapshot)),
         ),
@@ -224,6 +270,12 @@ function selectedSession(
 function resumeOffer(snapshot: SandalphonSnapshot): ActionOffer | undefined {
   return selectedSession(snapshot)?.actionOffers.find(
     ({ kind, state }) => kind === "ResumeSession" && state === "available",
+  );
+}
+
+function reviewOffer(snapshot: SandalphonSnapshot): ActionOffer | undefined {
+  return selectedSession(snapshot)?.actionOffers.find(
+    ({ kind, state }) => kind === "ReviewChanges" && state === "available",
   );
 }
 
@@ -274,6 +326,25 @@ function resumeView(snapshot: SandalphonSnapshot): ComposableKeyView {
     enabled: true,
     state: selected.primaryState,
     icon: "resume",
+  };
+}
+
+function reviewView(snapshot: SandalphonSnapshot): ComposableKeyView {
+  const selected = selectedSession(snapshot);
+  const offer = reviewOffer(snapshot);
+  if (!selected || !offer) {
+    return {
+      label: "",
+      enabled: false,
+      state: selected?.primaryState ?? "unavailable",
+      icon: "review",
+    };
+  }
+  return {
+    label: "Review",
+    enabled: true,
+    state: selected.primaryState,
+    icon: "review",
   };
 }
 

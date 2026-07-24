@@ -12,30 +12,33 @@ Composable controls live directly in an ordinary user profile. They own only
 their key or encoder context, coexist with unrelated actions, and require no
 Sandalphon Exit control.
 
-## First Stream Deck + Set
+## Composable Set
 
-| Control            | Idle presentation                                                                      | Input                              | Authority                                       |
-| ------------------ | -------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
-| Session Status key | Selected session name plus a session glyph and primary-state accent                    | None                               | Read-only                                       |
-| Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank | Press and release                  | Revalidates and dispatches only `ResumeSession` |
-| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank        | Press and release                  | Selects the next attention session only         |
-| Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter             | Rotate to preview; press to select | Session selection only                          |
+| Control            | Idle presentation                                                                                     | Input                              | Authority                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
+| Session Status key | Selected session name plus a session glyph and primary-state accent                                   | None                               | Read-only                                       |
+| Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank                | Press and release                  | Revalidates and dispatches only `ResumeSession` |
+| Review Changes key | Distinct Review glyph only for an idle Sandalphon-owned session with a current offer; otherwise blank | Press and release                  | Revalidates and dispatches only `ReviewChanges` |
+| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank                       | Press and release                  | Selects the next attention session only         |
+| Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter                            | Rotate to preview; press to select | Session selection only                          |
 
-The four controls may be placed anywhere in the user's profile. Sandalphon
+The five controls may be placed anywhere in the user's profile. Sandalphon
 does not inspect, move, relabel, or coordinate neighboring foreign actions.
 Only the Sessions dial owns its 200 by 100 touch-strip quarter.
-When Resume or Attention has nothing to present, its key renders true black so
-it is physically indistinguishable from an unused key rather than a dim tile.
+When Resume, Review Changes, or Attention has nothing to present, its key
+renders true black so it is physically indistinguishable from an unused key
+rather than a dim tile.
 
 ## Safety Boundary
 
 Composable controls cannot approve, reject, cancel, interrupt, retry, redirect,
 or commit a next-turn setting. They never receive managed-surface authority.
-Resume captures the current revision and opaque offer token on key-down and
-dispatches only if both are unchanged on release. Attention similarly rejects
-a stale target and advances through attention sessions in roster order,
-wrapping after the last. Dial rotation is local preview; selection requires a
-separate press.
+Resume and Review Changes capture the current revision and opaque offer token
+on key-down and dispatch only if both are unchanged on release. Review Changes
+uses the typed `review/start` app-server operation and never silently resumes
+or attaches to a historical session. Attention similarly rejects a stale
+target and advances through attention sessions in roster order, wrapping after
+the last. Dial rotation is local preview; selection requires a separate press.
 
 Complete request inspection and final high-consequence confirmation remain on
 the optional managed surface with the accepted review, separate-confirmation,
@@ -43,14 +46,17 @@ and 800 ms hold contracts.
 
 ## Validation
 
-SO1-178 validates the Stream Deck + set first in an ordinary existing profile:
+SO1-178 validated the initial Stream Deck + set in an ordinary existing profile.
+SO1-197 adds the first directly actionable official-interface control:
 
-1. Place the three keys and one dial beside normal user actions.
+1. Place the four keys and one dial beside normal user actions.
 2. Confirm each role is visually distinct in the action catalog and on-device.
 3. Confirm Resume appears and dispatches only for a resumable selected session.
-4. Preview sessions by dial without changing selection; press to select.
-5. Confirm Attention selects a target without deciding its request.
-6. Fully quit and reopen Stream Deck while the ordinary profile is active and
+4. Confirm Review Changes appears only after that session is owned and idle,
+   then starts a real official review turn without restarting Codex.
+5. Preview sessions by dial without changing selection; press to select.
+6. Confirm Attention selects a target without deciding its request.
+7. Fully quit and reopen Stream Deck while the ordinary profile is active and
    confirm the controls recover without an Exit dependency.
 
 After that walkthrough, the three key controls are validated on the Stream Deck
