@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DESKTOP_COMPANION_PROTOCOL_VERSION,
+  DesktopCompanionStartError,
   DesktopCompanionSupervisor,
   handleDesktopCompanionRequest,
   parseDesktopCompanionRequest,
@@ -42,15 +43,18 @@ class FakeDriver implements DesktopCompanionDriver {
   reconcileCount = 0;
   recovery: DesktopCompanionRecovery = { kind: "normal" };
   startError = false;
+  startFailure: DesktopCompanionStartError["failure"] | undefined;
   startCount = 0;
   startObservation: DesktopControlObservation = observation;
 
   startControlled(signal: AbortSignal): Promise<DesktopControlObservation> {
     void signal;
     this.startCount += 1;
-    return this.startError
-      ? Promise.reject(new Error("private detail"))
-      : Promise.resolve(this.startObservation);
+    return this.startFailure
+      ? Promise.reject(new DesktopCompanionStartError(this.startFailure))
+      : this.startError
+        ? Promise.reject(new Error("private detail"))
+        : Promise.resolve(this.startObservation);
   }
 
   reconcileControlled(signal: AbortSignal): Promise<DesktopCompanionRecovery> {
@@ -124,6 +128,19 @@ describe("desktop companion supervisor", () => {
     });
     expect(driver.cleanupCount).toBe(1);
     expect(JSON.stringify(snapshot)).not.toContain("private detail");
+  });
+
+  it("retains a bounded content-free start failure category", async () => {
+    const driver = new FakeDriver();
+    driver.startFailure = "applicationRejected";
+    const supervisor = new DesktopCompanionSupervisor(driver, policy);
+    await supervisor.recover();
+    await expect(supervisor.start()).resolves.toMatchObject({
+      lifecycle: "stopped",
+      failure: "applicationRejected",
+      desktop: { availability: "unavailable", targets: [] },
+    });
+    expect(driver.cleanupCount).toBe(1);
   });
 
   it("turns a wedged start into bounded cleanup", async () => {

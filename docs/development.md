@@ -112,7 +112,9 @@ Installation writes an owner-only artifact under the current user's
 `~/Library/Application Support/Sandalphon` directory and an owner-only
 LaunchAgent under `~/Library/LaunchAgents`. The service reconciles any durable
 controlled-launch record before listening. Status output is content-free and
-reports only lifecycle, failure category, availability, and task count.
+reports only lifecycle, a bounded rejected stage, availability, and task
+count. It never returns the underlying process, signature, renderer, or task
+payload that caused a rejection.
 
 `companion-start` is privileged and disruptive: it stops an argument-free
 normal Codex process and launches the official signed Codex application with a

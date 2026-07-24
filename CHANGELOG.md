@@ -10,6 +10,18 @@ All notable changes to Sandalphon are recorded here.
   official-signature verification and a reversible per-build compatibility
   qualification receipt, so routine Codex updates fail closed and requalify
   without requiring a Sandalphon source change.
+- Made companion Start failures identify only the bounded rejected stage
+  (application, owned state, launch, renderer, or qualification) so live
+  update validation remains diagnosable without exposing Codex content.
+- Allowed updated Codex builds to expose unrelated debugger targets while
+  retaining the requirement for exactly one canonical loopback `app://-`
+  application page within a bounded discovery list.
+- Waited up to ten seconds for an updated Codex process to register its
+  canonical renderer after opening the owned listener, while keeping version,
+  endpoint, ambiguity, and malformed-state rejection immediate.
+- Recognized same-user direct children of the exact controlled Codex PID as
+  inherited holders of its listener descriptor, while keeping unrelated or
+  reparented listener owners ambiguous and non-terminable.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

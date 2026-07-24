@@ -4,6 +4,7 @@ import type {
   DesktopCompanionDriver,
   DesktopCompanionRecovery,
 } from "./desktopCompanion.js";
+import { DesktopCompanionStartError } from "./desktopCompanion.js";
 import type { DesktopControlObservation } from "./desktopControlContract.js";
 
 export const MACOS_CODEX_APPLICATION_PATH = "/Applications/ChatGPT.app";
@@ -72,6 +73,11 @@ export interface MacosDesktopCompanionPlatform {
     signal: AbortSignal,
   ): Promise<readonly MacosControlledProcess[]>;
   listenerOwner(port: number, signal: AbortSignal): Promise<number | undefined>;
+  listenerOwnership(
+    port: number,
+    process: MacosControlledProcess,
+    signal: AbortSignal,
+  ): Promise<"absent" | "owned" | "ambiguous">;
   observeDesktop(
     record: MacosControlledLaunchRecord,
     signal: AbortSignal,
@@ -106,41 +112,72 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
   ) {
     this.#platform = platform;
     this.#createControlId = options.createControlId ?? randomUUID;
-    this.#createEpoch =
-      options.createEpoch ?? (() => randomInt(1, Number.MAX_SAFE_INTEGER));
+    this.#createEpoch = options.createEpoch ?? (() => randomInt(1, 2 ** 48));
   }
 
   async startControlled(
     signal: AbortSignal,
   ): Promise<DesktopControlObservation> {
-    const identity = await this.#platform.readApplicationIdentity(signal);
-    if ((await this.#readRecord(signal)) !== undefined) {
-      throw new Error("controlledRecordExists");
+    let identity: MacosCodexApplicationIdentity;
+    try {
+      identity = await this.#platform.readApplicationIdentity(signal);
+    } catch {
+      throw new DesktopCompanionStartError("applicationRejected");
     }
-    if (
-      (await this.#platform.findControlledProcesses(undefined, signal)).length
-    ) {
-      throw new Error("controlledProcessExists");
+    try {
+      if ((await this.#readRecord(signal)) !== undefined) {
+        throw new Error("controlledRecordExists");
+      }
+      if (
+        (await this.#platform.findControlledProcesses(undefined, signal)).length
+      ) {
+        throw new Error("controlledProcessExists");
+      }
+    } catch {
+      throw new DesktopCompanionStartError("controlledStateRejected");
     }
 
+    let port: number;
+    try {
+      port = await this.#platform.allocateLoopbackPort(signal);
+    } catch {
+      throw new DesktopCompanionStartError("loopbackPortRejected");
+    }
     const launching: MacosControlledLaunchRecord = {
       schema: MACOS_CONTROL_RECORD_SCHEMA,
       phase: "launching",
       identity,
       controlId: this.#createControlId(),
-      port: await this.#platform.allocateLoopbackPort(signal),
+      port,
       epoch: this.#createEpoch(),
       revision: 0,
     };
-    await this.#platform.writeLaunchRecord(launching, signal);
-    await this.#platform.stopNormal(signal);
-    const process = await this.#platform.launchControlled(launching, signal);
+    try {
+      await this.#platform.writeLaunchRecord(launching, signal);
+    } catch {
+      throw new DesktopCompanionStartError("launchRecordRejected");
+    }
+    try {
+      await this.#platform.stopNormal(signal);
+    } catch {
+      throw new DesktopCompanionStartError("normalStopRejected");
+    }
+    let process: MacosControlledProcess;
+    try {
+      process = await this.#platform.launchControlled(launching, signal);
+    } catch {
+      throw new DesktopCompanionStartError("controlledProcessRejected");
+    }
     const controlled: MacosControlledLaunchRecord = {
       ...launching,
       phase: "controlled",
       process,
     };
-    await this.#platform.writeLaunchRecord(controlled, signal);
+    try {
+      await this.#platform.writeLaunchRecord(controlled, signal);
+    } catch {
+      throw new DesktopCompanionStartError("controlledProcessRejected");
+    }
     return this.#observe(controlled, signal);
   }
 
@@ -176,8 +213,12 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     if (record.process && !sameProcess(record.process, match)) {
       return { kind: "ambiguous" };
     }
-    const owner = await this.#platform.listenerOwner(record.port, signal);
-    if (owner !== match.pid) return { kind: "ambiguous" };
+    const ownership = await this.#platform.listenerOwnership(
+      record.port,
+      match,
+      signal,
+    );
+    if (ownership !== "owned") return { kind: "ambiguous" };
     const controlled: MacosControlledLaunchRecord = {
       ...record,
       phase: "controlled",
@@ -219,8 +260,16 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     if (match && record.process && !sameProcess(record.process, match)) {
       throw new Error("controlledProcessChanged");
     }
-    const owner = await this.#platform.listenerOwner(record.port, signal);
-    if (owner !== undefined && (!match || owner !== match.pid)) {
+    if (match) {
+      const ownership = await this.#platform.listenerOwnership(
+        record.port,
+        match,
+        signal,
+      );
+      if (ownership !== "owned") throw new Error("listenerOwnershipChanged");
+    } else if (
+      (await this.#platform.listenerOwner(record.port, signal)) !== undefined
+    ) {
       throw new Error("listenerOwnershipChanged");
     }
     if (match) await this.#platform.terminateControlled(match, signal);
@@ -253,12 +302,20 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
       throw new Error("controlledProcessChanged");
     }
     if (
-      (await this.#platform.listenerOwner(record.port, signal)) !==
-      record.process.pid
+      (await this.#platform.listenerOwnership(
+        record.port,
+        record.process,
+        signal,
+      )) !== "owned"
     ) {
       throw new Error("listenerOwnershipChanged");
     }
-    const observed = await this.#platform.observeDesktop(record, signal);
+    let observed: Omit<DesktopControlObservation, "epoch" | "revision">;
+    try {
+      observed = await this.#platform.observeDesktop(record, signal);
+    } catch (error) {
+      throw new DesktopCompanionStartError(rendererFailure(error));
+    }
     await this.#requireReceipt(record, observed, signal);
   }
 
@@ -267,9 +324,18 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     signal: AbortSignal,
   ): Promise<DesktopControlObservation> {
     const process = requireControlledProcess(record);
-    const owner = await this.#platform.listenerOwner(record.port, signal);
-    if (owner !== process.pid) throw new Error("listenerOwnershipUnverified");
-    const observed = await this.#platform.observeDesktop(record, signal);
+    if (
+      (await this.#platform.listenerOwnership(record.port, process, signal)) !==
+      "owned"
+    ) {
+      throw new DesktopCompanionStartError("listenerRejected");
+    }
+    let observed: Omit<DesktopControlObservation, "epoch" | "revision">;
+    try {
+      observed = await this.#platform.observeDesktop(record, signal);
+    } catch (error) {
+      throw new DesktopCompanionStartError(rendererFailure(error));
+    }
     await this.#qualify(record, observed, signal);
     const next = { ...record, revision: record.revision + 1 };
     await this.#platform.writeLaunchRecord(next, signal);
@@ -294,7 +360,12 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     observed: Omit<DesktopControlObservation, "epoch" | "revision">,
     signal: AbortSignal,
   ): Promise<void> {
-    const rawReceipt = await this.#platform.readCompatibilityReceipt(signal);
+    let rawReceipt: unknown;
+    try {
+      rawReceipt = await this.#platform.readCompatibilityReceipt(signal);
+    } catch {
+      throw new DesktopCompanionStartError("qualificationFailed");
+    }
     if (rawReceipt !== undefined) {
       try {
         const receipt = parseMacosDesktopCompatibilityReceipt(rawReceipt);
@@ -305,32 +376,55 @@ export class MacosDesktopCompanionDriver implements DesktopCompanionDriver {
     }
     const selected = observed.targets.find((target) => target.selected);
     const alternate = observed.targets.find((target) => !target.selected);
-    if (!selected || !alternate)
-      throw new Error("qualificationCanaryUnavailable");
-    await this.#platform.selectDesktopTask(record, alternate.id, signal);
-    const changed = await this.#platform.observeDesktop(record, signal);
+    if (!selected || !alternate) {
+      throw new DesktopCompanionStartError("qualificationUnavailable");
+    }
+    try {
+      await this.#platform.selectDesktopTask(record, alternate.id, signal);
+    } catch {
+      throw new DesktopCompanionStartError("qualificationFailed");
+    }
+    let changed: Omit<DesktopControlObservation, "epoch" | "revision">;
+    try {
+      changed = await this.#platform.observeDesktop(record, signal);
+    } catch {
+      throw new DesktopCompanionStartError("qualificationFailed");
+    }
     if (
       changed.targets.find((target) => target.selected)?.id !== alternate.id
     ) {
-      throw new Error("qualificationCanaryFailed");
+      throw new DesktopCompanionStartError("qualificationFailed");
     }
-    await this.#platform.selectDesktopTask(record, selected.id, signal);
-    const restored = await this.#platform.observeDesktop(record, signal);
+    try {
+      await this.#platform.selectDesktopTask(record, selected.id, signal);
+    } catch {
+      throw new DesktopCompanionStartError("qualificationRestoreFailed");
+    }
+    let restored: Omit<DesktopControlObservation, "epoch" | "revision">;
+    try {
+      restored = await this.#platform.observeDesktop(record, signal);
+    } catch {
+      throw new DesktopCompanionStartError("qualificationRestoreFailed");
+    }
     if (
       restored.targets.find((target) => target.selected)?.id !== selected.id
     ) {
-      throw new Error("qualificationRestoreFailed");
+      throw new DesktopCompanionStartError("qualificationRestoreFailed");
     }
-    await this.#platform.writeCompatibilityReceipt(
-      {
-        schema: MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
-        contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
-        identity: record.identity,
-        engine: restored.version.engine,
-        protocol: "1.3",
-      },
-      signal,
-    );
+    try {
+      await this.#platform.writeCompatibilityReceipt(
+        {
+          schema: MACOS_COMPATIBILITY_RECEIPT_SCHEMA,
+          contractRevision: MACOS_DESKTOP_CONTROL_CONTRACT_REVISION,
+          identity: record.identity,
+          engine: restored.version.engine,
+          protocol: "1.3",
+        },
+        signal,
+      );
+    } catch {
+      throw new DesktopCompanionStartError("qualificationFailed");
+    }
   }
 
   async #requireReceipt(
@@ -479,6 +573,35 @@ function receiptMatches(
     receipt.engine === observation.version.engine &&
     receipt.protocol === observation.version.protocol
   );
+}
+
+function rendererFailure(
+  error: unknown,
+): DesktopCompanionStartError["failure"] {
+  if (!(error instanceof Error)) return "rendererRejected";
+  switch (error.message) {
+    case "desktopDiscoveryFailed":
+      return "rendererHttpRejected";
+    case "invalidDesktopTargetCount":
+      return "rendererTargetCountRejected";
+    case "invalidDesktopPageContract":
+      return "rendererPageRejected";
+    case "invalidDesktopDiscovery":
+      return "rendererDiscoveryRejected";
+    case "unsupportedDesktopVersion":
+      return "rendererVersionRejected";
+    case "unsafeDesktopEndpoint":
+      return "rendererEndpointRejected";
+    case "desktopConnectFailed":
+    case "desktopDisconnected":
+    case "desktopProtocolFailed":
+      return "rendererConnectionRejected";
+    case "desktopEvaluationFailed":
+    case "invalidDesktopTasks":
+      return "taskContractRejected";
+    default:
+      return "rendererRejected";
+  }
 }
 
 export function controlledLaunchArguments(

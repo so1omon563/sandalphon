@@ -34,6 +34,7 @@ const TASK_ROW_SELECTOR =
   '[role="button"][data-app-action-sidebar-thread-row][data-app-action-sidebar-thread-id]';
 const MAX_DISCOVERY_BYTES = 256 * 1024;
 const MAX_EVALUATION_BYTES = 64 * 1024;
+const RENDERER_DISCOVERY_TIMEOUT_MS = 10_000;
 const CONTROL_ID_PATTERN =
   "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const execFileAsync = promisify(execFile);
@@ -225,7 +226,17 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
         signal,
       );
       const match = matches.find((candidate) => candidate.pid === pid);
-      if (match) return match;
+      if (match) {
+        const ownership = await this.listenerOwnership(
+          record.port,
+          match,
+          signal,
+        );
+        if (ownership === "owned") return match;
+        if (ownership === "ambiguous") {
+          throw new Error("listenerOwnershipChanged");
+        }
+      }
       await delay(50, undefined, { signal });
     }
     throw new Error("controlledProcessUnavailable");
@@ -257,6 +268,29 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
     port: number,
     signal: AbortSignal,
   ): Promise<number | undefined> {
+    return parseListenerOwner(await this.#listenerOwners(port, signal));
+  }
+
+  async listenerOwnership(
+    port: number,
+    process: MacosControlledProcess,
+    signal: AbortSignal,
+  ): Promise<"absent" | "owned" | "ambiguous"> {
+    const owners = parseListenerOwners(
+      await this.#listenerOwners(port, signal),
+    );
+    if (owners.length === 0) return "absent";
+    if (!owners.includes(process.pid)) return "ambiguous";
+    for (const owner of owners) {
+      if (owner === process.pid) continue;
+      if (!(await isDirectOwnedChild(owner, process.pid, this.#uid, signal))) {
+        return "ambiguous";
+      }
+    }
+    return "owned";
+  }
+
+  async #listenerOwners(port: number, signal: AbortSignal): Promise<string> {
     let stdout: string;
     try {
       ({ stdout } = await execFileAsync(
@@ -265,10 +299,10 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
         { encoding: "utf8", signal },
       ));
     } catch (error) {
-      if (isExitCode(error, 1)) return undefined;
+      if (isExitCode(error, 1)) return "";
       throw error;
     }
-    return parseListenerOwner(stdout);
+    return stdout;
   }
 
   async observeDesktop(
@@ -276,11 +310,7 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
     signal: AbortSignal,
   ): Promise<Omit<DesktopControlObservation, "epoch" | "revision">> {
     const origin = `http://127.0.0.1:${record.port}`;
-    const [version, targets] = await Promise.all([
-      fetchJson(`${origin}/json/version`, signal),
-      fetchJson(`${origin}/json/list`, signal),
-    ]);
-    const discovery = decodeDebuggerPage({ version, targets }, record.port);
+    const discovery = await discoverDebuggerPage(origin, record.port, signal);
     const tasks = await evaluateDesktopTasks(discovery.debuggerUrl, signal);
     return {
       connected: true,
@@ -454,6 +484,37 @@ export class NodeMacosDesktopCompanionPlatform implements MacosDesktopCompanionP
   }
 }
 
+async function discoverDebuggerPage(
+  origin: string,
+  port: number,
+  signal: AbortSignal,
+): Promise<ReturnType<typeof decodeDebuggerPage>> {
+  const deadline = Date.now() + RENDERER_DISCOVERY_TIMEOUT_MS;
+  while (true) {
+    try {
+      const [version, targets] = await Promise.all([
+        fetchJson(`${origin}/json/version`, signal),
+        fetchJson(`${origin}/json/list`, signal),
+      ]);
+      return decodeDebuggerPage({ version, targets }, port);
+    } catch (error) {
+      if (!isRetryableRendererDiscovery(error) || Date.now() >= deadline) {
+        throw error;
+      }
+      await delay(50, undefined, { signal });
+    }
+  }
+}
+
+export function isRetryableRendererDiscovery(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === "desktopDiscoveryFailed" ||
+      error.message === "invalidDesktopTargetCount" ||
+      error.message === "invalidDesktopPageContract")
+  );
+}
+
 export interface ParsedMacosProcess {
   readonly pid: number;
   readonly uid: number;
@@ -502,20 +563,24 @@ export function parseMacosCodexProcessList(
 }
 
 export function parseListenerOwner(value: string): number | undefined {
+  const unique = parseListenerOwners(value);
+  if (unique.length === 0) return undefined;
+  if (unique.length !== 1) {
+    throw new Error("ambiguousListenerOwner");
+  }
+  return unique[0];
+}
+
+export function parseListenerOwners(value: string): readonly number[] {
   const pids = value
     .split("\n")
     .filter((line) => /^p\d+$/u.test(line))
     .map((line) => Number.parseInt(line.slice(1), 10));
   const unique = [...new Set(pids)];
-  if (unique.length === 0) return undefined;
-  if (
-    unique.length !== 1 ||
-    !Number.isSafeInteger(unique[0]) ||
-    unique[0]! <= 0
-  ) {
+  if (unique.some((pid) => !Number.isSafeInteger(pid) || pid <= 0)) {
     throw new Error("ambiguousListenerOwner");
   }
-  return unique[0];
+  return unique;
 }
 
 export function decodeDebuggerPage(
@@ -526,13 +591,15 @@ export function decodeDebuggerPage(
   readonly engine: string;
   readonly protocol: "1.3";
 } {
-  if (
-    !discovery.version ||
-    typeof discovery.version !== "object" ||
-    !Array.isArray(discovery.targets) ||
-    discovery.targets.length !== 1
-  ) {
+  if (!discovery.version || typeof discovery.version !== "object") {
     throw new Error("invalidDesktopDiscovery");
+  }
+  if (
+    !Array.isArray(discovery.targets) ||
+    discovery.targets.length === 0 ||
+    discovery.targets.length > 64
+  ) {
+    throw new Error("invalidDesktopTargetCount");
   }
   const version = discovery.version as Record<string, unknown>;
   const browser =
@@ -542,16 +609,20 @@ export function decodeDebuggerPage(
   if (!browser || version["Protocol-Version"] !== "1.3") {
     throw new Error("unsupportedDesktopVersion");
   }
-  const target = discovery.targets[0] as Record<string, unknown> | undefined;
-  if (
-    !target ||
-    target.type !== "page" ||
-    target.url !== "app://-" ||
-    typeof target.webSocketDebuggerUrl !== "string"
-  ) {
-    throw new Error("invalidDesktopDiscovery");
+  const applicationPages = discovery.targets.filter(
+    (candidate): candidate is Record<string, unknown> =>
+      !!candidate &&
+      typeof candidate === "object" &&
+      (candidate as Record<string, unknown>).type === "page" &&
+      (candidate as Record<string, unknown>).url === "app://-" &&
+      typeof (candidate as Record<string, unknown>).webSocketDebuggerUrl ===
+        "string",
+  );
+  if (applicationPages.length !== 1) {
+    throw new Error("invalidDesktopPageContract");
   }
-  const url = new URL(target.webSocketDebuggerUrl);
+  const target = applicationPages[0]!;
+  const url = new URL(target.webSocketDebuggerUrl as string);
   if (
     url.protocol !== "ws:" ||
     url.hostname !== "127.0.0.1" ||
@@ -665,6 +736,31 @@ async function inspectProcess(
   const processes = parseMacosProcessList(stdout);
   if (processes.length > 1) throw new Error("ambiguousProcessObservation");
   return processes[0];
+}
+
+async function isDirectOwnedChild(
+  pid: number,
+  expectedParentPid: number,
+  expectedUid: number,
+  signal: AbortSignal,
+): Promise<boolean> {
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(
+      "/bin/ps",
+      ["-p", String(pid), "-o", "ppid=,uid="],
+      { encoding: "utf8", signal, env: processEnvironmentWithCLocale() },
+    ));
+  } catch (error) {
+    if (isExitCode(error, 1)) return false;
+    throw error;
+  }
+  const match = /^\s*(\d+)\s+(\d+)\s*$/u.exec(stdout);
+  return (
+    !!match &&
+    Number.parseInt(match[1]!, 10) === expectedParentPid &&
+    Number.parseInt(match[2]!, 10) === expectedUid
+  );
 }
 
 async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {

@@ -30,8 +30,20 @@ version, and CDHash, so an on-disk update cannot change the identity of an
 already owned process.
 
 After controlled launch, the companion still requires one loopback listener
-owned by that exact process, one `app://-` renderer page, CDP protocol `1.3`,
-the bounded sidebar task projection, and exactly one selected opaque task.
+owned by that exact process, exactly one canonical `app://-` renderer page
+within a discovery list bounded to 64 targets, CDP protocol `1.3`, the bounded
+sidebar task projection, and exactly one selected opaque task. Unrelated
+debugger targets grant no authority and are not retained.
+The listener and renderer may become ready at different times, so the companion
+waits up to ten seconds for the bounded discovery endpoint and canonical page.
+It retries only unavailable, empty, or not-yet-canonical page discovery;
+version, endpoint, ambiguity, and malformed state fail immediately.
+Codex may launch a same-user direct child that inherits the listener file
+descriptor. That child is accepted as an inherited holder only while its
+immediate parent remains the exact recorded controlled PID. It gains no
+termination authority: cleanup signals only the recorded parent and still
+requires the listener to disappear. Unrelated, reparented, or deeper owners
+remain ambiguous and fail closed.
 The observed Chromium version is diagnostic and part of the qualification key;
 it is not manually allowlisted.
 

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   decodeDebuggerPage,
   decodeDesktopTaskTargets,
+  isRetryableRendererDiscovery,
   parseMacosCodexApplicationIdentity,
   parseListenerOwner,
+  parseListenerOwners,
   parseMacosCodexProcessList,
   parseMacosProcessList,
   taskListExpression,
@@ -48,6 +50,7 @@ describe("macOS desktop companion platform boundaries", () => {
   it("accepts one listener owner and rejects ambiguity", () => {
     expect(parseListenerOwner("p42\n")).toBe(42);
     expect(parseListenerOwner("")).toBeUndefined();
+    expect(parseListenerOwners("p42\np43\np42\n")).toEqual([42, 43]);
     expect(() => parseListenerOwner("p42\np43\n")).toThrow(
       "ambiguousListenerOwner",
     );
@@ -72,6 +75,43 @@ describe("macOS desktop companion platform boundaries", () => {
       engine: ENGINE,
       protocol: "1.3",
     });
+    expect(
+      decodeDebuggerPage(
+        {
+          ...discovery,
+          targets: [
+            { type: "background_page", url: "chrome-extension://ignored" },
+            ...discovery.targets,
+          ],
+        },
+        49152,
+      ),
+    ).toEqual({
+      debuggerUrl: "ws://127.0.0.1:49152/devtools/page/opaque",
+      engine: ENGINE,
+      protocol: "1.3",
+    });
+    expect(() =>
+      decodeDebuggerPage(
+        {
+          ...discovery,
+          targets: [...discovery.targets, ...discovery.targets],
+        },
+        49152,
+      ),
+    ).toThrow("invalidDesktopPageContract");
+    expect(() =>
+      decodeDebuggerPage(
+        {
+          ...discovery,
+          targets: Array.from({ length: 65 }, () => ({
+            type: "background_page",
+            url: "chrome-extension://ignored",
+          })),
+        },
+        49152,
+      ),
+    ).toThrow("invalidDesktopTargetCount");
     expect(() =>
       decodeDebuggerPage(
         {
@@ -86,6 +126,24 @@ describe("macOS desktop companion platform boundaries", () => {
         49152,
       ),
     ).toThrow("unsafeDesktopEndpoint");
+  });
+
+  it("retries only transient renderer discovery readiness", () => {
+    expect(
+      isRetryableRendererDiscovery(new Error("invalidDesktopTargetCount")),
+    ).toBe(true);
+    expect(
+      isRetryableRendererDiscovery(new Error("invalidDesktopPageContract")),
+    ).toBe(true);
+    expect(
+      isRetryableRendererDiscovery(new Error("desktopDiscoveryFailed")),
+    ).toBe(true);
+    expect(
+      isRetryableRendererDiscovery(new Error("unsupportedDesktopVersion")),
+    ).toBe(false);
+    expect(
+      isRetryableRendererDiscovery(new Error("unsafeDesktopEndpoint")),
+    ).toBe(false);
   });
 
   it("admits only the official signed application identity", () => {

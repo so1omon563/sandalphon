@@ -72,7 +72,8 @@ plugin client is enabled by the headless proof.
 SO1-196 implements the macOS driver behind that same boundary. The companion
 persists an owner-only launch record before stopping normal Codex, admits only
 the current uid and exact PID/start-time/control-marker tuple, requires the
-listener owner to match that process, and rechecks the official OpenAI bundle
+listener owner to match that process or a same-user direct child whose parent
+is still that exact process, and rechecks the official OpenAI bundle
 and Team ID, sealed code signature, Gatekeeper assessment, exact renderer page,
 CDP protocol, and bounded task contract. A new signed build gains authority
 only after a reversible task-selection canary restores the original task and
@@ -82,7 +83,9 @@ fails closed and requires requalification, not a source-level version
 allowlist change. Cleanup terminates only the recorded process, verifies
 listener removal, and restores exactly one argument-free normal Codex process.
 Ambiguous ownership fails closed without creating another controlled process
-or choosing a termination target. The per-user LaunchAgent installs an
+or choosing a termination target. An inherited child listener never becomes a
+termination target; cleanup still signals only the exact recorded parent and
+requires every inherited listener descriptor to close. The per-user LaunchAgent installs an
 owner-only companion artifact and records; its management output omits opaque
 task identifiers and renderer content. The driver remains an explicit
 development feasibility surface until its bounded live lifecycle matrix

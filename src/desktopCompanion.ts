@@ -19,6 +19,25 @@ export type DesktopCompanionLifecycle =
 export type DesktopCompanionFailure =
   | "startupReconciliationRequired"
   | "startFailed"
+  | "applicationRejected"
+  | "controlledStateRejected"
+  | "loopbackPortRejected"
+  | "launchRecordRejected"
+  | "normalStopRejected"
+  | "controlledProcessRejected"
+  | "listenerRejected"
+  | "rendererRejected"
+  | "rendererDiscoveryRejected"
+  | "rendererHttpRejected"
+  | "rendererTargetCountRejected"
+  | "rendererPageRejected"
+  | "rendererVersionRejected"
+  | "rendererEndpointRejected"
+  | "rendererConnectionRejected"
+  | "taskContractRejected"
+  | "qualificationUnavailable"
+  | "qualificationFailed"
+  | "qualificationRestoreFailed"
   | "startTimedOut"
   | "startUnfenced"
   | "capabilityRejected"
@@ -92,6 +111,36 @@ const DEFAULT_TIMEOUTS: DesktopCompanionTimeouts = Object.freeze({
 class DriverTimeoutError extends Error {}
 class DriverUnfencedError extends Error {}
 
+export class DesktopCompanionStartError extends Error {
+  readonly failure: Extract<
+    DesktopCompanionFailure,
+    | "applicationRejected"
+    | "controlledStateRejected"
+    | "loopbackPortRejected"
+    | "launchRecordRejected"
+    | "normalStopRejected"
+    | "controlledProcessRejected"
+    | "listenerRejected"
+    | "rendererRejected"
+    | "rendererDiscoveryRejected"
+    | "rendererHttpRejected"
+    | "rendererTargetCountRejected"
+    | "rendererPageRejected"
+    | "rendererVersionRejected"
+    | "rendererEndpointRejected"
+    | "rendererConnectionRejected"
+    | "taskContractRejected"
+    | "qualificationUnavailable"
+    | "qualificationFailed"
+    | "qualificationRestoreFailed"
+  >;
+
+  constructor(failure: DesktopCompanionStartError["failure"]) {
+    super(failure);
+    this.failure = failure;
+  }
+}
+
 export class DesktopCompanionSupervisor {
   readonly #driver: DesktopCompanionDriver;
   readonly #policy: DesktopControlPolicy;
@@ -145,7 +194,11 @@ export class DesktopCompanionSupervisor {
           return this.status();
         }
         await this.#failAndClean(
-          error instanceof DriverTimeoutError ? "startTimedOut" : "startFailed",
+          error instanceof DriverTimeoutError
+            ? "startTimedOut"
+            : error instanceof DesktopCompanionStartError
+              ? error.failure
+              : "startFailed",
         );
         return this.status();
       }

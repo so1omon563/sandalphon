@@ -42,7 +42,9 @@ const RECEIPT: MacosDesktopCompatibilityReceipt = {
 };
 
 class FakePlatform implements MacosDesktopCompanionPlatform {
+  claimListenerOnLaunch = true;
   identity = IDENTITY;
+  identityError = false;
   receipt: unknown = RECEIPT;
   receiptWrites: MacosDesktopCompatibilityReceipt[] = [];
   selectedId = "opaque-1";
@@ -51,6 +53,7 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   deleted = 0;
   launchedNormal = 0;
   normalCount = 1;
+  observeError: string | undefined;
   owner: number | undefined;
   record: unknown;
   stoppedNormal = 0;
@@ -59,7 +62,9 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   writes: MacosControlledLaunchRecord[] = [];
 
   readApplicationIdentity(): Promise<MacosCodexApplicationIdentity> {
-    return Promise.resolve(this.identity);
+    return this.identityError
+      ? Promise.reject(new Error("private signature detail"))
+      : Promise.resolve(this.identity);
   }
   readCompatibilityReceipt(): Promise<unknown> {
     return Promise.resolve(this.receipt);
@@ -89,7 +94,7 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   }
   launchControlled(): Promise<MacosControlledProcess> {
     this.controlled = [PROCESS];
-    this.owner = PROCESS.pid;
+    if (this.claimListenerOnLaunch) this.owner = PROCESS.pid;
     return Promise.resolve(PROCESS);
   }
   findControlledProcesses(
@@ -104,9 +109,24 @@ class FakePlatform implements MacosDesktopCompanionPlatform {
   listenerOwner(): Promise<number | undefined> {
     return Promise.resolve(this.owner);
   }
+  listenerOwnership(
+    _port: number,
+    process: MacosControlledProcess,
+  ): Promise<"absent" | "owned" | "ambiguous"> {
+    return Promise.resolve(
+      this.owner === undefined
+        ? "absent"
+        : this.owner === process.pid
+          ? "owned"
+          : "ambiguous",
+    );
+  }
   observeDesktop(): Promise<
     Omit<DesktopControlObservation, "epoch" | "revision">
   > {
+    if (this.observeError) {
+      return Promise.reject(new Error(this.observeError));
+    }
     return Promise.resolve({
       connected: true,
       endpointHost: "127.0.0.1",
@@ -156,6 +176,15 @@ function driver(platform: FakePlatform): MacosDesktopCompanionDriver {
 }
 
 describe("macOS desktop companion driver", () => {
+  it("uses a production-safe random epoch bound by default", async () => {
+    const platform = new FakePlatform();
+    const observation = await new MacosDesktopCompanionDriver(
+      platform,
+    ).startControlled(new AbortController().signal);
+    expect(observation.epoch).toBeGreaterThan(0);
+    expect(observation.epoch).toBeLessThan(2 ** 48);
+  });
+
   it("persists launch intent before starting and admits only owned observation", async () => {
     const platform = new FakePlatform();
     const observation = await driver(platform).startControlled(
@@ -188,6 +217,45 @@ describe("macOS desktop companion driver", () => {
     expect(platform.selectedId).toBe("opaque-1");
     expect(platform.receiptWrites).toHaveLength(1);
     expect(platform.receiptWrites[0]?.identity).toEqual(platform.identity);
+  });
+
+  it("rejects an unverified application before creating launch state", async () => {
+    const platform = new FakePlatform();
+    platform.identityError = true;
+    await expect(
+      driver(platform).startControlled(new AbortController().signal),
+    ).rejects.toThrow("applicationRejected");
+    expect(platform.writes).toEqual([]);
+    expect(platform.stoppedNormal).toBe(0);
+  });
+
+  it("rejects a controlled process whose listener is not yet owned", async () => {
+    const platform = new FakePlatform();
+    platform.claimListenerOnLaunch = false;
+    await expect(
+      driver(platform).startControlled(new AbortController().signal),
+    ).rejects.toThrow("listenerRejected");
+  });
+
+  it("reports renderer discovery rejection without exposing details", async () => {
+    const platform = new FakePlatform();
+    platform.observeError = "private renderer detail";
+    await expect(
+      driver(platform).startControlled(new AbortController().signal),
+    ).rejects.toThrow("rendererRejected");
+  });
+
+  it("reports only the bounded renderer rejection stage", async () => {
+    const platform = new FakePlatform();
+    platform.observeError = "invalidDesktopTasks";
+    await expect(
+      driver(platform).startControlled(new AbortController().signal),
+    ).rejects.toThrow("taskContractRejected");
+    const targetCountPlatform = new FakePlatform();
+    targetCountPlatform.observeError = "invalidDesktopTargetCount";
+    await expect(
+      driver(targetCountPlatform).startControlled(new AbortController().signal),
+    ).rejects.toThrow("rendererTargetCountRejected");
   });
 
   it("reattaches only to the exact recorded process and listener", async () => {
