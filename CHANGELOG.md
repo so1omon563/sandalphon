@@ -6,7 +6,7 @@ All notable changes to Sandalphon are recorded here.
 
 ### Changed
 
-- Marked Sandalphon as a paused feasibility project and documented that it does
+- Marked Sandalphon as a canceled feasibility project and documented that it does
   not provide usable control of the active Codex Desktop task. No supported
   release is planned.
 - Reframed bundled managed profiles as optional reference and consequential-

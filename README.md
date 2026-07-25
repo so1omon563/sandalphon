@@ -3,7 +3,7 @@
 [![CI](https://github.com/so1omon563/sandalphon/actions/workflows/ci.yml/badge.svg)](https://github.com/so1omon563/sandalphon/actions/workflows/ci.yml)
 
 > [!CAUTION]
-> **Sandalphon is a paused feasibility project, not a functional Codex Desktop
+> **Sandalphon is a canceled feasibility project, not a functional Codex Desktop
 > controller. Do not install it expecting to control Codex Desktop from a
 > Stream Deck.**
 >
