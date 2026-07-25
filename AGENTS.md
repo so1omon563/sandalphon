@@ -1,5 +1,24 @@
 # Repository Guidelines and DOX Rail
 
+## Project Status
+
+Sandalphon is a canceled product-feasibility project preserved as research
+evidence. It is not a functional Codex Desktop controller, has no supported
+release, and has no active implementation roadmap.
+
+Do not resume implementation, hardware refinement, packaging, or release work
+unless either:
+
+- Codex provides a supported interface for controlling the active visible
+  Desktop task; or
+- the user explicitly reopens unsupported private-interoperability research
+  with its compatibility and maintenance risks acknowledged.
+
+Any resumed work must first update this contract, the Sandalphon Linear project,
+and the durable wiki status. The remaining repository workflow, quality, and
+safety rules continue to govern preservation, research, and documentation
+changes; they do not imply that product development is active.
+
 ## DOX Framework
 
 This repository uses AGENTS.md files as binding work contracts for their
