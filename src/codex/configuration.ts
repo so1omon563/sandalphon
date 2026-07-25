@@ -1,5 +1,7 @@
-export const SANDALPHON_SETTINGS_SCHEMA_VERSION = 1;
-export const SUPPORTED_CODEX_VERSION = "0.144.1";
+export const SANDALPHON_SETTINGS_SCHEMA_VERSION = 3;
+export const MINIMUM_CODEX_VERSION = "0.144.1";
+const SUPPORTED_CODEX_MAJOR = 0;
+const LEGACY_DESKTOP_CONTROL_SCHEMA_VERSION = 2;
 
 export interface SandalphonSettings {
   readonly schemaVersion: typeof SANDALPHON_SETTINGS_SCHEMA_VERSION;
@@ -14,6 +16,10 @@ export type SettingsResult =
     }
   | {
       readonly status: "missing";
+      readonly settings: SandalphonSettings;
+    }
+  | {
+      readonly status: "migrated";
       readonly settings: SandalphonSettings;
     }
   | {
@@ -40,7 +46,7 @@ export type BinarySelection =
   | {
       readonly status: "ready";
       readonly path: string;
-      readonly version: typeof SUPPORTED_CODEX_VERSION;
+      readonly version: string;
     }
   | {
       readonly status: "unavailable";
@@ -64,23 +70,35 @@ export function parseSettings(value: unknown): SettingsResult {
   }
 
   const schemaVersion = value.schemaVersion;
-  if (typeof schemaVersion === "number" && schemaVersion > 1) {
+  if (
+    typeof schemaVersion === "number" &&
+    schemaVersion > SANDALPHON_SETTINGS_SCHEMA_VERSION
+  ) {
     return { status: "future", reason: "newerSettings" };
   }
-  if (schemaVersion !== SANDALPHON_SETTINGS_SCHEMA_VERSION) {
+  if (
+    schemaVersion !== 1 &&
+    schemaVersion !== LEGACY_DESKTOP_CONTROL_SCHEMA_VERSION &&
+    schemaVersion !== SANDALPHON_SETTINGS_SCHEMA_VERSION
+  ) {
     return { status: "invalid", reason: "invalidSettings" };
   }
   if (
     !optionalNonEmptyString(value.codexBinaryPath) ||
-    !optionalNonEmptyString(value.selectedThreadId)
+    !optionalNonEmptyString(value.selectedThreadId) ||
+    (schemaVersion === LEGACY_DESKTOP_CONTROL_SCHEMA_VERSION &&
+      !optionalDesktopControl(value.desktopControl))
   ) {
     return { status: "invalid", reason: "invalidSettings" };
   }
 
   return {
-    status: "ready",
+    status:
+      schemaVersion === SANDALPHON_SETTINGS_SCHEMA_VERSION
+        ? "ready"
+        : "migrated",
     settings: {
-      schemaVersion,
+      schemaVersion: SANDALPHON_SETTINGS_SCHEMA_VERSION,
       ...(typeof value.codexBinaryPath === "string"
         ? { codexBinaryPath: value.codexBinaryPath }
         : {}),
@@ -100,13 +118,13 @@ export function selectCodexBinary(
   );
   const supported = ordinary.find(
     (candidate) =>
-      candidate.executable && candidate.version === SUPPORTED_CODEX_VERSION,
+      candidate.executable && isSupportedCodexVersion(candidate.version),
   );
   if (supported?.executable) {
     return {
       status: "ready",
       path: supported.path,
-      version: SUPPORTED_CODEX_VERSION,
+      version: supported.version,
     };
   }
   return {
@@ -119,10 +137,40 @@ export function isDesktopBundledCodex(path: string): boolean {
   return path.includes(".app/Contents/Resources/codex");
 }
 
+export function isSupportedCodexVersion(version: string): boolean {
+  const candidate = parseVersion(version);
+  const minimum = parseVersion(MINIMUM_CODEX_VERSION);
+  if (!candidate || !minimum || candidate[0] !== SUPPORTED_CODEX_MAJOR) {
+    return false;
+  }
+  for (let index = 0; index < candidate.length; index += 1) {
+    if (candidate[index] !== minimum[index]) {
+      return candidate[index]! > minimum[index]!;
+    }
+  }
+  return true;
+}
+
+function parseVersion(
+  version: string,
+): readonly [number, number, number] | null {
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function optionalNonEmptyString(value: unknown): boolean {
   return value === undefined || (typeof value === "string" && value.length > 0);
+}
+
+function optionalDesktopControl(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (isRecord(value) &&
+      Object.keys(value).length === 1 &&
+      typeof value.enabled === "boolean")
+  );
 }

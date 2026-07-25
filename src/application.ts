@@ -123,6 +123,9 @@ export class SandalphonApplication {
       return;
     }
     this.#settings = parsed.settings;
+    if (parsed.status === "migrated") {
+      await this.#persist(parsed.settings);
+    }
     const selection = await this.#runtime.selectBinary(
       this.#settings.codexBinaryPath,
     );

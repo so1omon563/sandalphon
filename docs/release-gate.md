@@ -19,14 +19,16 @@ The first public release supports only this matrix:
 | Operating system        | macOS 13 or newer                                 | Stream Deck manifest and CI on macOS 15                 |
 | Stream Deck application | 7.1 or newer                                      | Stream Deck manifest; physical checks use 7.5.0 (22885) |
 | Plugin runtime          | Stream Deck-provided Node.js 24                   | Stream Deck manifest                                    |
-| Codex CLI               | Exactly `codex-cli 0.144.1`                       | Fail-closed runtime allowlist and configuration tests   |
+| Codex CLI               | `codex-cli >= 0.144.1, < 1.0.0`                   | Bounded runtime range and protocol contract tests       |
 | 15-key hardware         | Stream Deck Mk.2 using the 5-by-3 managed profile | Recorded physical-device evidence                       |
 | Encoder hardware        | Standard Stream Deck +                            | Recorded physical-device evidence                       |
 
-Other Codex CLI versions, operating systems, agents, Stream Deck models, and
-control surfaces are unverified and unsupported. The 5-by-3 Classic interaction
-contract may fit related hardware, but the first release makes no compatibility
-claim beyond the physically verified Mk.2.
+Older or 1.0-and-newer Codex CLI versions, other operating systems, agents,
+Stream Deck models, and control surfaces are unsupported. Compatible pre-1.0
+CLI updates must still pass initialization, authentication, strict JSON-RPC
+framing, and response decoding at runtime; any protocol rejection fails closed.
+The 5-by-3 Classic interaction contract may fit related hardware, but the first
+release makes no compatibility claim beyond the physically verified Mk.2.
 
 Sandalphon owns a private Codex app-server child. It does not provide ambient
 control of arbitrary work already active in the Codex desktop app, originate a

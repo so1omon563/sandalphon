@@ -41,6 +41,11 @@ All notable changes to Sandalphon are recorded here.
 - Official `review/start` and `thread/compact/start` controls for idle owned
   sessions, with terminal-turn tracking and mutually exclusive work startup on
   both managed device layouts.
+- Compatible Codex CLI updates from the verified 0.144.1 baseline through the
+  pre-1.0 series, while initialization, authentication, framing, and response
+  decoding continue to fail closed on protocol drift.
+- A one-way settings migration that removes the retired desktop-control opt-in
+  from schema 2 without retaining or activating its abandoned authority.
 - A disabled-by-default desktop-control feasibility contract with exact version
   and capability gating, revision-bound task-selection offers, stale-target
   rejection, and fail-closed cleanup semantics.

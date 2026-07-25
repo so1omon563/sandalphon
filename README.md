@@ -65,7 +65,7 @@ included as a supported control path.
 - macOS 13 or newer
 - Node.js 24 or newer
 - Stream Deck 7.1 or newer
-- Codex CLI 0.144.1
+- Codex CLI 0.144.1 or newer in the compatible pre-1.0 series
 - Stream Deck Mk.2 or standard Stream Deck + for the supported hardware paths
 
 ## Development

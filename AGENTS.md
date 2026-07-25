@@ -82,6 +82,9 @@ Sandalphon is a macOS-first Node.js Stream Deck plugin.
   contract.
 - src/foundation.ts owns package action identifiers and device-specific managed
   profile names used by the entry action and generated profiles.
+- src/codex/configuration.ts owns the ordinary Codex CLI compatibility floor
+  and pre-1.0 boundary. Runtime initialization, authentication, framing, and
+  response decoding remain the fail-closed protocol qualification layer.
 - src/composableControls.ts owns self-contained status, Resume, Review Changes,
   attention, and Plus session-dial behavior for ordinary user profiles. These
   controls never inherit managed-surface confirmation authority.

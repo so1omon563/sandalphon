@@ -152,7 +152,7 @@ describe("Sandalphon application", () => {
       },
     ]);
     expect(settings.write).toHaveBeenCalledWith({
-      schemaVersion: 1,
+      schemaVersion: 3,
       codexBinaryPath: "/opt/homebrew/bin/codex",
     });
 
@@ -390,9 +390,27 @@ describe("Sandalphon application", () => {
     expect(application.snapshot.sessions[0]?.primaryState).toBe("idle");
   });
 
+  it("migrates the retired desktop-control settings without retaining its opt-in", async () => {
+    const runtime = new FakeRuntime();
+    const settings = new MemorySettings({
+      schemaVersion: 2,
+      codexBinaryPath: "/opt/homebrew/bin/codex",
+      selectedThreadId: "thread-1",
+      desktopControl: { enabled: true },
+    });
+    const application = new SandalphonApplication(settings, runtime);
+    await application.start();
+    expect(application.snapshot.integration.phase).toBe("ready");
+    expect(settings.write).toHaveBeenCalledWith({
+      schemaVersion: 3,
+      codexBinaryPath: "/opt/homebrew/bin/codex",
+      selectedThreadId: "thread-1",
+    });
+  });
+
   it("fails closed for settings, binary, auth, protocol, and disconnect errors", async () => {
     const futureRuntime = new FakeRuntime();
-    const futureSettings = new MemorySettings({ schemaVersion: 2 });
+    const futureSettings = new MemorySettings({ schemaVersion: 4 });
     const future = new SandalphonApplication(futureSettings, futureRuntime);
     await future.start();
     expect(future.snapshot.integration).toEqual({
