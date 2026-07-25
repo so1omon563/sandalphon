@@ -2,63 +2,42 @@
 
 [![CI](https://github.com/so1omon563/sandalphon/actions/workflows/ci.yml/badge.svg)](https://github.com/so1omon563/sandalphon/actions/workflows/ci.yml)
 
-Sandalphon is a human interface layer for directing and supervising software
-agents from physical control surfaces.
+> [!CAUTION]
+> **Sandalphon is a paused feasibility project, not a functional Codex Desktop
+> controller. Do not install it expecting to control Codex Desktop from a
+> Stream Deck.**
+>
+> The plugin can display limited state and its research code can invoke
+> operations in separate Sandalphon-owned Codex app-server sessions. It cannot
+> control or visibly update the active task in the Codex Desktop app, expose
+> useful results there, or provide a practical continuation workflow. No
+> supported release exists.
 
-The first implementation is Codex-first, Elgato Stream Deck-first, and
-macOS-first. It treats Stream Deck hardware as a persistent interface to active
-agent work: useful controls in, legible state and attention out.
+Sandalphon explored a Codex-first, Elgato Stream Deck-first, macOS-first human
+interface for software agents. The repository is preserved as research evidence
+after the core product requirement proved infeasible through supported
+interfaces.
 
-## Current Status
+## Feasibility Result
 
-The repository currently contains the independent foundation, deterministic
-behavioral core, and verified live integrations for Stream Deck + and the
-15-key Stream Deck capability class:
+The project established two important boundaries:
 
-- an original Node.js 24 and TypeScript Stream Deck plugin;
-- self-contained Session Status, Resume, Attention, and Stream Deck + Sessions
-  dial actions for ordinary user profiles;
-- strict formatting, linting, type checking, tests, coverage, build, validation,
-  and packaging gates;
-- immutable agent/session/run state reduction with latched terminal results;
-- revision- and connection-bound action offers with fail-closed validation;
-- a source-clean, exact-version desktop co-presence feasibility proof for
-  opaque task listing and reversible selection, kept outside production plugin
-  wiring;
-- deterministic confirmation, invocation locking, and duplicate suppression;
-- an owned Codex app-server lifecycle with validated local configuration,
-  bounded JSON-RPC framing, live session discovery, resume, official change
-  review and context compaction, and next-turn settings;
-- explicit Classic 15 and Stream Deck + capability frames plus deterministic
-  simulated boundaries;
-- an exact Classic 15 managed interaction map with stable anchors, key-native
-  ordered choices, bounded request review, and deterministic acceptance
-  fixtures;
-- an exact Stream Deck + managed interaction map with contextual dial lanes,
-  separate press commits, coordinated strip review, conservative touch, and
-  deterministic acceptance fixtures;
-- a generated managed Stream Deck + profile, live SDK key and encoder adapters,
-  and physical-device verification on Stream Deck 7.5;
-- a generated managed Classic 15 profile, live 15-key SDK adapter, and the exact
-  accepted key-native roster, session, action, choice, and request surfaces;
-- the original Liminal Signal state palette, icon grammar, deterministic SVG
-  references, and redistributable asset-provenance policy;
-- public contribution, design, security, licensing, and architecture guidance;
-- CI, opt-in semantic version tagging, and an evidence-backed
-  first-public-release gate.
+- The official Codex app-server interface can operate a separate
+  Sandalphon-owned session, but it does not control the user's active visible
+  Codex Desktop task.
+- The private Desktop mechanisms explored during feasibility work are
+  unsupported and sensitive to frequent Codex Desktop updates, so they are not
+  a viable product foundation.
 
-The bundled managed profiles remain optional full-surface reference and
-consequential-review environments. Normal daily use is being validated through
-the composable controls so Sandalphon can coexist with the user's ordinary
-Stream Deck actions without a profile Exit dependency.
+Physical-device testing confirmed that the Stream Deck presentation and status
+reporting worked. It did not turn the hardware into a useful Codex Desktop
+controller. Further hardware refinement was stopped because it could not solve
+that missing control path.
 
-Daily-driver validation is currently paused while SO1-179 establishes a hybrid
-control model. Sandalphon-owned sessions use official typed app-server
-operations for Codex workflows such as turns, interruption, compaction,
-review, and model selection. A separately version-gated feasibility path is
-being evaluated only for task selection in the active Codex desktop app. That
-desktop contract is disabled by default and is not wired to the live plugin or
-included as a supported control path.
+The source, tests, architecture decisions, visual assets, and experimental
+integration work remain available for study. Development and release work are
+stopped unless Codex gains a supported interface for controlling the active
+Desktop task.
 
 ## Requirements
 
@@ -68,30 +47,27 @@ included as a supported control path.
 - Codex CLI 0.144.1
 - Stream Deck Mk.2 or standard Stream Deck + for the supported hardware paths
 
-## Development
+## Research Build
 
     nvm use
     npm ci
     make check
+
+The following commands are retained for reproducing the research build. They do
+not produce a functional Codex Desktop controller.
 
 To link the local plugin into Stream Deck:
 
     npm run dev:link
     npm run dev:restart
 
-To create a local installer:
+To create a local research installer:
 
     make package
 
-To build an evidence-bearing release candidate after all manual release gates
-are satisfied:
-
-    make release-candidate
-
 See [Development](docs/development.md) for the complete local workflow.
-The [first public release gate](docs/release-gate.md) defines the exact support
-boundary, physical evidence, install/upgrade/removal checks, security and
-privacy claims, and artifact provenance required before publication.
+The historical [first public release gate](docs/release-gate.md) remains as part
+of the research record; the project did not meet it and no release is planned.
 
 ## Design
 
