@@ -1,8 +1,11 @@
 # ADR 0007: Isolate Desktop Co-Presence in a Supervised Companion
 
-- Status: Accepted for bounded feasibility
+- Status: Superseded by ADR 0008; implementation canceled
 - Date: 2026-07-21
 - Decision: SO1-180
+
+This document preserves the bounded companion design as research evidence. ADR
+0008 cancels its implementation sequence and all production integration.
 
 ## Context
 

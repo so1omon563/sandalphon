@@ -1,8 +1,12 @@
 # ADR 0006: Use Official Codex Control with a Version-Gated Desktop Bridge
 
-- Status: Accepted; production integration deferred to SO1-180
+- Status: Superseded by ADR 0008; production integration canceled
 - Date: 2026-07-20
 - Decision: SO1-179
+
+This document preserves the decision at the time it was made. ADR 0008 cancels
+the proposed production bridge after later feasibility work failed the core
+Codex Desktop-control requirement.
 
 ## Context
 
