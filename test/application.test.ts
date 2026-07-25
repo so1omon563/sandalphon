@@ -198,7 +198,7 @@ describe("Sandalphon application", () => {
 
     const reviewToken = availableOffer(application, "ReviewChanges");
     connection.results.set("review/start", {
-      turn: { id: "review-turn" },
+      turn: { id: "review-turn", status: "inProgress" },
       reviewThreadId: "thread-1",
     });
     expect(
@@ -232,6 +232,25 @@ describe("Sandalphon application", () => {
         offerToken: reviewToken,
       }),
     ).toMatchObject({ status: "completed", kind: "ReviewChanges" });
+
+    const immediateReviewToken = availableOffer(application, "ReviewChanges");
+    connection.results.set("review/start", {
+      turn: { id: "immediate-review-turn", status: "completed" },
+      reviewThreadId: "thread-1",
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-immediate",
+        offerToken: immediateReviewToken,
+      }),
+    ).toMatchObject({ status: "completed", kind: "ReviewChanges" });
+    expect(application.snapshot.sessions[0]).toMatchObject({
+      primaryState: "completed",
+      resultLatch: {
+        runId: "immediate-review-turn",
+        outcome: "completed",
+      },
+    });
 
     const compactToken = availableOffer(application, "CompactThread");
     connection.results.set("thread/compact/start", {});
@@ -275,6 +294,26 @@ describe("Sandalphon application", () => {
     expect(
       await application.invoke({
         invocationId: "review-failed",
+        offerToken: availableOffer(application, "ReviewChanges"),
+      }),
+    ).toMatchObject({ status: "failed", kind: "ReviewChanges" });
+    expect(availableOffer(application, "CompactThread")).toBeTruthy();
+  });
+
+  it("fails closed when review/start omits authoritative turn state", async () => {
+    const { application, connection } = await startedApplication();
+    connection.results.set("thread/resume", {});
+    await application.invoke({
+      invocationId: "resume-1",
+      offerToken: availableOffer(application, "ResumeSession"),
+    });
+    connection.results.set("review/start", {
+      turn: { id: "review-turn" },
+      reviewThreadId: "thread-1",
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-invalid",
         offerToken: availableOffer(application, "ReviewChanges"),
       }),
     ).toMatchObject({ status: "failed", kind: "ReviewChanges" });

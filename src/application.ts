@@ -263,9 +263,39 @@ export class SandalphonApplication {
         const result = asRecord(response);
         const turn = result && asRecord(result.turn);
         const turnId = turn && stringField(turn, "id");
+        const turnStatus = turn && stringField(turn, "status");
+        if (
+          kind === "ReviewChanges" &&
+          (!turnId ||
+            !turnStatus ||
+            !["completed", "interrupted", "failed", "inProgress"].includes(
+              turnStatus,
+            ))
+        ) {
+          throw new Error("invalidReviewStart");
+        }
         if (turnId) {
           this.#pendingOfficialTurns.delete(selected.id);
           this.#officialTurnInvocations.set(turnId, invocation.invocationId);
+          if (
+            turnStatus === "completed" ||
+            turnStatus === "interrupted" ||
+            turnStatus === "failed"
+          ) {
+            this.#state = reduceCore(this.#state, {
+              type: "runStarted",
+              connectionEpoch: this.#state.connectionEpoch,
+              sessionId: selected.id,
+              runId: turnId,
+              steerability: "steerable",
+            });
+            this.#receiveTurnCompleted({
+              threadId: selected.id,
+              turn: { id: turnId, status: turnStatus },
+            });
+            this.#emit();
+            return;
+          }
         }
       } catch (error) {
         this.#pendingOfficialTurns.delete(selected.id);
