@@ -7,7 +7,9 @@ All notable changes to Sandalphon are recorded here.
 ### Changed
 
 - Added a composable Review Changes key that invokes the existing official
-  Codex app-server review operation only for an idle Sandalphon-owned session.
+  Codex app-server review operation only for an idle Sandalphon-owned session,
+  remains visible as Reviewing while active, and reports Review done or Review
+  failed instead of disappearing after a valid press.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

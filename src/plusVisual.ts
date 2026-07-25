@@ -30,6 +30,7 @@ export function renderManagedKey(view: {
   readonly label: string;
   readonly lines?: readonly string[];
   readonly enabled: boolean;
+  readonly prominent?: boolean;
   readonly state: PrimaryState;
   readonly icon?: KeyIcon;
 }): string {
@@ -46,7 +47,9 @@ export function renderManagedKey(view: {
   const icon = view.icon ?? "state";
   const accent = iconAccent(icon, view.state);
   const opacity =
-    view.enabled || icon === "state" || icon === "session" ? 1 : 0.52;
+    view.enabled || view.prominent || icon === "state" || icon === "session"
+      ? 1
+      : 0.52;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <rect width="144" height="144" rx="18" fill="${LIMINAL_SIGNAL_COLORS.canvas}"/>
   <rect x="8" y="8" width="128" height="128" rx="14" fill="${LIMINAL_SIGNAL_COLORS.surface}" opacity="${opacity}"/>
@@ -63,6 +66,8 @@ function iconAccent(icon: KeyIcon, state: PrimaryState): string {
   if (icon === "state" || icon === "session")
     return LIMINAL_SIGNAL_STATE_ACCENTS[state];
   if (icon === "attention") return LIMINAL_SIGNAL_STATE_ACCENTS.waiting;
+  if (icon === "review" && state !== "idle")
+    return LIMINAL_SIGNAL_STATE_ACCENTS[state];
   if (icon === "cancel" || icon === "reject")
     return LIMINAL_SIGNAL_STATE_ACCENTS.failed;
   if (icon === "approve" || icon === "apply")

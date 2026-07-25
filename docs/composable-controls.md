@@ -14,20 +14,22 @@ Sandalphon Exit control.
 
 ## Composable Set
 
-| Control            | Idle presentation                                                                                     | Input                              | Authority                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
-| Session Status key | Selected session name plus a session glyph and primary-state accent                                   | None                               | Read-only                                       |
-| Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank                | Press and release                  | Revalidates and dispatches only `ResumeSession` |
-| Review Changes key | Distinct Review glyph only for an idle Sandalphon-owned session with a current offer; otherwise blank | Press and release                  | Revalidates and dispatches only `ReviewChanges` |
-| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank                       | Press and release                  | Selects the next attention session only         |
-| Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter                            | Rotate to preview; press to select | Session selection only                          |
+| Control            | Idle presentation                                                                                      | Input                              | Authority                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------- | ----------------------------------------------- |
+| Session Status key | Selected session name plus a session glyph and primary-state accent                                    | None                               | Read-only                                       |
+| Resume Session key | Distinct Resume glyph only while an exact current Resume offer exists; otherwise blank                 | Press and release                  | Revalidates and dispatches only `ResumeSession` |
+| Review Changes key | Review when available; Reviewing while active; explicit Review done or Review failed terminal feedback | Press and release                  | Revalidates and dispatches only `ReviewChanges` |
+| Attention key      | Distinct attention glyph and count only while attention exists; otherwise blank                        | Press and release                  | Selects the next attention session only         |
+| Sessions dial      | Selected session, or a clearly labeled local preview, in one strip quarter                             | Rotate to preview; press to select | Session selection only                          |
 
 The five controls may be placed anywhere in the user's profile. Sandalphon
 does not inspect, move, relabel, or coordinate neighboring foreign actions.
 Only the Sessions dial owns its 200 by 100 touch-strip quarter.
-When Resume, Review Changes, or Attention has nothing to present, its key
-renders true black so it is physically indistinguishable from an unused key
-rather than a dim tile.
+When Resume, an uninvoked Review Changes control, or Attention has nothing to
+present, its key renders true black so it is physically indistinguishable from
+an unused key rather than a dim tile. After Review is invoked, its key remains
+visible with working, waiting, completed, or failed text and semantic accent;
+it does not disappear merely because the shared start-work effect is busy.
 
 ## Safety Boundary
 
@@ -53,7 +55,9 @@ SO1-197 adds the first directly actionable official-interface control:
 2. Confirm each role is visually distinct in the action catalog and on-device.
 3. Confirm Resume appears and dispatches only for a resumable selected session.
 4. Confirm Review Changes appears only after that session is owned and idle,
-   then starts a real official review turn without restarting Codex.
+   then starts a real official review turn without restarting Codex. Confirm
+   the same key reads Reviewing while active and ends at Review done or Review
+   failed.
 5. Preview sessions by dial without changing selection; press to select.
 6. Confirm Attention selects a target without deciding its request.
 7. Fully quit and reopen Stream Deck while the ordinary profile is active and

@@ -23,6 +23,7 @@ import { moveStreamDeckPlusChoice } from "./streamDeckPlus.js";
 interface ComposableKeyView {
   readonly label: string;
   readonly enabled: boolean;
+  readonly prominent?: boolean;
   readonly state: PrimaryState;
   readonly icon: KeyIcon;
 }
@@ -35,6 +36,12 @@ interface PressedResume {
 interface PressedReview {
   readonly revision: number;
   readonly offerToken: string;
+}
+
+interface ReviewFeedback {
+  readonly sessionId: string;
+  readonly phase: "starting" | "running" | "completed" | "failed";
+  readonly observedActive: boolean;
 }
 
 interface PressedAttention {
@@ -57,6 +64,7 @@ export class ComposableControls {
   readonly #pressedResume = new Map<string, PressedResume>();
   readonly #pressedReview = new Map<string, PressedReview>();
   readonly #pressedAttention = new Map<string, PressedAttention>();
+  #reviewFeedback: ReviewFeedback | undefined;
   #snapshot: SandalphonSnapshot;
   #pendingSnapshot: SandalphonSnapshot | undefined;
   #rendering = false;
@@ -66,6 +74,10 @@ export class ComposableControls {
     this.#application = application;
     this.#snapshot = application.snapshot;
     application.onSnapshot((snapshot) => {
+      this.#reviewFeedback = reconcileReviewFeedback(
+        this.#reviewFeedback,
+        snapshot,
+      );
       const selectedChanged =
         snapshot.selectedSessionId !== this.#snapshot.selectedSessionId;
       this.#snapshot = snapshot;
@@ -169,11 +181,30 @@ export class ComposableControls {
       return;
     }
     this.#invocation += 1;
+    const sessionId = selectedSession(this.#snapshot)?.id;
+    if (!sessionId) return;
+    this.#reviewFeedback = {
+      sessionId,
+      phase: "starting",
+      observedActive: false,
+    };
+    this.#scheduleRender(this.#snapshot);
     const result = await this.#application.invoke({
       invocationId: `composable-review:${this.#invocation}`,
       offerToken: pressed.offerToken,
     });
-    if (result.status === "failed") await safeAlert(action);
+    this.#reviewFeedback = settleReviewFeedback(
+      this.#reviewFeedback,
+      result.status,
+    );
+    this.#scheduleRender(this.#snapshot);
+    if (
+      result.status === "failed" ||
+      result.status === "rejected" ||
+      result.status === "uncertain"
+    ) {
+      await safeAlert(action);
+    }
   }
 
   attentionDown(action: KeyAction): void {
@@ -247,7 +278,7 @@ export class ComposableControls {
           renderKey(action, resumeView(snapshot)),
         ),
         ...[...this.#review.values()].map((action) =>
-          renderKey(action, reviewView(snapshot)),
+          renderKey(action, reviewView(snapshot, this.#reviewFeedback)),
         ),
         ...[...this.#attention.values()].map((action) =>
           renderKey(action, attentionView(snapshot)),
@@ -329,9 +360,37 @@ function resumeView(snapshot: SandalphonSnapshot): ComposableKeyView {
   };
 }
 
-function reviewView(snapshot: SandalphonSnapshot): ComposableKeyView {
+function reviewView(
+  snapshot: SandalphonSnapshot,
+  feedback: ReviewFeedback | undefined,
+): ComposableKeyView {
   const selected = selectedSession(snapshot);
   const offer = reviewOffer(snapshot);
+  if (selected && feedback?.sessionId === selected.id) {
+    const terminal =
+      feedback.phase === "completed" || feedback.phase === "failed";
+    return {
+      label:
+        feedback.phase === "completed"
+          ? "Review done"
+          : feedback.phase === "failed"
+            ? "Review failed"
+            : selected.primaryState === "waiting"
+              ? "Review waiting"
+              : "Reviewing",
+      enabled: terminal && offer !== undefined,
+      prominent: true,
+      state:
+        feedback.phase === "completed"
+          ? "completed"
+          : feedback.phase === "failed"
+            ? "failed"
+            : selected.primaryState === "waiting"
+              ? "waiting"
+              : "working",
+      icon: "review",
+    };
+  }
   if (!selected || !offer) {
     return {
       label: "",
@@ -346,6 +405,47 @@ function reviewView(snapshot: SandalphonSnapshot): ComposableKeyView {
     state: selected.primaryState,
     icon: "review",
   };
+}
+
+function reconcileReviewFeedback(
+  feedback: ReviewFeedback | undefined,
+  snapshot: SandalphonSnapshot,
+): ReviewFeedback | undefined {
+  if (
+    !feedback ||
+    feedback.phase === "completed" ||
+    feedback.phase === "failed"
+  ) {
+    return feedback;
+  }
+  const session = snapshot.sessions.find(({ id }) => id === feedback.sessionId);
+  if (!session) return { ...feedback, phase: "failed" };
+  if (
+    session.primaryState === "working" ||
+    session.primaryState === "waiting"
+  ) {
+    return { ...feedback, phase: "running", observedActive: true };
+  }
+  if (feedback.observedActive && session.primaryState === "completed") {
+    return { ...feedback, phase: "completed" };
+  }
+  if (feedback.observedActive && session.primaryState === "failed") {
+    return { ...feedback, phase: "failed" };
+  }
+  return feedback;
+}
+
+function settleReviewFeedback(
+  feedback: ReviewFeedback | undefined,
+  status:
+    "rejected" | "accepted" | "pending" | "completed" | "failed" | "uncertain",
+): ReviewFeedback | undefined {
+  if (!feedback) return undefined;
+  if (status === "completed") return { ...feedback, phase: "completed" };
+  if (status === "failed" || status === "rejected" || status === "uncertain") {
+    return { ...feedback, phase: "failed" };
+  }
+  return feedback;
 }
 
 function attentionView(snapshot: SandalphonSnapshot): ComposableKeyView {

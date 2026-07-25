@@ -40,6 +40,7 @@ describe("ComposableControls", () => {
 
   it("dispatches only the unchanged current Review offer", async () => {
     const harness = applicationHarness(reviewSnapshot(1));
+    harness.invoke.mockResolvedValueOnce({ status: "pending" });
     const controls = new ComposableControls(harness.application);
     const review = keyAction("review");
     controls.registerReview(review.action);
@@ -53,21 +54,45 @@ describe("ComposableControls", () => {
       invocationId: "composable-review:1",
       offerToken: "review-alpha",
     });
+    await vi.waitFor(() =>
+      expect(lastSvg(review.setImage)).toContain("Reviewing"),
+    );
+    expect(lastSvg(review.setImage)).toContain("#72E2F1");
+    expect(lastSvg(review.setImage)).toContain('opacity="1"');
 
     controls.reviewDown(review.action);
     harness.emit(reviewSnapshot(2));
     await controls.reviewUp(review.action);
     expect(harness.invoke).toHaveBeenCalledTimes(1);
 
+    harness.emit(reviewProgressSnapshot("working", 3));
+    await vi.waitFor(() =>
+      expect(lastSvg(review.setImage)).toContain("Reviewing"),
+    );
+    harness.emit(reviewProgressSnapshot("completed", 4));
+    await vi.waitFor(() =>
+      expect(lastSvg(review.setImage)).toContain("Review done"),
+    );
+    expect(lastSvg(review.setImage)).toContain("#72E6A5");
+
     harness.invoke.mockResolvedValueOnce({ status: "failed" });
     controls.reviewDown(review.action);
     await controls.reviewUp(review.action);
     expect(harness.invoke).toHaveBeenCalledTimes(2);
     expect(review.showAlert).toHaveBeenCalledOnce();
-
-    harness.emit(snapshotWithoutReview());
     await vi.waitFor(() =>
-      expect(lastSvg(review.setImage)).toContain("role=blank"),
+      expect(lastSvg(review.setImage)).toContain("failed"),
+    );
+    expect(lastSvg(review.setImage)).toContain("Review");
+    expect(lastSvg(review.setImage)).toContain("#FF7B72");
+
+    const unavailableControls = new ComposableControls(
+      applicationHarness(snapshotWithoutReview()).application,
+    );
+    const unavailable = keyAction("unavailable-review");
+    unavailableControls.registerReview(unavailable.action);
+    await vi.waitFor(() =>
+      expect(lastSvg(unavailable.setImage)).toContain("role=blank"),
     );
   });
 
@@ -302,6 +327,30 @@ function snapshotWithoutReview(): SandalphonSnapshot {
     ...snapshot,
     sessions: [
       { ...snapshot.sessions[0]!, actionOffers: [] },
+      snapshot.sessions[1]!,
+    ],
+  };
+}
+
+function reviewProgressSnapshot(
+  primaryState: "working" | "completed" | "failed",
+  revision: number,
+): SandalphonSnapshot {
+  const snapshot = reviewSnapshot(revision);
+  return {
+    ...snapshot,
+    sessions: [
+      {
+        ...snapshot.sessions[0]!,
+        run: {
+          ...snapshot.sessions[0]!.run,
+          phase: primaryState === "working" ? "active" : "idle",
+          ...(primaryState === "working" ? { activeRunId: "review-turn" } : {}),
+        },
+        primaryState,
+        actionOffers:
+          primaryState === "working" ? [] : snapshot.sessions[0]!.actionOffers,
+      },
       snapshot.sessions[1]!,
     ],
   };
