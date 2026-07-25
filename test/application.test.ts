@@ -52,10 +52,12 @@ class FakeConnection implements CodexConnection {
   readonly #messageListeners = new Set<(message: CodexServerMessage) => void>();
   readonly #closeListeners = new Set<() => void>();
   readonly results = new Map<string, unknown>([["thread/list", THREADS]]);
+  readonly beforeResolve = new Map<string, () => void>();
 
   request<T>(method: string, params: unknown): Promise<T> {
     this.requests.push({ method, params });
     const result = this.results.get(method);
+    this.beforeResolve.get(method)?.();
     return result instanceof Error
       ? Promise.reject(result)
       : Promise.resolve(result as T);
@@ -251,6 +253,35 @@ describe("Sandalphon application", () => {
         outcome: "completed",
       },
     });
+
+    const racedReviewToken = availableOffer(application, "ReviewChanges");
+    connection.results.set("review/start", {
+      turn: { id: "raced-review-turn", status: "inProgress" },
+      reviewThreadId: "thread-1",
+    });
+    connection.beforeResolve.set("review/start", () => {
+      connection.emit({
+        method: "turn/started",
+        params: {
+          threadId: "thread-1",
+          turn: { id: "raced-review-turn", status: "inProgress" },
+        },
+      });
+      connection.emit({
+        method: "turn/completed",
+        params: {
+          threadId: "thread-1",
+          turn: { id: "raced-review-turn", status: "completed" },
+        },
+      });
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-raced",
+        offerToken: racedReviewToken,
+      }),
+    ).toMatchObject({ status: "completed", kind: "ReviewChanges" });
+    connection.beforeResolve.delete("review/start");
 
     const compactToken = availableOffer(application, "CompactThread");
     connection.results.set("thread/compact/start", {});

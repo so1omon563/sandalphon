@@ -276,6 +276,11 @@ export class SandalphonApplication {
         }
         if (turnId) {
           this.#pendingOfficialTurns.delete(selected.id);
+          const current =
+            this.#ledger.invocationResults[invocation.invocationId];
+          if (current?.status === "completed" || current?.status === "failed") {
+            return;
+          }
           this.#officialTurnInvocations.set(turnId, invocation.invocationId);
           if (
             turnStatus === "completed" ||
@@ -439,10 +444,17 @@ export class SandalphonApplication {
       this.#interruptions.delete(turnId);
     }
     const officialInvocationId = this.#officialTurnInvocations.get(turnId);
-    if (officialInvocationId) {
+    const pendingOfficialInvocationId =
+      this.#pendingOfficialTurns.get(threadId);
+    const correlatedInvocationId =
+      officialInvocationId ?? pendingOfficialInvocationId;
+    if (correlatedInvocationId) {
+      if (pendingOfficialInvocationId) {
+        this.#pendingOfficialTurns.delete(threadId);
+      }
       this.#ledger = advanceInvocation(
         this.#ledger,
-        officialInvocationId,
+        correlatedInvocationId,
         outcome === "completed" ? "completed" : "failed",
       );
       this.#officialTurnInvocations.delete(turnId);

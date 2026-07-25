@@ -10,7 +10,8 @@ All notable changes to Sandalphon are recorded here.
   Codex app-server review operation only for an idle Sandalphon-owned session,
   remains visible as Reviewing while active, and reports Review done or Review
   failed instead of disappearing after a valid press, including when Codex
-  returns an already-terminal review turn in the initial response.
+  returns an already-terminal review turn or completes before the start
+  response arrives.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.
