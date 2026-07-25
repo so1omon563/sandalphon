@@ -11,7 +11,8 @@ All notable changes to Sandalphon are recorded here.
   remains visible as Reviewing while active, and reports Review done or Review
   failed instead of disappearing after a valid press, including when Codex
   returns an already-terminal review turn or completes before the start
-  response arrives.
+  response arrives, and reconciles terminal review state through official
+  thread history when the app-server does not stream turn notifications.
 - Reframed bundled managed profiles as optional reference and consequential-
   review surfaces instead of restart-safe daily-driver profiles, and renamed
   the catalog entry accordingly.

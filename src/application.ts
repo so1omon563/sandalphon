@@ -37,6 +37,9 @@ import type {
 } from "./domain/model.js";
 import { paginateStreamDeckPlusDetail } from "./streamDeckPlus.js";
 
+const OFFICIAL_TURN_POLL_INTERVAL_MS = 500;
+const OFFICIAL_TURN_POLL_ATTEMPTS = 600;
+
 export interface SettingsStore {
   read(): Promise<unknown>;
   write(settings: SandalphonSettings): Promise<void>;
@@ -247,6 +250,8 @@ export class SandalphonApplication {
 
     if (kind === "ReviewChanges" || kind === "CompactThread") {
       this.#pendingOfficialTurns.set(selected.id, invocation.invocationId);
+      let startedTurnId: string | undefined;
+      let startedTurnStatus: string | undefined;
       try {
         let response: unknown;
         if (kind === "ReviewChanges") {
@@ -262,41 +267,44 @@ export class SandalphonApplication {
         }
         const result = asRecord(response);
         const turn = result && asRecord(result.turn);
-        const turnId = turn && stringField(turn, "id");
-        const turnStatus = turn && stringField(turn, "status");
+        startedTurnId = turn && stringField(turn, "id");
+        startedTurnStatus = turn && stringField(turn, "status");
         if (
           kind === "ReviewChanges" &&
-          (!turnId ||
-            !turnStatus ||
+          (!startedTurnId ||
+            !startedTurnStatus ||
             !["completed", "interrupted", "failed", "inProgress"].includes(
-              turnStatus,
+              startedTurnStatus,
             ))
         ) {
           throw new Error("invalidReviewStart");
         }
-        if (turnId) {
+        if (startedTurnId) {
           this.#pendingOfficialTurns.delete(selected.id);
           const current =
             this.#ledger.invocationResults[invocation.invocationId];
           if (current?.status === "completed" || current?.status === "failed") {
             return;
           }
-          this.#officialTurnInvocations.set(turnId, invocation.invocationId);
+          this.#officialTurnInvocations.set(
+            startedTurnId,
+            invocation.invocationId,
+          );
           if (
-            turnStatus === "completed" ||
-            turnStatus === "interrupted" ||
-            turnStatus === "failed"
+            startedTurnStatus === "completed" ||
+            startedTurnStatus === "interrupted" ||
+            startedTurnStatus === "failed"
           ) {
             this.#state = reduceCore(this.#state, {
               type: "runStarted",
               connectionEpoch: this.#state.connectionEpoch,
               sessionId: selected.id,
-              runId: turnId,
+              runId: startedTurnId,
               steerability: "steerable",
             });
             this.#receiveTurnCompleted({
               threadId: selected.id,
-              turn: { id: turnId, status: turnStatus },
+              turn: { id: startedTurnId, status: startedTurnStatus },
             });
             this.#emit();
             return;
@@ -307,6 +315,18 @@ export class SandalphonApplication {
         throw error;
       }
       this.#pending(invocation.invocationId);
+      if (
+        kind === "ReviewChanges" &&
+        startedTurnId &&
+        startedTurnStatus === "inProgress"
+      ) {
+        void this.#pollOfficialTurn(
+          connection,
+          selected.id,
+          startedTurnId,
+          invocation.invocationId,
+        );
+      }
       return;
     }
 
@@ -459,6 +479,64 @@ export class SandalphonApplication {
       );
       this.#officialTurnInvocations.delete(turnId);
     }
+  }
+
+  async #pollOfficialTurn(
+    connection: CodexConnection,
+    threadId: string,
+    turnId: string,
+    invocationId: string,
+  ): Promise<void> {
+    for (let attempt = 0; attempt < OFFICIAL_TURN_POLL_ATTEMPTS; attempt += 1) {
+      if (this.#connection !== connection) return;
+      const invocation = this.#ledger.invocationResults[invocationId];
+      if (
+        invocation?.status === "completed" ||
+        invocation?.status === "failed"
+      ) {
+        return;
+      }
+      try {
+        const response = await connection.request("thread/read", {
+          threadId,
+          includeTurns: true,
+        });
+        const status = officialTurnStatus(response, turnId);
+        if (
+          status === "completed" ||
+          status === "interrupted" ||
+          status === "failed"
+        ) {
+          const session = this.#state.sessions.find(
+            ({ id }) => id === threadId,
+          );
+          if (session?.run.activeRunId !== turnId) {
+            this.#state = reduceCore(this.#state, {
+              type: "runStarted",
+              connectionEpoch: this.#state.connectionEpoch,
+              sessionId: threadId,
+              runId: turnId,
+              steerability: "steerable",
+            });
+          }
+          this.#receiveTurnCompleted({
+            threadId,
+            turn: { id: turnId, status },
+          });
+          this.#emit();
+          return;
+        }
+      } catch {
+        this.#ledger = advanceInvocation(this.#ledger, invocationId, "failed");
+        this.#officialTurnInvocations.delete(turnId);
+        this.#emit();
+        return;
+      }
+      await waitForOfficialTurnPoll();
+    }
+    this.#ledger = advanceInvocation(this.#ledger, invocationId, "failed");
+    this.#officialTurnInvocations.delete(turnId);
+    this.#emit();
   }
 
   #receiveItemStarted(params: Record<string, unknown>): void {
@@ -727,6 +805,30 @@ function stringField(
   key: string,
 ): string | undefined {
   return typeof record[key] === "string" ? record[key] : undefined;
+}
+
+function officialTurnStatus(
+  value: unknown,
+  turnId: string,
+): string | undefined {
+  const response = asRecord(value);
+  const thread = response && asRecord(response.thread);
+  const turns = thread?.turns;
+  if (!Array.isArray(turns)) return undefined;
+  for (const candidate of turns) {
+    const turn = asRecord(candidate);
+    if (turn && stringField(turn, "id") === turnId) {
+      return stringField(turn, "status");
+    }
+  }
+  return undefined;
+}
+
+function waitForOfficialTurnPoll(): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, OFFICIAL_TURN_POLL_INTERVAL_MS);
+    timer.unref();
+  });
 }
 
 function numberField(

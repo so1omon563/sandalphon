@@ -51,7 +51,10 @@ class FakeConnection implements CodexConnection {
   readonly responses: { id: RequestId; result: unknown }[] = [];
   readonly #messageListeners = new Set<(message: CodexServerMessage) => void>();
   readonly #closeListeners = new Set<() => void>();
-  readonly results = new Map<string, unknown>([["thread/list", THREADS]]);
+  readonly results = new Map<string, unknown>([
+    ["thread/list", THREADS],
+    ["thread/read", { thread: { turns: [] } }],
+  ]);
   readonly beforeResolve = new Map<string, () => void>();
 
   request<T>(method: string, params: unknown): Promise<T> {
@@ -349,6 +352,43 @@ describe("Sandalphon application", () => {
       }),
     ).toMatchObject({ status: "failed", kind: "ReviewChanges" });
     expect(availableOffer(application, "CompactThread")).toBeTruthy();
+  });
+
+  it("reconciles a review terminal state through official thread history", async () => {
+    const { application, connection } = await startedApplication();
+    connection.results.set("thread/resume", {});
+    await application.invoke({
+      invocationId: "resume-1",
+      offerToken: availableOffer(application, "ResumeSession"),
+    });
+    connection.results.set("review/start", {
+      turn: { id: "polled-review-turn", status: "inProgress" },
+      reviewThreadId: "thread-1",
+    });
+    connection.results.set("thread/read", {
+      thread: {
+        turns: [{ id: "polled-review-turn", status: "completed" }],
+      },
+    });
+    const reviewToken = availableOffer(application, "ReviewChanges");
+    expect(
+      await application.invoke({
+        invocationId: "review-polled",
+        offerToken: reviewToken,
+      }),
+    ).toMatchObject({ kind: "ReviewChanges" });
+    await vi.waitFor(() => {
+      expect(application.snapshot.sessions[0]?.resultLatch).toMatchObject({
+        runId: "polled-review-turn",
+        outcome: "completed",
+      });
+    });
+    expect(
+      await application.invoke({
+        invocationId: "review-polled",
+        offerToken: reviewToken,
+      }),
+    ).toMatchObject({ status: "completed", kind: "ReviewChanges" });
   });
 
   it("projects approval requests and resolves an exact consequential decision", async () => {

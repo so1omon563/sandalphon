@@ -38,9 +38,13 @@ or commit a next-turn setting. They never receive managed-surface authority.
 Resume and Review Changes capture the current revision and opaque offer token
 on key-down and dispatch only if both are unchanged on release. Review Changes
 uses the typed `review/start` app-server operation and never silently resumes
-or attaches to a historical session. Attention similarly rejects a stale
-target and advances through attention sessions in roster order, wrapping after
-the last. Dial rotation is local preview; selection requires a separate press.
+or attaches to a historical session. When that operation returns an active
+turn without streaming terminal notifications, Sandalphon reconciles only the
+matching turn's status through bounded official `thread/read` polling; it does
+not present, log, or persist returned task content. Attention similarly rejects
+a stale target and advances through attention sessions in roster order,
+wrapping after the last. Dial rotation is local preview; selection requires a
+separate press.
 
 Complete request inspection and final high-consequence confirmation remain on
 the optional managed surface with the accepted review, separate-confirmation,
