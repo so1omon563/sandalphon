@@ -61,23 +61,13 @@ context.
 The historical [first public release gate](docs/release-gate.md) remains as part
 of the research record; the project did not meet it and no release is planned.
 
-## Design
+## Research Record
 
-Sandalphon models durable human intent and reliable agent state rather than a
-grid of raw commands. Device adapters remain thin, consequential actions stay
-fail-closed, and the first concrete experience takes precedence over
-speculative provider or hardware frameworks.
-
-See [Design](DESIGN.md) and the
-[architecture decisions](docs/architecture/decisions).
-Visual implementation follows the [Liminal Signal system](docs/visual-language.md)
-and [asset policy](ASSETS.md).
-The accepted Classic profile follows the
-[Classic 15 interaction map](docs/classic-15-interaction-map.md).
-The accepted Plus profile follows the
-[Stream Deck + interaction map](docs/stream-deck-plus-interaction-map.md).
-The ordinary-profile path follows the
-[composable controls contract](docs/composable-controls.md).
+The historical [design](DESIGN.md), [architecture
+decisions](docs/architecture/decisions), interaction maps, visual system, and
+asset policy are preserved for study. They are not supported product contracts
+or an active roadmap. [ADR 0008](docs/architecture/decisions/0008-cancel-product-feasibility.md)
+is the authoritative closeout decision.
 
 ## Independent Implementation
 
