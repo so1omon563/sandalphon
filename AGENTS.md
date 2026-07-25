@@ -1,5 +1,24 @@
 # Repository Guidelines and DOX Rail
 
+## Project Status
+
+Sandalphon is a canceled product-feasibility project preserved as research
+evidence. It is not a functional Codex Desktop controller, has no supported
+release, and has no active implementation roadmap.
+
+Do not resume implementation, hardware refinement, packaging, or release work
+unless either:
+
+- Codex provides a supported interface for controlling the active visible
+  Desktop task; or
+- the user explicitly reopens unsupported private-interoperability research
+  with its compatibility and maintenance risks acknowledged.
+
+Any resumed work must first update this contract, the Sandalphon Linear project,
+and the durable wiki status. The remaining repository workflow, quality, and
+safety rules continue to govern preservation, research, and documentation
+changes; they do not imply that product development is active.
+
 ## DOX Framework
 
 This repository uses AGENTS.md files as binding work contracts for their
@@ -35,7 +54,8 @@ but the pass still occurs.
 
 There are no child AGENTS.md files yet. This root owns the contracts for:
 
-- .github/workflows: CI, version tagging, and future release automation.
+- .github/workflows: CI only. Version tagging and release automation are
+  disabled while the project is canceled.
 - dev.so1omon.sandalphon.sdPlugin: distributable manifest and immutable plugin
   assets.
 - src: plugin bootstrap, application/domain seams, Stream Deck presentation,
@@ -131,10 +151,11 @@ Use Node.js 24 or newer and Stream Deck 7.1 or newer.
 - make coverage: enforce the current coverage threshold.
 - make build: bundle the plugin into the sdPlugin directory.
 - make validate: run official Stream Deck validation.
-- make package: produce a local installer under dist.
-- make release-candidate: run the canonical gate, create the real installer,
-  and record its source commit, package metadata, size, and SHA-256 evidence.
 - make check: run every pre-PR quality gate.
+
+Packaging and release-candidate targets remain in source as historical tooling.
+Do not run them or create an installer unless this contract is reactivated
+first.
 
 Use npm ci from a clean checkout. Commit package-lock.json whenever dependency
 resolution changes.
@@ -186,11 +207,9 @@ manifest contract tests plus the official validate and pack checks.
   canceled. Move it to ready when implementation and local checks are complete.
 - PRs include the Linear issue key when applicable, a concise summary, impact,
   checks run, and any config, migration, packaging, or security implications.
-- Use exactly one #patch, #minor, or #major marker in titles when a merge should
-  create a version tag. Add #release only when the same merge should publish a
-  GitHub Release and plugin package. Explain intentional no-bump PRs.
-- Release publication additionally requires every applicable item in
-  docs/release-gate.md and an exact candidate-artifact provenance record.
+- Preservation PRs omit `#patch`, `#minor`, `#major`, and `#release`. Automatic
+  version tagging and release publication are disabled while the project is
+  canceled.
 - Keep Linear work In Review while its PR is open and move it to Done only after
   merge.
 - Codex review is the default. Merge only after required CI passes, the branch

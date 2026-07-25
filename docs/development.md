@@ -1,5 +1,11 @@
 # Development
 
+> [!CAUTION]
+> Sandalphon is a canceled feasibility project with no supported release or
+> active development workflow. This document is an archival record. Do not link
+> the plugin, restart Stream Deck for Sandalphon, run Desktop-control probes, or
+> create an installer from these instructions.
+
 ## Prerequisites
 
 - macOS 13 or newer
@@ -11,29 +17,16 @@ The repository records Node 24 in .nvmrc and .node-version. Newer supported
 local Node versions may run the checks, but CI and the plugin manifest use Node
 24 as the compatibility baseline.
 
-## Setup
+## Historical Source Verification
 
     nvm use
     npm ci
-    npm run dev:link
+    make check
 
-The link command builds the plugin first, then enables Stream Deck developer
-mode and points the desktop application at the repository sdPlugin directory.
+This verifies the preserved source only. It does not link Sandalphon into Stream
+Deck or produce a functional Codex Desktop controller.
 
-`npm run dev:restart` reloads the JavaScript bundle, but Stream Deck 7.5 caches
-managed action contexts and touch-strip layout files. After adding or changing
-a profile, action context, or layout JSON file, fully quit and reopen the
-Stream Deck application before judging the hardware result. A plugin-only
-restart may continue displaying the prior frame or Elgato fallback glyphs.
-Use Command-Q and confirm the Stream Deck application has actually exited
-before reopening it; closing the window or receiving a successful plugin
-restart response does not prove that action contexts reconnected.
-Select a normal user profile before the full application restart. Stream Deck
-does not preserve a plugin-usable prior-profile return target when it restarts
-inside a managed profile, and the official plugin API cannot select a
-user-defined recovery profile.
-
-## Daily Commands
+## Historical Component Checks
 
     make format
     make lint
@@ -41,9 +34,8 @@ user-defined recovery profile.
     make test
     make build
     make validate
-    npm run dev:restart
 
-Before a pull request:
+The former pre-PR gate was:
 
     make check
 
@@ -52,75 +44,36 @@ coverage, bundle output, manifest structure, and a package dry run.
 
 ## Desktop-Control Feasibility Proof
 
-The desktop proof is privileged, explicit-opt-in development tooling. It is
-not part of the plugin bundle and must not be used as a normal launch path.
-Read [SO1-179 Desktop-Control Feasibility Proof](so1-179-desktop-control-proof.md)
-and the security warning before running it.
+The privileged Desktop-control proof is retired. It is not part of the plugin
+bundle, did not provide a viable supported control path, and must not be run
+from this archived guide. Its bounded design and feasibility result remain in
+[SO1-179 Desktop-Control Feasibility Proof](so1-179-desktop-control-proof.md) as
+historical evidence.
 
-Launch Codex desktop with a random loopback-only debugging endpoint only for a
-bounded proof:
+## Historical Supervised Companion Proof
 
-    open -na /Applications/ChatGPT.app --args \
-      --remote-debugging-address=127.0.0.1 \
-      --remote-debugging-port=0
+ADR 0007 explored moving desktop lifecycle ownership into a separately
+supervised companion. Its headless proof exercised the lifecycle supervisor and
+a real Unix-domain socket with deterministic drivers, without launching Codex,
+restarting Stream Deck, or enabling task selection in the plugin.
 
-After reading the generated port, run the content-free list proof. The tool
-independently re-verifies the installed application version:
+The proof verified a `0600` socket inside a `0700` current-user directory,
+client disconnect and reconnect without ownership changes, and clean socket
+removal. ADR 0008 canceled the later macOS driver, launchd, plugin-client,
+hardware, and production-integration work. This section records past evidence;
+it defines no future implementation slice or command to run.
 
-    node scripts/probe-desktop-control.mjs \
-      --port <port> \
-      --application-version 26.715.52143
+## Historical Packaging and Release
 
-Add `--switch-and-restore` only when one reversible selection proof is
-explicitly authorized. The tool rejects version drift, unsafe debugger URLs,
-malformed task state, and failed restoration. It prints counts, capabilities,
-and boolean outcomes only—never task IDs, titles, prompts, responses, or other
-renderer content.
+Sandalphon was canceled before a supported release. Do not create or distribute
+an installer from this repository: it does not provide usable control of the
+active Codex Desktop task.
 
-End every proof by fully quitting Codex, reopening it normally without debug
-arguments, and verifying the former port has no listener. A stale
-`DevToolsActivePort` file is not evidence of an active listener; verify the
-socket itself.
-
-## Supervised Companion Headless Proof
-
-ADR 0007 replaces in-plugin desktop lifecycle ownership with a separately
-supervised companion. The first slice is deliberately headless: it exercises
-the lifecycle supervisor and a real Unix-domain socket with deterministic
-drivers, without launching Codex, restarting Stream Deck, or enabling task
-selection in the plugin.
-
-Run the focused proof with:
-
-    npm test -- --run test/desktopCompanion.test.ts test/desktopCompanionServer.test.ts
-
-The IPC test creates a short temporary macOS socket path, verifies a `0600`
-socket inside a `0700` current-user directory, disconnects and reconnects a
-client without changing companion ownership, and removes the socket on clean
-shutdown. The macOS driver and launchd definition remain a later SO1-180 slice;
-do not repeat live Codex or hardware restart testing until that driver passes
-its own bounded lifecycle matrix.
-
-## Packaging
-
-    make package
-
-This creates an installable streamDeckPlugin file under dist. Local package
-artifacts and generated bundles are ignored by Git.
-
-## Release Candidate
-
-Use the dedicated release target only after the manual gates in
-[First Public Release Gate](release-gate.md) are ready for candidate evidence:
-
-    npm ci
-    make release-candidate
-
-This reruns the complete repository gate, creates the real installer with the
-official Stream Deck pack command, and writes its source commit, package
-identity, compatibility metadata, byte count, and SHA-256 digest to
-`dist/release-evidence.json`. A rebuild is a new candidate and requires new
-evidence.
+The package and release-candidate tooling remains in source only to preserve the
+feasibility record. It is not a current workflow. Packaging or release work may
+resume only after the reactivation conditions in the root `AGENTS.md` are met
+and the project contract, Linear project, and durable wiki status are updated
+first.
 
 ## Device Verification
 

@@ -7,10 +7,11 @@ public Chrome DevTools Protocol primitives plus an exact-version-gated private
 desktop capability selector to list opaque Codex desktop tasks, select another
 visible task, and restore the original task.
 
-This accepts the narrow bridge for production integration work in SO1-180. It
-does not enable the bridge in the packaged plugin and does not authorize any
-composer, approval, interruption, reasoning, command, or generalized desktop
-automation capability.
+This result was initially accepted for production integration work in SO1-180.
+Later feasibility work showed that the private route was unsupported and too
+sensitive to frequent Codex Desktop updates to be a viable product foundation.
+ADR 0008 cancels the integration. The proof never enabled the bridge in the
+packaged plugin.
 
 ## Exact Boundary
 
@@ -47,11 +48,10 @@ The authorized reversible action phase reported:
 No task identifier, title, prompt, response, reasoning, diff, command,
 credential, or renderer payload was recorded in repository evidence.
 
-Both managed hardware implementations already emit session selection through
-the shared application boundary rather than device-specific transport logic.
-Their deterministic suites cover Classic key selection and Plus dial-preview
-then press-to-select. SO1-180 will route proven desktop-controlled targets
-through that same boundary and add physical task-switching evidence.
+Both managed hardware implementations emitted session selection through the
+shared application boundary rather than device-specific transport logic. Their
+deterministic suites covered Classic key selection and Plus dial-preview then
+press-to-select, but no production Desktop-control route was accepted.
 
 ## Cleanup Evidence
 
@@ -62,9 +62,7 @@ the socket check, not file presence, established cleanup.
 
 ## Decision and Follow-Up
 
-The feasibility route is viable but remains private, privileged, and brittle.
-SO1-180 must add explicit consent and lifecycle ownership, preserve exact
-version and capability gating, integrate authority routing, verify both device
-classes physically, and prove listener cleanup before any production package
-may enable desktop task selection. SO1-175 remains blocked by that production
-integration work.
+The isolated proof succeeded, but the route did not remain viable as a product
+boundary. SO1-180 and the production integration were canceled. No package may
+enable desktop task selection, and this archived proof must not be used as a
+current launch or development procedure. See ADR 0008.

@@ -1,6 +1,12 @@
 # Design
 
-## Product Role
+> [!CAUTION]
+> This is a historical design record for a canceled feasibility project. ADR
+> 0008 supersedes every forward-looking product, production, integration, and
+> release direction below. The language describes the design that was explored,
+> not an active roadmap or supported product.
+
+## Former Product Role
 
 Sandalphon carries human intent from a physical control surface into a software
 agent and returns useful state, context, and attention to the operator.
@@ -9,7 +15,7 @@ The Stream Deck is both an input device and an ambient status surface. A control
 represents what the user is trying to accomplish, not merely an underlying
 command.
 
-## Initial Product
+## Former Initial Product
 
 The first implementation is deliberately concrete:
 
@@ -37,7 +43,7 @@ permanent product definition.
    the distinction is already real.
 8. Build an original Stream Deck-native interaction and visual language.
 
-## Architectural Direction
+## Historical Architectural Direction
 
 The first system has four production responsibilities:
 

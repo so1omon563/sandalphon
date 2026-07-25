@@ -1,12 +1,19 @@
 # Contributing
 
-Thanks for helping build Sandalphon. The project values focused changes,
-explicit state, human control, and calm Stream Deck-native interaction.
+Sandalphon is a canceled feasibility project with no active implementation
+roadmap or supported release. The repository is preserved as research evidence.
 
-## Local Setup
+Do not submit feature, hardware-integration, packaging, or release changes
+unless the reactivation conditions in `AGENTS.md` have been met first.
 
-Install Node.js 24 or newer, Stream Deck 7.1 or newer, and the Stream Deck
-desktop application.
+## Preservation Changes
+
+Documentation corrections, dependency maintenance needed to keep the preserved
+source inspectable, and responsible security fixes may still be considered.
+They must not claim that Sandalphon controls Codex Desktop or restore an active
+product workflow.
+
+For source-only verification:
 
     git clone https://github.com/so1omon563/sandalphon.git
     cd sandalphon
@@ -14,8 +21,7 @@ desktop application.
     npm ci
     make check
 
-Use npm run dev:link once to link the local sdPlugin directory. After a build,
-npm run dev:restart restarts the plugin in Stream Deck.
+Do not link the plugin into Stream Deck or create an installer for normal use.
 
 ## Pull Requests
 
@@ -25,16 +31,7 @@ npm run dev:restart restarts the plugin in Stream Deck.
 - Run make check before requesting review.
 - Update CHANGELOG.md under Unreleased for user-visible changes.
 - Include the Linear issue key when work is tracked there.
-- Use #patch, #minor, or #major in the title only when the merge should create a
-  version tag.
-- Add #release only when the merge is intentionally prepared to publish a
-  GitHub Release and installable plugin.
-- Explain why a maintenance PR intentionally omits a version marker.
-
-Release preparation must satisfy the
-[first public release gate](docs/release-gate.md). Do not add `#release` while
-the recorded decision is no-ship or while the candidate artifact differs from
-the reviewed bytes.
+- Omit version and release markers. The project has no supported release path.
 
 Main is protected. Required CI, mergeability, resolved review threads, and the
 bounded Codex review must complete before merge.
