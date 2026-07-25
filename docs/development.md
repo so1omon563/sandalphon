@@ -101,26 +101,17 @@ shutdown. The macOS driver and launchd definition remain a later SO1-180 slice;
 do not repeat live Codex or hardware restart testing until that driver passes
 its own bounded lifecycle matrix.
 
-## Packaging
+## Historical Packaging and Release
 
-    make package
+Sandalphon was canceled before a supported release. Do not create or distribute
+an installer from this repository: it does not provide usable control of the
+active Codex Desktop task.
 
-This creates an installable streamDeckPlugin file under dist. Local package
-artifacts and generated bundles are ignored by Git.
-
-## Release Candidate
-
-Use the dedicated release target only after the manual gates in
-[First Public Release Gate](release-gate.md) are ready for candidate evidence:
-
-    npm ci
-    make release-candidate
-
-This reruns the complete repository gate, creates the real installer with the
-official Stream Deck pack command, and writes its source commit, package
-identity, compatibility metadata, byte count, and SHA-256 digest to
-`dist/release-evidence.json`. A rebuild is a new candidate and requires new
-evidence.
+The package and release-candidate tooling remains in source only to preserve the
+feasibility record. It is not a current workflow. Packaging or release work may
+resume only after the reactivation conditions in the root `AGENTS.md` are met
+and the project contract, Linear project, and durable wiki status are updated
+first.
 
 ## Device Verification
 

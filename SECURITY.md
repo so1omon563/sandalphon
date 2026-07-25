@@ -2,9 +2,12 @@
 
 ## Supported Versions
 
-Security fixes are provided for the latest released Sandalphon version. During
-pre-release development, fixes land on main and are included in the next
-published package.
+Sandalphon has no supported versions. The project was canceled before a
+supported release and no future package is planned.
+
+The repository is preserved as research evidence. Security reports about that
+source are welcome, but maintenance is best-effort and a report does not imply
+that a fix, advisory, package, or release will be produced.
 
 ## Reporting a Vulnerability
 
@@ -74,5 +77,7 @@ reported upstream unless Sandalphon directly contributes to the vulnerability.
 
 ## Response
 
-Credible reports are triaged privately. Fixes and mitigations are prepared
-before coordinated public disclosure when practical.
+Credible reports may be triaged privately on a best-effort basis. The
+maintainer may document the risk, remove affected research material, or leave
+the report unresolved rather than prepare a release. Any public disclosure
+coordination is likewise best-effort.

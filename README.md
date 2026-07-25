@@ -53,19 +53,11 @@ Desktop task.
     npm ci
     make check
 
-The following commands are retained for reproducing the research build. They do
-not produce a functional Codex Desktop controller.
+These commands verify the preserved source; they do not produce a functional
+Codex Desktop controller. Do not link or package Sandalphon for normal use.
 
-To link the local plugin into Stream Deck:
-
-    npm run dev:link
-    npm run dev:restart
-
-To create a local research installer:
-
-    make package
-
-See [Development](docs/development.md) for the complete local workflow.
+See the historical [development record](docs/development.md) for research
+context.
 The historical [first public release gate](docs/release-gate.md) remains as part
 of the research record; the project did not meet it and no release is planned.
 
