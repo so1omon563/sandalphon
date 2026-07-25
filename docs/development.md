@@ -50,24 +50,18 @@ from this archived guide. Its bounded design and feasibility result remain in
 [SO1-179 Desktop-Control Feasibility Proof](so1-179-desktop-control-proof.md) as
 historical evidence.
 
-## Supervised Companion Headless Proof
+## Historical Supervised Companion Proof
 
-ADR 0007 replaces in-plugin desktop lifecycle ownership with a separately
-supervised companion. The first slice is deliberately headless: it exercises
-the lifecycle supervisor and a real Unix-domain socket with deterministic
-drivers, without launching Codex, restarting Stream Deck, or enabling task
-selection in the plugin.
+ADR 0007 explored moving desktop lifecycle ownership into a separately
+supervised companion. Its headless proof exercised the lifecycle supervisor and
+a real Unix-domain socket with deterministic drivers, without launching Codex,
+restarting Stream Deck, or enabling task selection in the plugin.
 
-Run the focused proof with:
-
-    npm test -- --run test/desktopCompanion.test.ts test/desktopCompanionServer.test.ts
-
-The IPC test creates a short temporary macOS socket path, verifies a `0600`
-socket inside a `0700` current-user directory, disconnects and reconnects a
-client without changing companion ownership, and removes the socket on clean
-shutdown. The macOS driver and launchd definition remain a later SO1-180 slice;
-do not repeat live Codex or hardware restart testing until that driver passes
-its own bounded lifecycle matrix.
+The proof verified a `0600` socket inside a `0700` current-user directory,
+client disconnect and reconnect without ownership changes, and clean socket
+removal. ADR 0008 canceled the later macOS driver, launchd, plugin-client,
+hardware, and production-integration work. This section records past evidence;
+it defines no future implementation slice or command to run.
 
 ## Historical Packaging and Release
 
