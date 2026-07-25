@@ -37,7 +37,9 @@ that missing control path.
 The source, tests, architecture decisions, visual assets, and experimental
 integration work remain available for study. Development and release work are
 stopped unless Codex gains a supported interface for controlling the active
-Desktop task.
+Desktop task, or the user explicitly reopens unsupported private-interoperability
+research with its compatibility and maintenance risks acknowledged. The root
+`AGENTS.md` is the governing reactivation contract.
 
 ## Requirements
 
